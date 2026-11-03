@@ -1,0 +1,358 @@
+"""Background work on the queue, one item at a time with a pause between: expanding short links,
+then fetching and archiving posts."""
+
+import json
+import random
+import time
+from collections.abc import Callable
+from pathlib import Path
+
+from magpiary.activity import NO_PROGRESS
+from magpiary.archive import fetch_item
+from magpiary import login
+from magpiary.hub import details_from_folder
+from magpiary.expand import ExpansionFailed, Fetch, expand, http_fetch
+from magpiary.sources import FetchFailed, Get, http_get
+from magpiary.store import Store
+from magpiary.tools import ToolMissing, YtDlp, update_ytdlp
+
+RETRYABLE = {"rate_limited", "unknown"}  # the rest (private, deleted, login wall...) wait for Retry
+
+
+def jitter_pause() -> None:
+    """Serial and slow on purpose: never hammer a site with a burst of requests."""
+    time.sleep(random.uniform(0.5, 2.0))
+
+
+def process_due(store: Store, fetch: Fetch = http_fetch, pause: Callable[[], None] = jitter_pause) -> int:
+    """Try every short link that is due. Returns how many were expanded."""
+    done = 0
+    for i, link in enumerate(store.due_for_expansion()):
+        if i:
+            pause()
+        try:
+            store.expansion_succeeded(link.url, expand(link, fetch))
+            done += 1
+        except ExpansionFailed as err:
+            store.expansion_failed(link.url, err.detail)
+    return done
+
+
+def fetch_pause(source: str) -> None:
+    """Serial with jitter; Reddit gets a slow lane (it rate-limits scripts hard, S4)."""
+    time.sleep(random.uniform(20, 40) if source == "reddit" else random.uniform(3, 8))
+
+
+def fetch_due(store: Store, library: Path, get: Get = http_get, ytdlp: YtDlp | None = None,
+              pause: Callable[[str], None] = fetch_pause, update: Callable[..., bool] | None = None,
+              activity=None, on_archived: Callable[[], None] = lambda: None) -> int:
+    """Fetch and archive every item that is due. Returns how many were archived."""
+    ytdlp = ytdlp or YtDlp()
+    update = update or (lambda force=False: update_ytdlp(store, force=force))
+    done = 0
+    base = ytdlp
+    for i, item in enumerate(store.due_for_fetch()):
+        if i:
+            pause(item["source"])
+        url = item["canonical_url"]
+        site = login.site_of(url)
+        ytdlp = with_login(base, site) if item.get("use_login") else base
+        item_get = _get_with_login(get, site) if item.get("use_login") else get
+        progress = activity.begin("fetch", item) if activity else NO_PROGRESS
+        try:
+            folder = fetch_item(item, library, item_get, ytdlp, progress=progress)
+        except ToolMissing as err:
+            store.fetch_failed(url, "unknown", str(err), retry=True)
+            continue
+        except FetchFailed as err:
+            # yt-dlp breaks when a site changes: update it (once a day at most) and try once more
+            if err.reason in RETRYABLE and item["source"] in ("instagram", "youtube", "x", "linkedin") and update():
+                try:
+                    folder = fetch_item(item, library, item_get, ytdlp, progress=progress)
+                except FetchFailed as again:
+                    store.fetch_failed(url, *_plain_failure(again, item, ytdlp is not base))
+                    continue
+            else:
+                reason, detail, retry = _plain_failure(err, item, ytdlp is not base)
+                store.fetch_failed(url, reason, detail, retry=retry)
+                continue
+        finally:
+            if activity:
+                activity.end("fetch")
+        store.fetch_succeeded(url, str(folder))
+        store.set_details(url, details_from_folder(folder))
+        on_archived()
+        done += 1
+    return done
+
+
+def _get_with_login(get: Get, site: str) -> Get:
+    """Page fetches carry the owner's saved login for this one site. Only the real fetcher takes a cookie; a test double is left alone."""
+    header = login.cookie_header(site)
+    if not header or get is not http_get:
+        return get
+    return lambda url, *rest: http_get(url, *rest, cookie=header)
+
+
+def with_login(ytdlp: YtDlp, domain: str = "instagram.com") -> YtDlp:
+    """The same yt-dlp, carrying the owner's login to that item's site (only for items they allowed it on)."""
+    from magpiary.login import login_path
+
+    path = login_path(domain)
+    if not path.exists():
+        return ytdlp
+    path.chmod(0o600)  # yt-dlp writes the file back after each run
+    return YtDlp(run=ytdlp.run, binary=ytdlp.binary, cookies=path)
+
+
+def _plain_failure(err: FetchFailed, item: dict, used_login: bool) -> tuple[str, str, bool]:
+    """Instagram answers an age-limited or followers-only post with an "empty media response", which looks
+    like its short-lived refusal. The same answer three times means the post needs a login."""
+    empty = "empty media response" in err.detail.lower()
+    site = login.site_of(item.get("canonical_url", ""))
+    name = "Instagram" if site in ("", "instagram.com") else site
+    if used_login and (err.reason == "login_wall" or empty):
+        return ("login_wall", f"{name} still refused it with your login. If the login copy is old, connect "
+                f"{name} again.", False)
+    if empty and item.get("attempts", 0) >= 2:
+        return ("login_wall", "Instagram shows this post only to logged-in people (often an age limit or "
+                "followers only).", False)
+    return err.reason, err.detail, err.reason in RETRYABLE
+
+
+BRAIN_RETRYABLE = {"rate_limited", "busy", "unknown"}  # blocked and invalid wait for "Try again"
+
+
+def brain_pause(tier: str = "free") -> None:
+    """Free keys get a handful of requests a minute; paid keys need no wait."""
+    time.sleep(random.uniform(6, 10) if tier == "free" else 0.5)
+
+
+def transcript_text(folder: Path) -> str:
+    try:
+        saved = json.loads((folder / "transcript.json").read_text())
+        return " ".join(seg["text"] for seg in saved.get("segments", []))
+    except (OSError, ValueError, KeyError, TypeError):
+        return ""
+
+
+def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brain_pause, process=None,
+              log: Callable[[str], None] = lambda m: None, key_source=None, activity=None, prepare=None) -> int:
+    """For each archived item: first the transcript and frames (on the Mac, saved right away), then the summary
+    with the first usable key (moving to the next key on a limit or refusal). Each part can be paused; an
+    item the owner asked to "Try again" goes even while paused. Returns how many summaries were made."""
+    from magpiary import keys as keyring
+    from magpiary import modes
+    from magpiary.brain import BrainFailed
+    from magpiary.process import process_item, senses
+
+    key_source = key_source or keyring
+    process = process or (lambda item, key, progress: process_item(item, key, notes_dir, store=store, progress=progress))
+    prepare = prepare or (lambda item, progress: senses(Path(item["archive_dir"]), _meta(item), progress=progress))
+    apply_tags = store.get_setting("auto_tags", "apply") == "apply"
+    done = asked = 0
+    for item in store.due_for_brain():
+        forced = bool(item.get("ai_force"))
+        url = item["canonical_url"]
+        if not item.get("senses_status"):
+            if store.paused("transcribe") and not forced:
+                continue
+            progress = activity.begin("process", item) if activity else NO_PROGRESS
+            try:
+                prepare(item, progress)
+            except Exception as err:  # a broken file must not stop the others
+                log(f"transcript failed: {type(err).__name__}")
+            finally:
+                if activity:
+                    activity.end("process")
+            store.senses_done(url, transcript_text(Path(item["archive_dir"])))
+        if item.get("ai_status") == "done" and not forced:
+            continue
+        if not forced and (store.paused("summary") or not store.take_summary_turn()):
+            continue
+        record, repicked = None, False
+        while record is None:
+            usable = modes.summarisers(store, key_source)  # Smart: the keys; Private: nobody
+            if not usable:
+                break  # no summary now; later items still need their local transcript
+            key = usable[0]
+            if asked:
+                pause(key.tier)
+            asked += 1
+            progress = activity.begin("process", item) if activity else NO_PROGRESS
+            try:
+                record = process(item, key, progress)
+            except BrainFailed as err:
+                if err.reason == "bad_key":
+                    key_source.mark(key.id, refused=True)
+                    log(f"key '{key.name}' was refused; trying the next key")
+                    continue
+                if err.reason == "rate_limited":
+                    key_source.mark(key.id, limit=True)
+                    log(f"key '{key.name}' reached its limit for today; trying the next key")
+                    continue
+                if err.reason == "busy" and not repicked and hasattr(key_source, "repick"):
+                    repicked = True
+                    if key_source.repick(key):  # that model is slow or overloaded: pick another, try once more
+                        log(f"switched key '{key.name}' to a less busy model")
+                        continue
+                store.brain_failed(url, err.reason, err.detail, retry=err.reason in BRAIN_RETRYABLE)
+                break
+            except Exception as err:
+                store.brain_failed(url, "unknown", type(err).__name__, retry=True)
+                break
+            finally:
+                if activity:
+                    activity.end("process")
+        if record is None:
+            continue
+        store.brain_succeeded(url, record, transcript_text(Path(item["archive_dir"])), apply_tags)
+        done += 1
+    return done
+
+
+def _meta(item: dict) -> dict:
+    try:
+        return json.loads((Path(item["archive_dir"]) / "meta.json").read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def link_pause(source: str) -> None:
+    """GitHub allows about 10 searches a minute without a login; OpenStreetMap and Wikidata ask for one request
+    a second."""
+    time.sleep({"github": 6.5, "github_guess": 1.0, "catalog_skill": 1.0, "places": 1.1, "wikidata": 1.1,
+                "search": 1.1, "crossref": 0.5, "alternativeto": 2.0}.get(source, 0.3))
+
+
+SEARCH_LIMIT = 500  # web searches a month, whatever the provider allows (Settings can change it)
+
+
+def searches_used(store: Store) -> int:
+    month, _, count = store.get_setting("search_month", "").partition(":")
+    return int(count or 0) if month == time.strftime("%Y-%m") else 0
+
+
+def web_search(store: Store, key):
+    """The owner's search key as a search, counted against the monthly limit. None without a key."""
+    from magpiary.links import brave, counted, http_get, tavily
+
+    if key is None:
+        return None
+    search = tavily(key.secret) if key.provider == "tavily" else brave(key.secret, http_get)
+    limit = int(store.get_setting("search_limit", str(SEARCH_LIMIT)) or SEARCH_LIMIT)
+
+    def spend():
+        store.set_setting("search_month", f"{time.strftime('%Y-%m')}:{searches_used(store) + 1}")
+    return counted(search, lambda: searches_used(store), spend, limit)
+
+
+def links_due(store: Store, activity=None, get=None, pause: Callable[[str], None] = link_pause,
+              key_source=None, log: Callable[[str], None] = lambda m: None) -> int:
+    """Find links for summarised items with the free directories and, if the owner added one, a web search key
+    (Tavily or Brave). Never uses the AI key. Returns how many items were done."""
+    from magpiary import keys as keyring
+    from magpiary.links import find_links, http_get
+
+    key_source = key_source or keyring
+    get = get or http_get
+    done = 0
+    for item in store.due_for_links():
+        forced = bool(item.get("links_force"))
+        if store.paused("links") and not forced:
+            return done
+        folder = Path(item["archive_dir"])
+        try:
+            record = json.loads((folder / "record.json").read_text())
+        except (OSError, ValueError):
+            store.save_found_links(item["canonical_url"], [])
+            continue
+        comments = None
+        try:
+            comments = json.loads((folder / "discussion.json").read_text())
+        except (OSError, ValueError):
+            pass
+        search = web_search(store, key_source.search_key())
+        progress = activity.begin("process", item) if activity else None
+        if progress:
+            progress.step("links")
+        try:
+            meta = _meta(item)
+            found = find_links(record, meta.get("text") or "", item.get("transcript_text") or "", comments,
+                               get=get, search=search, skip=store.removed_links(item["canonical_url"]),
+                               author=meta.get("author") or "", pause=pause)
+        except Exception as err:  # one bad page must not stop the rest
+            log(f"link search failed: {type(err).__name__}")
+            found = []
+        finally:
+            if activity:
+                activity.end("process")
+        store.save_found_links(item["canonical_url"], found)
+        done += 1
+    return done
+
+
+def screen_due(store: Store, activity=None, read=None, log: Callable[[str], None] = lambda m: None, limit: int = 5) -> int:
+    """Read the text on screen in a few posts that have not had it read (quietly, after summaries). Returns how many."""
+    from magpiary import ocr
+
+    done = 0
+    for item in store.due_for_screen(limit):
+        folder = Path(item["archive_dir"])
+        meta = _meta(item)
+        frames = _load_json(folder / "frames.json") or []
+        photos = [m for m in meta.get("media") or [] if m.lower().endswith(ocr.IMAGE)][:10]
+        progress = activity.begin("process", item) if activity else None
+        if progress:
+            progress.step("screen")
+        try:
+            known = ocr.known_words(item.get("title"), item.get("ai_title"), item.get("caption"), item.get("summary"), item.get("transcript_text"))
+            lines = ocr.read_post(folder, frames, photos, read or ocr.read_lines, known)
+            (folder / "ocr.json").write_text(json.dumps(lines, ensure_ascii=False))
+            store.screen_done(item["canonical_url"], " ".join(l["text"] for l in lines))
+            done += 1
+        except Exception as err:  # one unreadable post must not stop the rest
+            log(f"on-screen text failed: {type(err).__name__}")
+            store.screen_done(item["canonical_url"], "")
+        finally:
+            if activity:
+                activity.end("process")
+    return done
+
+
+def _load_json(path: Path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def icons_due(store: Store, get=None, log: Callable[[str], None] = lambda m: None, limit: int = 8) -> int:
+    """Fetch the little site icon for a few link sites that have none yet, once each, on this Mac. Returns how many were kept."""
+    from magpiary import icons
+
+    kept = 0
+    for host in icons.due(store.link_urls(), limit):
+        try:
+            kept += bool(icons.fetch(host, get))
+        except Exception as err:  # one odd site must not stop the rest
+            log(f"site icon failed: {type(err).__name__}")
+    return kept
+
+
+def related_due(store: Store, embedder=None, log: Callable[[str], None] = lambda m: None) -> int:
+    """Meaning vectors for new or changed items (on this Mac), then piles again if anything changed or the
+    owner asked for it. Returns how many vectors were made."""
+    from magpiary.embed import EmbedFailed
+    from magpiary.related import rebuild_piles, refresh_vectors
+
+    try:
+        made = refresh_vectors(store, embedder) if embedder else refresh_vectors(store)
+    except EmbedFailed as err:
+        log(f"related: {err}")
+        return 0
+    if made or store.get_setting("piles_dirty", "1") == "1":
+        store.set_setting("piles_dirty", "0")
+        rebuild_piles(store)
+    return made
+

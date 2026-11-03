@@ -1,0 +1,25 @@
+/* The menu-bar panel, on top of the hub's own CSS. Designed in the browser with the owner: search, the latest saves, one main button. */
+html[data-theme], html[data-theme] body { background: transparent !important; }
+html, body { margin: 0; overflow: hidden; scrollbar-gutter: auto !important; }
+body { font: 15px/1.5 var(--sans); color: var(--fg); -webkit-user-select: none; user-select: none; }
+.panel { box-sizing: border-box; width: 340px; padding: 18px; border-radius: 22px; color: var(--fg); background: #141418; box-shadow: inset 0 0 0 1px rgba(247,243,232,.12); }
+.panel .logo { display: inline-flex; align-items: center; gap: 7px; font: 800 18px var(--logo); } .panel .logo .mark { width: 23px; height: 23px; flex: none; }
+.mb-phead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.mb-state { display: inline-flex; align-items: center; gap: 6px; font: 600 12.5px var(--sans); color: var(--fg-2); } .mb-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.mb-note { margin: 0 0 14px; font-size: 14px; line-height: 1.45; color: var(--fg-2); }
+.mb-wide { width: 100%; height: 44px; font-size: 14.5px; }
+.btn { cursor: pointer; border: 0; transition: transform .22s cubic-bezier(.3,1.9,.5,1), background-color .2s ease; } .btn:hover { transform: translateY(-2px); } .btn:active { transform: scale(.98); transition-duration: .08s; }
+.mb-foot { display: flex; justify-content: space-between; margin-top: 14px; }
+.mb-tlink { font: 600 12.5px var(--sans); color: var(--fg-3); background: none; border: 0; padding: 0; cursor: pointer; } .mb-tlink:hover { color: var(--fg); }
+.mb-save { color: var(--fg); } .mb-save:disabled { cursor: default; color: var(--fg-3); } .mb-save.mb-done:disabled { color: var(--ok-t); }
+.mb-pbar { height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; margin: 8px 0 6px; } .mb-pbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #ffd27a, var(--pink)); transition: width .3s; }
+.mb-pbar.mb-moving i { width: 35%; animation: mbslide 1.6s ease-in-out infinite alternate; } @keyframes mbslide { from { margin-left: 0; } to { margin-left: 65%; } }
+.mb-prow { display: flex; justify-content: space-between; font-size: 13px; color: var(--fg-2); } .mb-prow b { font-variant-numeric: tabular-nums; color: var(--fg); }
+.mb-progress { margin-bottom: 16px; }
+.mb-psearch { display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; margin-bottom: 14px; border-radius: 999px; background: var(--navglass); box-shadow: var(--navring); color: var(--fg-3); } .mb-psearch span { font-size: 16px; }
+.mb-psearch input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0; background: none; color: var(--fg); font: 500 14px var(--sans); box-shadow: none; } .mb-psearch input::placeholder { color: var(--fg-3); }
+.mb-recent { display: grid; gap: 10px; margin-bottom: 16px; } .mb-recent small { font-size: 12px; color: var(--fg-3); }
+.mb-rrow { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; width: 100%; padding: 0; border: 0; background: none; color: var(--fg); text-align: left; font: 600 13.5px/1.25 var(--sans); cursor: pointer; } .mb-rrow:hover span { color: #ffd27a; }
+.mb-rrow span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.mb-rrow i { display: block; height: 46px; border-radius: 9px; overflow: hidden; background: radial-gradient(120% 90% at 25% 8%, #5a5a70, #2a2a38 55%, #101018); } .mb-rrow img { display: block; width: 100%; height: 100%; object-fit: cover; }
+@media (prefers-reduced-motion: reduce) { .btn, .btn:hover { transform: none; } .mb-pbar.mb-moving i { animation: none; } }

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480">
+  <title>Fictional workshop cover</title>
+  <desc>An abstract folded paper shape for demonstration posts.</desc>
+  <path fill="#fff" fill-opacity=".16" d="M0 0h360v480H0z"/>
+  <path fill="#fff" fill-opacity=".8" d="m70 155 220 45-135 140 20-113z"/>
+  <path fill="#fff" fill-opacity=".35" d="m70 155 105 72-20 113-35-100z"/>
+  <path fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="2" d="m175 227 115-27"/>
+</svg>

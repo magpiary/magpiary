@@ -1,0 +1,28 @@
+{
+  "brand": "Magpiary",
+  "tagline": "Everything you find, kept in one place",
+  "brief": "A personal library, built on your own Mac, for the posts, reels, threads and pages you want to keep. Share from your iPhone; your Mac downloads, transcribes and files it. Private, calm and searchable.",
+  "adjectives": ["clever", "curious", "warm", "tidy"],
+  "criteria": "Distinct from social-app and bookmark icons, readable at 16 px in the menu bar, works in one colour, feels like a collector's treasure shelf.",
+  "industry": "software",
+  "nav": ["How it works", "Privacy", "Install"],
+  "brand_color": "#16213E",
+  "greyscale": false,
+  "final": true,
+  "designer": "Magpiary brand kit v1",
+  "round": 1,
+  "concepts": [
+    {
+      "name": "The Pair",
+      "symbol": "symbol.svg",
+      "lockup": "lockup-horizontal.svg",
+      "symbol_on_tile": "symbol-reversed-art.svg",
+      "lockup_on_dark": "lockup-horizontal-reversed.svg",
+      "tile_color": "#16213E",
+      "idea": "Two bookmark birds, one behind the other: a collection, with a sparkle for the shiny thing a magpie would keep.",
+      "rationale": ["A bookmark that is also a magpie says keep and collect in one shape", "Real transparent gap, so it works as a one-colour menu-bar icon", "The sparkle is the bird's eye and the dot of the i"]
+    }
+  ],
+  "recommendation": "The Pair with the bold wordmark (option D).",
+  "next_steps": ["Refine the letterforms by hand in Figma or Illustrator", "Trademark, reverse-image and domain checks", "Use symbol-small.svg for the menu bar and anything under 24 px"]
+}

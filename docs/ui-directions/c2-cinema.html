@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magpiary · C2 · Cinema</title>
+<link rel="icon" href="example-cover.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="c-common.css">
+<style>
+:root { --bg: #08080a; --bg-2: #111114; --bg-3: #1b1b20; --fg: #f3f1ec; --fg-2: #a7a5a0; --fg-3: #6c6a66; --h: 300px; --tfs: 15px;
+  --lb-bg: #050506; --lb-panel: #0f0f12; --lb-chip: #1d1d22; }
+:root[data-size="s"] { --h: 210px; --tfs: 13px; }
+:root[data-size="l"] { --h: 420px; --tfs: 18px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 "DM Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.app { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+.rail { position: sticky; top: 0; height: 100vh; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--bg-3); background: var(--bg); z-index: 5; }
+.logo { font: 800 24px/1 var(--display); letter-spacing: -.03em; padding: 0 10px 18px; }
+.logo i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--t-design); margin-left: 2px; }
+.rail .it { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 10px; color: var(--fg-2); font-weight: 500; }
+.rail .it:hover { background: var(--bg-2); color: var(--fg); }
+.rail .it.on { background: var(--bg-3); color: var(--fg); }
+.rail .it .ic { width: 20px; text-align: center; font-size: 16px; }
+.rail .it .n { margin-left: auto; font-size: 12px; color: var(--fg-3); }
+.rail .add { margin: 8px 0 14px; background: var(--fg); color: var(--bg); justify-content: center; font-weight: 600; }
+.rail .add:hover { background: #fff; color: #000; }
+.rail h6 { margin: 18px 10px 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); }
+.rail .dot { width: 10px; height: 10px; border-radius: 3px; margin: 0 5px; }
+.rail .foot { margin-top: auto; padding: 14px 10px 0; border-top: 1px solid var(--bg-3); }
+.rail .foot label { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
+.sizes { background: var(--bg-2); }
+.sizes button { color: var(--fg-2); }
+.sizes button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.live { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg-2); margin-top: 14px; cursor: pointer; }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: #2bd47e; animation: p 1.5s infinite; }
+@keyframes p { 50% { opacity: .3; } }
+main { min-width: 0; padding-bottom: 80px; }
+.feature { position: relative; min-height: 440px; display: flex; align-items: end; padding: 40px clamp(20px, 4vw, 52px); overflow: hidden; }
+.feature .bd { position: absolute; inset: -40px; background-size: cover; background-position: center; filter: blur(38px) saturate(1.4) brightness(.55); transform: scale(1.1); }
+.feature::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--bg) 0%, transparent 60%), linear-gradient(0deg, var(--bg) 0%, transparent 45%); }
+.feature .in { position: relative; z-index: 1; display: flex; gap: 36px; align-items: end; width: 100%; }
+.feature .poster { width: 210px; aspect-ratio: 9/16; border-radius: 16px; flex: none; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.feature .kick { display: inline-flex; gap: 10px; align-items: center; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--fg-2); }
+.feature .kick span { padding: 3px 10px; border-radius: 999px; color: #fff; letter-spacing: 0; text-transform: none; }
+.feature h1 { font: 800 clamp(34px, 4.6vw, 64px)/.98 var(--display); letter-spacing: -.04em; margin: 12px 0 14px; max-width: 16ch; }
+.feature p { color: var(--fg-2); max-width: 56ch; margin: 0 0 18px; }
+.moments { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+.moments span { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.08); backdrop-filter: blur(8px); }
+.moments b { color: var(--t-design); margin-right: 6px; font-weight: 600; }
+.cta { display: flex; gap: 10px; }
+.cta button { height: 44px; padding: 0 22px; border-radius: 999px; font-weight: 600; background: rgba(255,255,255,.1); }
+.cta button:first-child { background: var(--fg); color: var(--bg); }
+.row { margin-top: 34px; }
+.rh { display: flex; align-items: center; gap: 10px; padding: 0 clamp(20px, 4vw, 52px); margin-bottom: 12px; }
+.rh h2 { font: 700 22px var(--display); letter-spacing: -.02em; margin: 0; }
+.rh .bar { width: 4px; height: 20px; border-radius: 2px; }
+.rh .n { color: var(--fg-3); font-size: 14px; }
+.rh .arr { margin-left: auto; display: flex; gap: 6px; }
+.rh .arr button { width: 34px; height: 34px; border-radius: 50%; background: var(--bg-2); color: var(--fg-2); }
+.shelf { display: flex; gap: 14px; overflow-x: auto; padding: 4px clamp(20px, 4vw, 52px) 14px; scroll-snap-type: x proximity; scrollbar-width: none; scroll-padding: 0 clamp(20px, 4vw, 52px); }
+.reel { flex: none; height: var(--h); aspect-ratio: 9/16; border-radius: 14px; position: relative; overflow: hidden; cursor: pointer; scroll-snap-align: start; transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s; }
+.reel:hover { transform: scale(1.04); box-shadow: 0 0 0 2px var(--fg), 0 20px 40px rgba(0,0,0,.5); z-index: 1; }
+.reel .sh { position: absolute; inset: 0; background: linear-gradient(transparent 45%, rgba(0,0,0,.88)); }
+.reel .tx { position: absolute; left: 12px; right: 12px; bottom: 12px; }
+.reel .t { font: 700 var(--tfs)/1.15 var(--display); letter-spacing: -.01em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.reel .m { font-size: 11.5px; color: var(--fg-2); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+.reel .m i { width: 8px; height: 8px; border-radius: 2px; }
+.reel .du { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 600; background: rgba(0,0,0,.55); padding: 2px 8px; border-radius: 999px; }
+.reel .pg { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.15); }
+.reel .pg i { display: block; height: 100%; background: var(--t-design); }
+.reel .typo { position: absolute; inset: 0; padding: 18px; display: flex; align-items: center; font: 800 calc(var(--tfs) * 1.4)/1.05 var(--display); letter-spacing: -.02em; }
+.reel.pend { filter: saturate(.3); }
+:root[data-size="s"] .reel .m { display: none; }
+.srch { padding: 40px clamp(20px, 4vw, 52px) 0; }
+.srch input { width: 100%; background: transparent; border: 0; border-bottom: 2px solid var(--bg-3); color: var(--fg); font: 800 clamp(34px, 5vw, 60px)/1.1 var(--display); letter-spacing: -.035em; padding: 0 0 10px; outline: none; }
+.srch input:focus { border-color: var(--t-design); }
+.srch p { color: var(--fg-3); margin: 10px 0 0; }
+.reel .q { position: absolute; left: 8px; right: 8px; top: 8px; background: rgba(255,255,255,.94); color: #111; border-radius: 10px; padding: 7px 9px; font-size: 12px; line-height: 1.35; }
+.reel .q small { display: block; font-size: 10px; font-weight: 700; color: #777; text-transform: uppercase; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 100%); background: var(--bg-2); border-left: 1px solid var(--bg-3); transform: translateX(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); z-index: 20; padding: 26px 24px; overflow: auto; }
+.drawer.on { transform: none; box-shadow: -30px 0 80px rgba(0,0,0,.5); }
+.drawer h3 { font: 800 30px var(--display); letter-spacing: -.03em; margin: 0 0 4px; }
+.drawer .x { position: absolute; top: 18px; right: 18px; width: 36px; height: 36px; border-radius: 50%; background: var(--bg-3); }
+.lane { background: var(--bg-3); border-radius: 16px; padding: 14px; margin-top: 14px; display: grid; grid-template-columns: 54px 1fr; gap: 12px; }
+.lane .p { aspect-ratio: 9/16; border-radius: 8px; }
+.lane small { color: var(--fg-3); display: block; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; font-size: 10.5px; color: var(--fg-3); }
+.steps i { display: block; height: 4px; border-radius: 2px; background: #2a2a30; margin-bottom: 4px; }
+.steps .d i { background: #2bd47e; } .steps .r i { background: var(--t-design); animation: p 1s infinite; }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; }
+  .rail { position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; flex-direction: row; justify-content: space-around; padding: 8px; border-right: 0; border-top: 1px solid var(--bg-3); }
+  .rail .logo, .rail h6, .rail .ty, .rail .live, .rail .lbl, .rail .foot label, .rail .n { display: none; }
+  .rail .foot { margin: 0; padding: 0; border: 0; } .rail .add { margin: 0; padding: 9px 14px; }
+  .feature .poster { display: none; } .feature { min-height: 380px; }
+  :root { --h: 240px; } :root[data-size="s"] { --h: 170px; } :root[data-size="l"] { --h: 360px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <a class="logo" href="#/">magpiary<i></i></a>
+    <a class="it" href="#/" id="r-home"><span class="ic">⌂</span><span class="lbl">Home</span></a>
+    <a class="it" href="#/search" id="r-search"><span class="ic">⌕</span><span class="lbl">Search</span><span class="n">/</span></a>
+    <a class="it" href="#/activity" id="r-act"><span class="ic">◔</span><span class="lbl">Activity</span><span class="n">3</span></a>
+    <button class="it add"><span class="ic">+</span><span class="lbl">Paste a link</span></button>
+    <h6>Jump to</h6><div id="types"></div>
+    <div class="foot"><label>Tile size</label><div class="sizes" id="sizes" role="group" aria-label="Tile size"></div>
+      <div class="live" data-go="#/activity"><i></i>Reading 1 · 3 up next</div></div>
+  </nav>
+  <main id="main"></main>
+</div>
+<aside class="drawer" id="drawer"></aside>
+<div class="lb" id="lb"></div>
+<script src="data.js"></script><script src="c-common.js"></script>
+<script>
+const M = window.MAG, C = window.MAGC, $ = s => document.querySelector(s);
+const types = [...new Set(M.items.filter(i => i.type && i.status === "done").map(i => i.type))];
+const slug = t => t.toLowerCase().replace(/[^a-z]+/g, "-");
+$("#types").innerHTML = types.map(t => `<a class="it ty" href="#/" data-jump="${slug(t)}"><span class="dot" style="background:${C.color(t)}"></span><span class="lbl">${t}</span><span class="n">${M.items.filter(i => i.type === t).length}</span></a>`).join("");
+
+function reel(it, hit, q) {
+  const pend = it.status !== "done";
+  return `<div class="reel ${pend ? "pend" : ""}" data-go="#/item/${it.id}" style="background:${C.hasThumb(it) ? C.bg(it) : C.color(it.type)}">
+    ${!C.hasThumb(it) ? `<div class="typo">“${C.esc(C.shortTitle(it))}”</div>` : ""}<div class="sh"></div>
+    ${it.dur ? `<span class="du">${it.dur}</span>` : ""}
+    ${hit ? `<div class="q"><small>${hit.where}${hit.at ? " · " + hit.at : ""}</small>${M.mark(hit.text.slice(0, 80), q)}</div>` : ""}
+    <div class="tx"><div class="t">${q ? M.mark(it.title, q) : C.esc(it.title)}</div><div class="m"><i style="background:${C.color(it.type)}"></i>${pend ? C.status(it) : it.author}</div></div>
+    ${it.status === "summarising" ? `<div class="pg"><i style="width:${it.pct}%"></i></div>` : ""}</div>`;
+}
+function row(title, items, color, id = "", note = "") {
+  if (!items.length) return "";
+  return `<section class="row" id="${id}"><div class="rh">${color ? `<span class="bar" style="background:${color}"></span>` : ""}<h2>${title}</h2><span class="n">${note || items.length}</span>
+    <span class="arr"><button data-sc="-1">‹</button><button data-sc="1">›</button></span></div><div class="shelf">${items.map(x => Array.isArray(x) ? reel(...x) : reel(x)).join("")}</div></section>`;
+}
+function wire() {
+  document.querySelectorAll("[data-sc]").forEach(b => b.onclick = () => { const s = b.closest(".row").querySelector(".shelf"); s.scrollBy({ left: +b.dataset.sc * s.clientWidth * .8, behavior: "smooth" }); });
+}
+function home() {
+  const f = M.byId[15];
+  const done = M.items.filter(i => i.status === "done");
+  $("#main").innerHTML = `<section class="feature"><div class="bd" style="background-image:url(example-cover.svg)"></div><div class="in">
+      <div class="poster" style="background:${C.bg(f)}"></div>
+      <div><div class="kick">Just read <span style="background:${C.color(f.type)}">${f.type}</span></div><h1>${C.esc(f.title)}</h1><p>${C.esc(f.summary)}</p>
+      <div class="moments">${f.points.slice(0, 3).map(([at, t]) => `<span><b>${at}</b>${C.esc(t.slice(0, 44))}…</span>`).join("")}</div>
+      <div class="cta"><button data-go="#/item/15">▶ Watch with key moments</button><button>Open original ↗</button></div></div></div></section>
+    ${row("Being read & up next", [M.byId[17], ...M.queue.map(i => M.byId[i])], "", "", "≈ 2 min")}
+    ${row("Saved today", done.filter(i => i.day === "Today"), "")}
+    ${types.map(t => row(t, done.filter(i => i.type === t), C.color(t), slug(t))).join("")}`;
+  wire();
+}
+function search(q = "") {
+  $("#main").innerHTML = `<div class="srch"><input id="q" placeholder="What was that one about…" value="${C.esc(q)}" autocomplete="off"><p>Results are grouped by where the words were found.</p></div><div id="res"></div>`;
+  const run = () => {
+    const v = $("#q").value.trim(), r = M.search(v), grp = {};
+    for (const { it, hits } of r) for (const h of hits) { const k = h.where === "Said" ? "In what was said" : h.where === "Key point" ? "In key moments" : h.where === "Mentions" ? "Things mentioned" : h.where === "Summary" ? "In summaries" : "In titles"; (grp[k] ||= []).some(x => x[0] === it) || grp[k].push([it, h, v]); }
+    $("#res").innerHTML = v ? (Object.entries(grp).map(([k, xs]) => row(k, xs, "")).join("") || `<p style="padding:30px clamp(20px,4vw,52px);color:var(--fg-3)">Nothing for “${C.esc(v)}”.</p>`) : row("Try", [M.byId[15], M.byId[16], M.byId[10]], "");
+    wire();
+  };
+  $("#q").oninput = run; run(); $("#q").focus();
+}
+function drawer(open) {
+  const d = $("#drawer"); d.classList.toggle("on", open); if (!open) return;
+  const n = M.byId[17];
+  d.innerHTML = `<button class="x" data-go="#/">×</button><h3>Activity</h3><p style="color:var(--fg-3);margin:0">One at a time. ≈ 2 min until clear.</p>
+    <div class="lane"><div class="p" style="background:${C.bg(n)}"></div><div><small>Reading now · ${n.pct}%</small>${C.esc(n.title)}
+      <div class="steps"><div class="d"><i></i>Fetch</div><div class="d"><i></i>Listen</div><div class="d"><i></i>Look</div><div class="r"><i></i>Write</div></div></div></div>
+    <h6 style="margin:22px 0 0;color:var(--fg-3);letter-spacing:.1em;text-transform:uppercase;font-size:11px">Up next</h6>
+    ${M.queue.map(i => `<div class="lane" data-go="#/item/${i}" style="cursor:pointer"><div class="p" style="background:${C.bg(M.byId[i])}"></div><div><small>${M.sources[M.byId[i].source]} · fetched</small>${C.esc(M.byId[i].title)}</div></div>`).join("")}
+    <div class="lane" style="grid-template-columns:1fr;border:1.5px dashed var(--t-news);background:none"><div><small style="color:var(--t-news)">Needs you</small>An Instagram reel wants a login. Next try in 3 h. <button style="text-decoration:underline">Try now</button></div></div>
+    <h6 style="margin:22px 0 8px;color:var(--fg-3);letter-spacing:.1em;text-transform:uppercase;font-size:11px">Controls</h6>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${["Fetching: on", "Transcribing: on", "Summaries: all"].map(x => `<span style="padding:6px 12px;border-radius:999px;background:var(--bg-3);font-size:13px">${x}</span>`).join("")}</div>`;
+}
+C.size($("#sizes"));
+document.addEventListener("click", e => {
+  const j = e.target.closest("[data-jump]"); if (j) { e.preventDefault(); if (location.hash.startsWith("#/search") || location.hash.startsWith("#/activity")) { location.hash = "#/"; } setTimeout(() => document.getElementById(j.dataset.jump)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); return; }
+  const g = e.target.closest("[data-go]"); if (g) location.hash = g.dataset.go;
+});
+document.addEventListener("keydown", e => { if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); location.hash = "#/search"; } if (e.key === "Escape") location.hash = mode === "search" ? "#/search" : "#/"; });
+let mode = "";
+function route() {
+  const p = (location.hash || "#/").slice(1);
+  const want = p.startsWith("/search") ? "search" : "home";
+  if (want !== mode) { want === "search" ? search() : home(); mode = want; window.scrollTo(0, 0); }
+  ["r-home", "r-search", "r-act"].forEach(id => $("#" + id).classList.remove("on"));
+  $(p.startsWith("/search") ? "#r-search" : p.startsWith("/activity") ? "#r-act" : "#r-home").classList.add("on");
+  drawer(p.startsWith("/activity"));
+  if (p.startsWith("/item/")) C.lightbox($("#lb"), +p.split("/")[2], () => history.back()); else $("#lb").classList.remove("on");
+}
+addEventListener("hashchange", route); route();
+</script>
+</body>
+</html>

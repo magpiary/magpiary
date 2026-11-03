@@ -1,0 +1,1000 @@
+/* The landing page's world in the hub (owner, 1 Nov): the Indigo theme and its three backgrounds, the library's big
+   search and slim floating bar, the Featured area, the soft caption on tiles, and the bird's opening. */
+
+/* ---- Indigo ---- */
+/* ---- the two palettes. Everything below is one structure; a theme is only these colours ---- */
+:root[data-theme="indigo"] {
+  --bg: #0a0a22; --fg: #f7f3e8; --fg-2: rgba(247,243,232,.84); --fg-3: rgba(247,243,232,.66); --line: rgba(247,243,232,.13);
+  --chip: rgba(247,243,232,.08); --card: #0e0e2a; --dlg: #0e0e2a; --dlg-edge: rgba(247,243,232,.14); --dlg-chip: rgba(247,243,232,.09); --tb: rgba(12,12,30,.92); --tb-edge: inset 0 0 0 1px rgba(247,243,232,.1);
+  --veil: rgba(5,5,40,.66); --dlg-sh: inset 0 1px 0 rgba(255,255,255,.08), 0 40px 100px -20px rgba(0,0,0,.85);
+  --strip: #0a0a44; --strip-fg: rgba(247,243,232,.7); --strip-chip: rgba(247,243,232,.08);
+  --bad-t: #ff8a8f; --ok-t: #4fe0a4; --warn-t: #ffc266; --hi: #ffd27a; color-scheme: dark;
+  --surf: #0e0e2a; --surf-2: #1a1a3c; --c-surf: 14 14 42; --c-deep: 9 9 30; --c-field: 21 21 42; --c-pop: 18 18 38; --c-page: 5 5 26; --c-pill: 19 19 22;
+  --fade-0: #0e0e26; --fade-1: #09091d; --fade-2: #06061a; --open-a: #14146e; --open-b: #0b0b4e;
+  --wc1: .06 .06 .27; --wc2: .17 .17 .47; --wdk: .86;
+}
+:root[data-theme="dark"] {
+  --bg: #0b0b0e; --fg: #f7f3e8; --fg-2: rgba(247,243,232,.84); --fg-3: rgba(247,243,232,.66); --line: rgba(247,243,232,.12);
+  --chip: rgba(247,243,232,.07); --card: #101014; --dlg: #101014; --dlg-edge: rgba(247,243,232,.14); --dlg-chip: rgba(247,243,232,.09); --tb: rgba(15,15,19,.92); --tb-edge: inset 0 0 0 1px rgba(247,243,232,.09);
+  --veil: rgba(0,0,0,.66); --dlg-sh: inset 0 1px 0 rgba(255,255,255,.08), 0 40px 100px -20px rgba(0,0,0,.85);
+  --strip: #14141a; --strip-fg: rgba(247,243,232,.7); --strip-chip: rgba(247,243,232,.08);
+  --bad-t: #ff8a8f; --ok-t: #4fe0a4; --warn-t: #ffc266; --hi: #ffd27a; color-scheme: dark;
+  --surf: #101014; --surf-2: #1d1d24; --c-surf: 16 16 20; --c-deep: 11 11 14; --c-field: 24 24 30; --c-pop: 20 20 25; --c-page: 6 6 8; --c-pill: 20 20 24;
+  --fade-0: #101015; --fade-1: #0a0a0d; --fade-2: #060608; --open-a: #25252e; --open-b: #15151a;
+  --wc1: .05 .05 .065; --wc2: .15 .15 .18; --wdk: .88;
+}
+
+/* ---- glass, for both: Off is solid and flat; On is translucent with blur and a bright top edge, and the strength (25 to 100%, --gs)
+   raises the translucency, the blur and the glow. Only floating layers use it: pills, sheets, pop-ups, the search, the corner buttons ---- */
+:root[data-theme] {
+  --g-a: 1; --g-as: 1; --g-bf: none; --g-fill: linear-gradient(transparent, transparent); --g-edge: inset 0 0 0 1px rgba(255,255,255,.07);
+  --g-hi: linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.03));
+}
+html[data-glass="on"][data-theme] {
+  --g-a: calc(.97 - .34 * var(--gs)); --g-as: calc(.985 - .43 * (var(--gs) - .3)); --g-bf: blur(calc(var(--gs) * 26px)) saturate(1.25);
+  --g-fill: radial-gradient(120% 90% at 20% 0%, rgba(255,255,255,calc(var(--gs) * .0633)), rgba(255,255,255,0) 55%), linear-gradient(180deg, rgba(255,255,255,calc(var(--gs) * .0333)), rgba(255,255,255,0) 40%);
+  --g-edge: inset 0 1px 0 rgba(255,255,255,calc(var(--gs) * .12)), inset 0 0 0 1px rgba(255,255,255,calc(var(--gs) * .0567)), inset 0 -14px 24px -18px rgba(255,255,255,calc(var(--gs) * .0467));
+  --g-hi: linear-gradient(rgba(255,255,255,calc(var(--gs) * .14)), rgba(255,255,255,calc(var(--gs) * .07)));
+}
+:root[data-theme] {
+  --navglass: var(--g-fill), rgb(var(--c-pill) / var(--g-a));
+  --navring: var(--g-edge);
+  --navhi: var(--g-hi); --navhiring: inset 0 1px 0 rgba(255,255,255,.1), inset 0 0 0 1px rgba(255,255,255,.07);
+  --glass-sheet: var(--g-fill), rgb(var(--c-surf) / var(--g-as));  /* the big sheets stay nearly solid at 25%: text sits on them */
+}
+:root[data-theme] body { background: transparent; }
+#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; display: block; pointer-events: none; }
+:root[data-theme] .hero h1 em { color: #ffd27a; }
+:root[data-theme] .views a, :root[data-theme] .views a.on { border-color: transparent; }  /* the sliding line is the only underline */
+:root[data-theme] .views > .vline { background: #ffd27a; }
+:root[data-theme] .btn.dark { background: #f7f3e8; color: #0b0b22; }
+:root[data-theme] .top { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom-color: transparent; }
+:root[data-theme] .secblock > .sec { position: static; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+/* Dark content: indigo around the page, a quiet near-black sheet under the posts */
+:root[data-theme][data-world="frame"] #wallbody { background: #0c0c16; border-radius: 28px 28px 0 0; padding: 8px var(--pad) 60px; margin-inline: calc(-1 * var(--pad)); }
+
+/* ---- the library's top ---- */
+.lhero.wallhero.compact { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 22px; margin: clamp(14px, 3vh, 34px) 0 clamp(16px, 3vh, 30px); }
+.lhero.wallhero.compact h1 { font: 700 var(--type-display)/1.08 var(--display); letter-spacing: -.02em; }
+.lhero h1 em { font-style: normal; }
+.lhero .meta1 { justify-content: center; font-size: var(--type-small); }
+.lhsearch { position: relative; width: min(680px, 100%); height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 26px; border: 0; border-radius: 999px; cursor: text;
+  background: var(--chip); color: var(--fg-2); font: 500 var(--type-body) var(--sans); text-align: left; transition: transform .25s cubic-bezier(.2,.8,.2,1), background .2s; }
+.lhsearch:hover { transform: translateY(-2px); background: color-mix(in srgb, var(--chip) 100%, var(--fg) 6%); }
+.lhsearch > span:first-child { font-size: 24px; }
+.lhph { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lhsearch kbd { font: 13px var(--sans); color: var(--fg-3); }
+.lhbird { position: absolute; right: 6px; bottom: calc(100% - 7px); width: 84px; pointer-events: none; }
+.sslot { transition: opacity .25s; }
+
+/* the nav is one flat strip with everything in it; the tabs are a separate dark pill floating just under it */
+html:has(.lhero) .top { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom-color: transparent; transition: background .25s, transform .32s cubic-bezier(.2,.8,.2,1); }
+/* when it returns it is no bar: only a dark fade behind it, gone by the time it reaches the page below (owner, 1 Nov) */
+html:has(.lhero) .top::before, :root[data-theme] .top::before { content: ""; position: absolute; inset: 0 0 -44px; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .25s; background: linear-gradient(to bottom, rgb(var(--c-page) / .94) 0, rgb(var(--c-page) / .8) 45%, rgb(var(--c-page) / 0) 100%); }
+html.lhslim:has(.lhero) .top::before, :root[data-theme] .top.scrolled::before { opacity: 1; }
+:root[data-theme] .top.scrolled { background: transparent; box-shadow: none; }
+html:has(.lhero) #wallctl { position: sticky; top: calc(var(--top-h, 64px) + 8px); z-index: 19; height: 52px; display: flex; flex-direction: column; justify-content: center; transition: top .32s cubic-bezier(.2,.8,.2,1); }
+html.lhslim #wallctl .ctrl1 { width: fit-content; max-width: 100%; margin: 0 auto; padding: 4px 16px; gap: 14px; border-radius: 999px; background: var(--bg); box-shadow: inset 0 0 0 1px rgba(247,243,232,.12), 0 14px 30px -14px #000; }
+html.lhslim #wallctl .askwall { display: none; }
+/* the nav leaves while you scroll down and comes back when you scroll up */
+html.navhid .top { transform: translateY(calc(-100% - 46px)); }
+html.navhid #wallctl { top: 12px; }
+
+/* ---- one search: the box you click grows into the big one, where it is ---- */
+html.morphing #lhsearch, html.morphing #searchform { visibility: hidden; }
+html.morphing .lhbird { visibility: visible; }
+.sover.morph { padding: 0; display: block; background: transparent; }
+.sover.morph .sbox { position: fixed; margin: 0; }
+.sover.morph .sbig { border-radius: 36px; background: var(--tb, var(--card)); }
+.sover.morph .sbig input { font-size: inherit; }
+.sover.morph .spanel2 { max-height: var(--spmax, 60vh); }
+
+/* ---- one dark toolbar look for every control that floats or sits on the background ---- */
+:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn), .fchip) { background: var(--navglass); box-shadow: var(--navring); }
+:root[data-theme] .banner, :root[data-theme] .banner.warnb { background: rgb(var(--c-deep) / .72); border: 0; box-shadow: var(--tb-edge); }
+:root[data-theme] .banner.warnb { box-shadow: inset 3px 0 0 #ff8a8f, var(--tb-edge); }
+
+/* ---- quiet pages: no moving picture behind reading and settings, only a flat dark fade ---- */
+#bgfade { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgb(var(--c-page) / .3) 0, rgb(var(--c-page) / .62) 34%, rgb(var(--c-page) / .9) 68%, rgb(var(--c-page)) 100%); }
+html.quiet #bg { visibility: hidden; }
+html.quiet #bgfade { background: linear-gradient(to bottom, var(--fade-0) 0, var(--fade-1) 45vh, var(--fade-2) 100%); }
+
+/* post view: no strip behind the bar; its pieces carry their own surface */
+:root[data-theme] .crumbbar { background: none; }
+:root[data-theme] .crumbbar .crumbs { background: none; box-shadow: none; flex: 0 1 auto; margin-right: auto; }
+:root[data-theme] .it-sum { color: rgba(247,243,232,.92); }
+
+/* Settings: flat rows and one surface; the colour leaves the icons */
+:root[data-theme] .setcard { border-radius: 12px; padding: 9px 12px; grid-template-columns: 26px minmax(0, 1fr); box-shadow: none; }
+:root[data-theme] .setcard:hover { background: var(--chip); }
+:root[data-theme] .setcard.on { background: rgba(247,243,232,.11); box-shadow: none; }
+:root[data-theme] .setcard .seticon, :root[data-theme] .sethead .seticon { background: none; box-shadow: none; color: var(--fg-2); width: 22px; height: 22px; border-radius: 0; }
+:root[data-theme] .setcard .seticon .ico { width: 18px; height: 18px; }
+:root[data-theme] .sethead .seticon { display: none; }
+:root[data-theme] .setcard > b { font-size: 15px; }
+:root[data-theme] .setnav { gap: 2px; }
+:root[data-theme] .srows { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; }
+:root[data-theme] .sgh h3 { font-size: 19px; }
+:root[data-theme] .sethead { border-bottom-color: var(--line); }
+
+/* Help: reading first */
+:root[data-theme] .helppage { color: rgba(247,243,232,.92); font-size: 16px; }
+:root[data-theme] .helppage .htopic { padding-top: 32px; border-top: 1px solid var(--line); }
+:root[data-theme] .helppage .htopic h3 { font-size: 30px; }
+:root[data-theme] .helppage .htopic h3 .hic { background: none; color: var(--fg-2); width: 28px; height: 28px; }
+:root[data-theme] .helppage .hfaq p { color: rgba(247,243,232,.88); font-size: 15.5px; line-height: 1.6; }
+
+/* Ask: the same surfaces, the same accent, no effects of its own */
+:root[data-theme] .askp:not(.inline) { background: var(--glass-sheet); border: 0; box-shadow: var(--g-edge), 0 30px 70px -20px #000; }
+:root[data-theme] .askorb i { display: none; }
+:root[data-theme] { --pink: #ff4fa3; }  /* the brand pink: Ask, the AI, and what is working. Gold is for what is chosen and for emphasis. */
+:root[data-theme] .askstart { background: var(--chip); box-shadow: none; border-color: var(--line); }
+:root[data-theme] .askpage .askside { background: rgb(var(--c-deep) / .6); box-shadow: inset -1px 0 0 var(--line); }
+:root[data-theme] .askcard { background: var(--card); }
+
+/* ---- Featured ---- */
+.featblock { margin-bottom: 8px; }
+.featgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-flow: dense; --gap: 22px; }
+.featgrid > .tile:first-child { grid-column: span 2; grid-row: span 2; aspect-ratio: auto; --tfs: 30px; }
+.featgrid > .tile:first-child .label .t { -webkit-line-clamp: 3; min-height: 0; }
+.featgrid > .tile:first-child .label .s { display: block; margin-top: 10px; font-size: 14px; line-height: 1.45; }
+.pastb { position: absolute; left: 10px; top: 10px; padding: 4px 10px; border-radius: 999px; font: 600 var(--type-micro) var(--sans); color: #0b0b22; background: #ffd27a; }
+.tile:has(.pastb) .sq .src { display: none; }
+@media (max-width: 1100px) { .featgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .featgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .featgrid > .tile:first-child { grid-row: auto; aspect-ratio: 4 / 3; --tfs: 22px; } }
+
+/* ---- the soft caption: the picture stays clear, the title sits in a small glass panel ---- */
+html[data-labels="soft"] { --tscrim: 0; }
+html[data-labels="soft"]:root[data-size] .label { left: 8px; right: 8px; bottom: 8px; padding: 10px 12px 9px; border-radius: 14px; background: rgb(var(--c-deep) / .56); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+html[data-labels="soft"] .label .t { min-height: 0; font-size: calc(var(--tfs) * .86); }
+html[data-labels="soft"] .label .m { margin-top: 5px; height: 22px; }
+html[data-labels="soft"] .label .step { font-size: 12px; font-weight: 500; }
+html[data-labels="soft"] .label .avatar.mini { --s: 18px; }
+html[data-labels="soft"] .tile { border-radius: 22px; }
+html[data-labels="soft"] .tile:hover { transform: translateY(-6px) rotate(-.7deg); box-shadow: 0 26px 44px -18px rgba(0,0,0,.75); }
+html[data-labels="soft"] .tile:nth-child(even):hover { transform: translateY(-6px) rotate(.7deg); }
+html[data-labels="soft"] .sq .src { background: rgb(var(--c-deep) / .5); }
+
+/* ---- the opening: nested pills holding your saves widen as they load, then expand into the page ---- */
+html.opening body { overflow: hidden; }
+html.opening::after { content: ""; position: fixed; inset: 0; z-index: 9998; background: rgb(var(--c-page)); }
+html.mgbird .lhbird { visibility: hidden; }
+#mgopen { position: fixed; inset: 0; z-index: 9999; cursor: pointer; overflow: hidden; }
+#mgopen .plate { isolation: isolate; position: absolute; inset: 0; background: radial-gradient(circle at 50% 54%, var(--open-a), rgb(var(--c-page)) 70%); overflow: hidden; }
+#mgopen .lp { position: absolute; left: 50%; top: 54%; width: 58vh; height: 32vh; border-radius: 999px; overflow: hidden; background: var(--open-b); box-shadow: 0 0 0 1px rgba(247,243,232,.14); }
+#mgopen .lp img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#mgopen .lp.fill { background: var(--bg); box-shadow: none; }
+#mgopen .stack { position: absolute; left: 50%; top: 54%; width: min(170px, 34vw); }
+#mgopen .bird { position: absolute; left: 0; top: 0; width: min(176px, 40vw); aspect-ratio: 3 / 2; will-change: transform; }
+#mgopen .bird img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; visibility: hidden; }
+#mgopen .bird img.on { visibility: visible; }
+#mgopen .post { position: absolute; left: 0; top: 0; width: min(54px, 11vw); will-change: transform; }
+
+/* ---- the comparison bar, only while the look is being chosen ---- */
+
+/* ---- one set of type sizes, used everywhere: Quicksand names things, DM Sans does the rest ---- */
+:root { --type-display: clamp(34px, 3.8vw, 56px); --type-title: 28px; --type-section: 20px; --type-body: 15px; --type-small: 13px; --type-micro: 12px; }
+.sec h2 { font: 700 var(--type-section)/1.2 var(--display); letter-spacing: -.01em; }
+.sec span { font: 400 var(--type-small) var(--sans); }
+.views a { font: 700 var(--type-section)/1 var(--display); letter-spacing: -.01em; }
+.btn { font: 600 var(--type-small) var(--sans); }
+.banner b { font: 600 var(--type-body) var(--sans); }
+.banner p { font-size: var(--type-small); }
+.sethead h2 { font: 700 var(--type-title)/1.15 var(--display); letter-spacing: -.015em; }
+.setside h1 { font: 700 var(--type-title)/1.15 var(--display); letter-spacing: -.015em; }
+.hero h1.mid { font: 700 var(--type-title)/1.15 var(--display); letter-spacing: -.015em; }
+.sgh h3 { font: 700 var(--type-section)/1.2 var(--display); letter-spacing: -.01em; }
+
+/* ---- the library: tiles come sooner, notices stay out of the way ---- */
+.wrap:has(.lhero) { display: flex; flex-direction: column; }
+.wrap:has(.lhero) > .lhero { order: -1; }
+.wrap:has(.lhero) > * { min-width: 0; }
+.wrap:has(.lhero) .banner { margin: 0 0 8px; padding: 8px 10px 8px 16px; border-radius: 14px; gap: 12px; flex-wrap: nowrap; }
+.wrap:has(.lhero) .banner > div { display: flex; align-items: baseline; gap: 10px; min-width: 0 !important; }
+.wrap:has(.lhero) .banner b { white-space: nowrap; }
+.wrap:has(.lhero) .banner p { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wrap:has(.lhero) .banner .btn { flex: none; height: 32px; padding: 0 12px; }
+@media (max-width: 760px) { .wrap:has(.lhero) .banner { flex-wrap: wrap; } .wrap:has(.lhero) .banner > div { display: block; } .wrap:has(.lhero) .banner p { white-space: normal; } }
+#wallctl .ctrl1 { border-bottom: 0; margin-bottom: 0; }
+.secblock > .sec { margin: 36px 0 14px !important; padding: 0 !important; }  /* the old sticky strip's padding pushed the heading away from the tiles on wide screens */
+.featblock { margin: 6px 0 4px; }
+.featgrid { gap: 14px; }
+.featgrid > .tile:first-child .label .s { -webkit-line-clamp: 2; }
+.featgrid > .tile:first-child { --tfs: 24px; }
+
+/* tiles: only the length rests on the picture; the rest comes with the pointer */
+.sq .src { opacity: 0; transition: opacity .15s; }
+.tile:hover .sq .src, .tile:focus-within .sq .src, body.selecting .sq .src { opacity: 1; }
+.sq .dur { font: 500 var(--type-micro) var(--sans); padding: 2px 8px; background: rgb(var(--c-deep) / .62); }
+.tile > .sq img { transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+.tile:hover > .sq img { transform: scale(1.025); }
+.tile.sel, .tile.kfocus, .tile:has(.tick input:checked) { outline-offset: 2px; }
+:root[data-theme] .tile.attn { border: 0; background: var(--tb); box-shadow: inset 0 0 0 1px rgba(255,138,143,.45); }
+:root[data-theme] .tile.attn .sq { background: none; font-size: var(--type-small); }
+.tile.attn .sq b { font: 600 var(--type-body) var(--sans); }
+
+/* empty pages: the bird's moment */
+.empty img.ebird { display: block; width: 150px; margin: 0 auto 8px; }
+.empty > svg { display: none; }
+.empty b { font: 700 var(--type-section) var(--display); }
+.empty p { font-size: var(--type-body); }
+:root[data-theme] .fchip { color: var(--fg); }
+:root[data-theme] .fchip.on { background: rgba(247,243,232,.16); color: var(--fg); }
+.wrap:has(.lhero) .banner:last-of-type { margin-bottom: 14px; }
+/* nearly solid: at .56 and .76 the picture behind changed the panel's colour, so light posts looked much paler than dark ones */
+html[data-labels="soft"]:root[data-size] .label { background: rgb(var(--c-deep) / .88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+
+/* ---- post view: the whole picture beside a calm reading column ---- */
+:root[data-theme] .cardm.pagemode { grid-template-columns: minmax(280px, 32%) minmax(0, 1fr); column-gap: clamp(28px, 4vw, 64px); }
+:root[data-theme] .cardm.pagemode .vid { padding: 6px 0 12px; gap: 10px; }
+.cardm.pagemode .vid .stage { flex: 1 1 auto; min-height: 0; background: rgb(var(--c-page)); border-radius: 18px; overflow: hidden; }
+.cardm.pagemode .stage video, .cardm.pagemode .stage .pvslide, .cardm.pagemode .stage img { width: 100%; height: 100%; object-fit: contain !important; border-radius: 0; background: none; }
+:root[data-theme] .cardm.pagemode .vid .capb.pvcapb { background: none; padding: 0; box-shadow: none; }
+.cardm.pagemode .vid .capslot { flex: none; max-height: 34vh; height: auto; overflow: auto; scrollbar-width: none; }
+.cardm.pagemode .vid .cap { font-size: var(--type-micro); padding: 0 2px; }
+.capb.pvcapb .cap2, .capb.pvcapb.short .cap2 { font: 400 var(--type-small)/1.5 var(--sans); }
+.pvwhere { font-size: var(--type-micro); }
+
+:root[data-theme] .cardm.pagemode .pscroll { padding: 6px 0 120px; }
+:root[data-theme] .cardm.pagemode .pscroll > * { max-width: 680px; }
+:root[data-theme] .pvhead .it-h { font: 700 clamp(26px, 2.6vw, 36px)/1.14 var(--display); letter-spacing: -.018em; margin: 10px 0 0; }
+:root[data-theme] .it-lead.pvlead { margin: 18px 0 20px; }
+:root[data-theme] .pvlead .it-sum { font: 400 16.5px/1.6 var(--sans); color: rgba(247,243,232,.94); }
+:root[data-theme] .pvlabel { font: 600 var(--type-micro) var(--sans); letter-spacing: 0; text-transform: none; color: var(--fg-3); margin-bottom: 6px; }
+:root[data-theme] .pvhead .pvcounts { font-size: var(--type-small); }
+
+/* the one main action is the site's cream button; the rest sit back */
+:root[data-theme] .pvask { background: #f7f3e8; color: #0b0b22; border-radius: 12px; font: 600 var(--type-small) var(--sans); }
+:root[data-theme] .pvask:hover { background: #fff; color: #0b0b22; }
+:root[data-theme] .pvask .askmark { color: #e0006c; }
+:root[data-theme] .pvprimary { border-radius: 12px; }
+:root[data-theme] .pvactions { margin-bottom: 14px; gap: 8px; }
+
+/* the tabs: plain words on the page, one gold line under the one that is open */
+:root[data-theme] .cardm.pagemode .tabs.pvtabs { width: auto; max-width: 100%; margin: 26px 0 22px; padding: 0; gap: 22px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; }
+:root[data-theme] .tabs.pvtabs a { font: 600 var(--type-body) var(--sans); padding: 10px 0; white-space: nowrap; border: 0; box-shadow: none; }
+:root[data-theme] .tabs.pvtabs a.on { color: var(--fg); }
+:root[data-theme] .tabs.pvtabs > .tline { background: var(--pink); }  /* pink on the reading page; gold under the library and Nest tabs */
+:root[data-theme] .tabs.pvtabs a.off { color: var(--fg-3); opacity: .55; cursor: default; }
+:root[data-theme] .tabs.pvtabs small { background: none; padding: 0 0 0 6px; color: var(--fg-3); }
+
+/* sections in a tab: small names, then what they name */
+:root[data-theme] .cardm.pagemode .pane h4 { font: 700 15px var(--display); letter-spacing: 0; text-transform: none; color: var(--fg); margin: 26px 0 8px; }
+:root[data-theme] .cardm.pagemode .pane h4:first-child { margin-top: 0; }
+:root[data-theme] .it-sum.sm { font: 400 14.5px/1.55 var(--sans); }
+:root[data-theme] .kp { border-radius: 10px; font-size: 14.5px; }
+:root[data-theme] .kp:hover { background: var(--chip); }
+
+/* the crumbs stay on one line; while reading the nav leaves and the post's own bar moves up */
+:root[data-theme] .crumbbar .crumbs { flex-wrap: nowrap; white-space: nowrap; padding: 8px 4px; min-width: 0; font-size: var(--type-small); color: var(--fg-3); }
+.crumbbar .crumbs > span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+html.navhid .postpage { --top-h: 0px; }
+.crumbbar { transition: top .32s cubic-bezier(.2,.8,.2,1); }
+html.navhid .crumbbar { top: 6px; }
+@media (max-width: 760px) { .cardm.pagemode .vid .capslot { max-height: none; } .crumbbar .crumbs { display: none !important; } }
+/* scrolled, the post's bar gets the same dark fade as the nav, so text passing under it never tangles with it */
+.crumbbar::before { content: ""; position: absolute; left: calc(-1 * var(--pad)); right: calc(-1 * var(--pad)); top: -16px; bottom: -30px; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .25s; background: linear-gradient(to bottom, rgba(4,4,20,.96) 0, rgba(4,4,20,.86) 55%, rgb(var(--c-page) / 0) 100%); }
+#top.scrolled ~ #view .crumbbar::before { opacity: 1; }
+#top ~ #view .crumbbar { isolation: isolate; }
+
+/* ---- Settings: one surface per group, the same type scale, the accent only for what is on ---- */
+:root[data-theme] .setside h1 { margin-bottom: 14px; }
+:root[data-theme] .sethead p { font-size: var(--type-body); color: var(--fg-2); }
+:root[data-theme] .modecard { background: var(--card); border: 0; box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; }
+:root[data-theme] .modecard:hover { background: var(--chip); border: 0; }
+:root[data-theme] .modecard.on { background: rgba(247,243,232,.07); border: 0; box-shadow: inset 0 0 0 1.5px rgba(247,243,232,.7); }
+
+/* ---- Help: a calm guide, one colour, reading sizes ---- */
+:root[data-theme] .helppage { max-width: 840px; margin-inline: auto; }
+:root[data-theme] .helppage .hero h1 { font: 700 var(--type-display)/1.05 var(--display); letter-spacing: -.02em; }
+:root[data-theme] .helppage .htopic h3 { font: 700 var(--type-title)/1.15 var(--display); letter-spacing: -.015em; }
+:root[data-theme] .helppage h4 { font: 600 var(--type-micro) var(--sans); letter-spacing: .08em; color: var(--fg-3); }
+:root[data-theme] .hsearch { background: var(--tb); box-shadow: var(--tb-edge); }
+:root[data-theme] .hchips a { background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--fg-2); }
+:root[data-theme] .hchips a:hover { background: var(--chip); color: var(--fg); }
+:root[data-theme] .hguide, :root[data-theme] .hdrop .hguide { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; }
+:root[data-theme] .hguide:hover, :root[data-theme] .hdrop .hguide:hover { background: var(--chip); }
+:root[data-theme] .hguide[open] { background: var(--card); box-shadow: inset 0 0 0 1px rgba(247,243,232,.32); }
+:root[data-theme] .gic { background: none; color: var(--fg-2); width: 26px; }
+:root[data-theme] .hguide > summary { grid-template-columns: 26px minmax(0, 1fr) auto; }
+:root[data-theme] .hguide em { background: none; padding: 0; }
+:root[data-theme] .hfaq > summary { font-size: var(--type-body); }
+:root[data-theme] .hdrop .hcard { background: rgb(var(--c-pop)); }
+
+/* ---- Ask: suggestions are plain lines, the mark is the gold star, nothing spins ---- */
+:root[data-theme] .askstart { background: none; border: 0; box-shadow: none; color: var(--fg-2); }
+:root[data-theme] .askstart:hover { color: var(--pink); }
+:root[data-theme] .askstar { animation: none; width: 34px; height: 34px; }
+:root[data-theme] .askstar path { fill: var(--pink); }
+:root[data-theme] .askhello b { font: 700 var(--type-title)/1.15 var(--display); letter-spacing: -.015em; }
+
+/* ---- Piles and Boards: the pictures carry the colour; a pile's or board's own colour is a dot or a deep tint ---- */
+:root[data-theme] .pile .stack { margin-bottom: 4px; }
+:root[data-theme] .stack > div { border-color: rgb(var(--c-deep)); }
+/* a pile's page and a board's page: the same title size as everywhere, no coloured glow */
+:root[data-theme] .hero h1.mid em { color: inherit; }
+:root[data-theme] .phead { border-bottom-color: var(--line); }
+:root[data-theme] .bhead h1 { font: 700 var(--type-display)/1.05 var(--display); letter-spacing: -.02em; }
+:root[data-theme] .bhead .bback { font: 600 var(--type-small) var(--sans); border: 0; color: var(--fg-2); }
+:root[data-theme] .bhead .bback .ico { width: 15px; height: 15px; }
+:root[data-theme] .bside section { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; }
+:root[data-theme] .bside h2 { font: 600 var(--type-micro) var(--sans); letter-spacing: .08em; }
+:root[data-theme] .bstats div { background: none; padding: 4px 0; }
+:root[data-theme] .bstats b { font-weight: 700; }
+
+/* ---- the Nest: a status page, not a poster: a plain headline, the mood is one dot; only real problems are coloured ---- */
+:root[data-theme] .nhead { background: none; color: var(--fg); padding: 0; border-radius: 0; animation: none; overflow: visible; --c: #4fe0a4; }
+:root[data-theme] .nhead.needs { --c: #ff8a8f; } :root[data-theme] .nhead.working { --c: var(--pink); } :root[data-theme] .nhead.waiting { --c: #f7f3e8; } :root[data-theme] .nhead.paused { --c: rgba(247,243,232,.5); }
+:root[data-theme] .nestpage .nhead { padding: 18px 4px 0; }
+:root[data-theme] .nestpage .nhead h2 { font: 700 var(--type-display)/1.05 var(--display); letter-spacing: -.02em; }
+:root[data-theme] .nhead h2 { font-weight: 700; letter-spacing: -.015em; }
+:root[data-theme] .nh-k { display: none; }
+:root[data-theme] .nhead p { color: var(--fg-2); opacity: 1; font-size: var(--type-body); margin-bottom: 8px; }
+:root[data-theme] .nh-line { display: inline-flex; align-items: center; gap: 8px; padding: 0; background: none; color: var(--fg); font: 600 var(--type-small) var(--sans); }
+:root[data-theme] .nh-line::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+:root[data-theme] .nh-ico { display: none; }
+:root[data-theme] .nestart { color: var(--fg-2); width: 100px; }
+:root[data-theme] .ntabs a { font: 700 var(--type-section)/1 var(--display); letter-spacing: -.01em; }
+:root[data-theme] .ntabs a.on { border-color: #ffd27a; }
+:root[data-theme] .ntabs .cnt { background: none; color: #ff8a8f; box-shadow: inset 0 0 0 1px #ff8a8f; }
+:root[data-theme] .nsec { margin-top: 30px; }
+:root[data-theme] .nsec h3 { font: 700 var(--type-section)/1.2 var(--display); }
+:root[data-theme] .nsec h3 .ico { display: none; }
+:root[data-theme] .nsec.need .cnt { background: none; color: #ff8a8f; box-shadow: inset 0 0 0 1px #ff8a8f; }
+:root[data-theme] .tgl { background: var(--tb); box-shadow: var(--tb-edge); }
+:root[data-theme] .tgl:hover { background: var(--surf-2); }
+:root[data-theme] .ntile { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; display: block; }
+:root[data-theme] .ntile .ico { display: none; }
+:root[data-theme] .ntile b { display: block; font: 700 var(--type-title)/1.1 var(--display); margin-bottom: 4px; }
+:root[data-theme] .ntile span { font-size: var(--type-small); }
+:root[data-theme] .lane, :root[data-theme] .nestpage .panel { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; }
+:root[data-theme] .lbar i { background: var(--pink); }
+:root[data-theme] .fs .ico { background: var(--chip); color: var(--fg-3); }
+:root[data-theme] :is(.fs.d, .fs.r) .ico { background: var(--pink); color: #fff; }
+:root[data-theme] .fs.r .ico { animation: none; }
+:root[data-theme] .wchips span { background: var(--chip); color: var(--fg-2); }
+:root[data-theme] .wchips .ico { color: var(--fg-3); }
+
+/* ---- the top: + · Library, Archive, Trash · search, together in the middle, in the same place on every page ---- */
+@media (min-width: 900px) {
+  :root[data-theme] .top .bar { display: grid; grid-template-columns: 1fr auto auto auto 1fr; gap: 8px; }
+  :root[data-theme] .bar > .logo { grid-column: 1; justify-self: start; }
+  :root[data-theme] .bar > .addp { grid-column: 2; grid-row: 1; width: 44px; height: 44px; padding: 0; border-radius: 50%; justify-content: center; }
+  :root[data-theme] .bar > .addp .lbl { display: none; }
+  :root[data-theme] .top .bar > .shelfsw { grid-column: 3; grid-row: 1; position: relative; left: auto; top: auto; transform: none; background: var(--tb); box-shadow: var(--tb-edge); }
+  :root[data-theme] .top .bar > .sslot { grid-column: 4; grid-row: 1; flex: none; width: 44px; min-width: 44px; max-width: 44px; margin: 0; }
+  :root[data-theme] .bar .right { grid-column: 5; grid-row: 1; justify-self: end; margin: 0; }
+  :root[data-theme] .sslot .search { position: relative; width: 44px; height: 44px; padding: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer; overflow: hidden; }
+  :root[data-theme] .sslot .search:hover { background: var(--surf-2); }
+  :root[data-theme] .sslot .search > span { font-size: 0; color: var(--fg); display: grid; place-items: center; }
+  :root[data-theme] .sslot .search > span .ico { width: 19px; height: 19px; }
+  :root[data-theme] .sslot .search input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  :root[data-theme] .sslot .search kbd, :root[data-theme] .sslot .search .sclear { display: none; }
+}
+
+/* the library's tabs, when they float: the same pill as Library, Archive, Trash, with the same sliding highlight */
+html.lhslim #wallctl .ctrl1 { padding: 2px; gap: 2px; height: 44px; align-items: center; background: var(--tb); box-shadow: var(--tb-edge), 0 14px 30px -14px #000; }
+html.lhslim #wallctl .views { gap: 0; border: 0; }
+html.lhslim #wallctl .views a { position: relative; z-index: 1; height: 40px; padding: 0 18px; display: inline-flex; align-items: center; font: 700 15px var(--sans); letter-spacing: 0; color: var(--fg-2); border: 0; }
+html.lhslim #wallctl .views a.on { color: var(--fg); }
+html.lhslim #wallctl .views > .vline { top: 0; bottom: 0; height: auto; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1.5px rgba(247,243,232,.16); }
+html.lhslim #wallctl .ctrl1 :is(.ibtn, .tbtn, .tbtn.ibtn, .fbtn, button, summary) { background: none; box-shadow: none; border: 0; }
+html.lhslim #wallctl .ctrl1 :is(.ibtn, .tbtn, .tbtn.ibtn, .fbtn, button, summary):hover { background: var(--chip); }
+
+/* ---- Featured follows the tile size ---- */
+html.moving .label { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
+/* ---- our tooltip ---- */
+#mgtip { position: fixed; z-index: 9999; max-width: 260px; padding: 6px 11px; border-radius: 10px; background: rgb(var(--c-pop) / var(--g-a)); color: var(--fg, #f7f3e8); box-shadow: var(--g-edge), 0 12px 26px -10px #000; font: 500 12.5px/1.35 var(--sans); pointer-events: none; opacity: 0; transform: translateY(2px); transition: opacity .12s, transform .12s; }
+#mgtip.on { opacity: 1; transform: none; }
+
+/* ---- post view: one button style, a frame the shape of the media, the source named, mentions as coloured words ---- */
+:root[data-theme] :is(.pgback, .pgnav a, .pgnav button, .pacts > a, .pacts > button, .pacts > details > summary, .pvact) { height: 38px; min-width: 38px; border: 0; border-radius: 999px; background: var(--tb); box-shadow: var(--tb-edge); color: var(--fg); font: 600 var(--type-small) var(--sans); display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+:root[data-theme] :is(.pgback, .pgnav a, .pgnav button, .pacts > a, .pacts > button, .pacts > details > summary, .pvact):hover { background: var(--hov); color: var(--fg); }
+:root[data-theme] .pgback { padding: 0 14px 0 10px; }
+.cardm.pagemode { --mh: calc(100vh - 230px); }
+:root[data-theme] .cardm.pagemode .vid .stage { flex: none; align-self: center; width: min(100%, calc(var(--mh) * var(--mar, .5625))); aspect-ratio: var(--mar, .5625); height: auto; max-height: var(--mh); }
+.cardm.pagemode .stage .pvbar { padding-bottom: 14px; }
+.cardm.pagemode .vid .capslot { max-height: none; overflow: visible; }
+:root[data-theme] .it-type { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pvsrc { display: inline-flex; align-items: center; gap: 6px; font: 600 var(--type-small) var(--sans); color: var(--fg); }
+.pvsrc svg { width: 15px; height: 15px; flex: none; }
+:root[data-theme] .chips.pvment { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 14px 0 0; }
+.pvmentl { font: 500 var(--type-micro) var(--sans); color: var(--fg-3); }
+:root[data-theme] .chips.pvment > a { --k: #f7f3e8; padding: 0; height: auto; border: 0; background: none; box-shadow: none; color: var(--k); font: 500 var(--type-small) var(--sans); }
+:root[data-theme] .chips.pvment > a:hover { background: none; text-decoration: underline; text-underline-offset: 3px; }
+:root[data-theme] .chips.pvment > a[data-kind="tools"] { --k: #ffd27a; }
+:root[data-theme] .chips.pvment > a[data-kind="people"] { --k: #ffb1c8; }
+:root[data-theme] .chips.pvment > a[data-kind="links"] { --k: #9ccbff; }
+:root[data-theme] .chips.pvment > a:is([data-kind="companies"], [data-kind="brands"], [data-kind="orgs"]) { --k: #a9e6c3; }
+:root[data-theme] .chips.pvment > .pvmorebtn { padding: 0; background: none; box-shadow: none; border: 0; color: var(--fg-3); font: 500 var(--type-small) var(--sans); }
+.pvnoteblock .pvnote { margin: 0 0 8px; }
+/* the whole caption opens where it is, under the media, in the page's own look */
+.cardm.pagemode .vid .capslot { height: auto !important; position: static; }
+:root[data-theme] .cardm.pagemode .vid .capb.pvcapb.pvopen { position: static; max-height: 40vh; overflow: auto; scrollbar-width: thin; background: none; box-shadow: none; padding: 0; border-radius: 0; }
+/* the player's controls always fit inside a narrow frame */
+.cardm.pagemode .pvbar { gap: 2px; padding-inline: 8px; }
+.cardm.pagemode .pvb { width: 32px; height: 32px; }
+.cardm.pagemode .pvi { width: 18px; height: 18px; }
+.cardm.pagemode .pvseek { min-width: 16px; }
+
+/* ---- one glass for every pill in the top: the + button, Library/Archive/Trash, the floating tabs, the search icon, the post's buttons ---- */
+:root[data-theme] .top .bar > .addp.btn { background: var(--navglass); box-shadow: var(--navring); color: var(--fg); width: 44px; height: 44px; min-width: 44px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; font: 300 24px/1 var(--sans); }
+:root[data-theme] .top .bar > .shelfsw { background: var(--navglass); box-shadow: var(--navring); }
+:root[data-theme] .top .bar > .shelfsw > .slider, html.lhslim #wallctl .views > .vline { background: var(--navhi); box-shadow: var(--navhiring); }
+:root[data-theme] .sslot .search { background: var(--navglass); box-shadow: var(--navring); }
+/* on the library the nav's search icon waits until the big search box has scrolled away */
+html:has(.lhero):not(.lhslim) .sslot { display: none; }
+html.lhslim #wallctl .ctrl1 { display: inline-flex; align-items: center; width: fit-content; max-width: 100%; margin: 0 auto; padding: 2px; gap: 2px; height: 44px; min-height: 0; border-radius: 999px; background: var(--navglass); box-shadow: var(--navring), 0 14px 30px -14px #000; }
+html.lhslim #wallctl .ctrl1 > *, html.lhslim #wallctl .ctrl1 .tools, html.lhslim #wallctl .ctrl1 .sizes { margin: 0; padding: 0; gap: 0; }
+html.lhslim #wallctl .ctrl1 .vgrp, html.lhslim #wallctl .ctrl1 .tools { display: flex; align-items: center; }
+html.lhslim #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button) { width: 40px; height: 40px; min-width: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: none; box-shadow: none; border: 0; }
+html.lhslim #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button):hover { background: var(--hov); }
+html.lhslim #wallctl .views a { height: 40px; padding: 0 20px; }
+
+/* the post's own buttons: one pill, like the top nav */
+:root[data-theme] .crumbbar .pacts { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 999px; background: var(--navglass); box-shadow: var(--navring); margin-left: auto; }
+:root[data-theme] .crumbbar .pacts > :is(a, button), :root[data-theme] .crumbbar .pacts > details > summary { background: none; box-shadow: none; width: 40px; height: 40px; min-width: 40px; padding: 0; border-radius: 50%; }
+:root[data-theme] .crumbbar .pacts > :is(a, button):hover, :root[data-theme] .crumbbar .pacts > details > summary:hover { background: var(--hov); }
+:root[data-theme] .crumbbar .pacts .pgpos { padding: 0 6px; font: 600 var(--type-small) var(--sans); color: var(--fg-2); }
+:root[data-theme] .pgback { background: var(--navglass); box-shadow: var(--navring); }
+
+/* the player: room on every side so the hover circles are never cut, and the play triangle sits true */
+.cardm.pagemode .stage .pvbar { height: auto; min-height: 0; padding: 36px 16px 20px; }
+:root[data-theme] .pvbig svg { margin-left: -5px; }  /* a negative margin moves the box half as far */
+
+/* Featured: the extra tiles are there for small tiles; medium and large show seven, and the big one never fills half the row */
+.featgrid > .tile:nth-child(n+7):not(:has(.pastb)) { display: none; }
+@media (min-width: 1101px) {
+  html[data-size="s"] .featgrid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  html[data-size="s"] .featgrid > .tile:first-child { grid-column: span 2; grid-row: span 2; }
+  html[data-size="l"] .featgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  html[data-size="l"] .featgrid > .tile:first-child { grid-column: span 2; grid-row: span 1; aspect-ratio: auto; }
+}
+@media (min-width: 1101px) { html[data-size="s"] .featgrid > .tile:nth-child(n+7):not(:has(.pastb)) { display: flex; } }
+
+/* the + and the search icon: the same drawn icon, the same size, and Library/Archive/Trash's hover (the icon brightens) */
+:root[data-theme] .top .bar > .addp.btn { font-size: 0; color: var(--fg-3); transition: color .25s; }
+:root[data-theme] .top .bar > .addp.btn .ico { width: 20px; height: 20px; }
+:root[data-theme] .top .bar > .addp.btn:hover { color: var(--fg); filter: none; background: var(--navglass); }
+:root[data-theme] .top .sslot .search { display: grid; place-items: center; padding: 0 !important; gap: 0; border: 0; color: var(--fg-3); transition: color .25s; }
+:root[data-theme] .sslot .search:hover { color: var(--fg); filter: none; }
+:root[data-theme] .sslot .search > span { position: static; margin: 0; padding: 0; display: grid; place-items: center; width: 100%; height: 100%; color: inherit; }
+:root[data-theme] .sslot .search > span .ico { width: 20px; height: 20px; margin: 0; }
+/* the search box that opens: the same glass, no coloured focus ring */
+:root[data-theme] .sover .sbig, :root[data-theme] .sover .sbig:focus-within, :root[data-theme] .sover.morph .sbig { background: var(--navglass); box-shadow: var(--navring), 0 24px 60px -24px #000; outline: 0; }
+:root[data-theme] .sover .spanel2 { background: var(--navglass); background-color: rgba(19,19,22,.97); box-shadow: var(--navring), 0 24px 60px -24px #000; border: 0; }
+:root[data-theme] .sover input:focus, :root[data-theme] .sover input:focus-visible { outline: 0; box-shadow: none; }
+:root[data-theme] .sover .sbig .smag, :root[data-theme] .sover .sbig > span:first-child { color: var(--fg-3); }
+
+/* the bar that appears when you select posts: the same glass as the other pills, no coloured ring around it */
+:root[data-theme] .selbar { background: var(--navglass); box-shadow: var(--navring), 0 24px 50px -16px #000; border: 0; }
+:root[data-theme] .selbar .bn { color: var(--fg-2); }
+:root[data-theme] .selbar .bn b { color: var(--fg); font-weight: 700; }
+:root[data-theme] .selbar button { color: var(--fg-2); }
+:root[data-theme] .selbar button:hover:not(:disabled) { background: var(--hov); color: var(--fg); }
+:root[data-theme] .selbar button.bad { color: #ff8a8f; }
+:root[data-theme] .selbar .bdone { background: #f7f3e8; color: #0b0b22; }
+:root[data-theme] .selbar .bdone:hover { background: #fff !important; }
+
+/* pink for Ask wherever it shows: the stars, the dock, the Ask page's heading mark */
+:root[data-theme] .askdock .askmark, :root[data-theme] .askhello .askmark, :root[data-theme] .asktitle .askmark, :root[data-theme] .askhead .askmark { background: none; color: var(--pink); -webkit-text-fill-color: var(--pink); }
+:root[data-theme] .pvask .askmark { -webkit-text-fill-color: #e0006c; }
+
+/* selected tiles and the ticks: pink, so the library has both accents (gold: the heading and tabs; pink: what you pick) */
+:root[data-theme] .tile.sel, :root[data-theme] .tile.kfocus { outline-color: var(--pink); }
+:root[data-theme] .tile .tick input:checked + * , :root[data-theme] .tick input:checked ~ * { background-color: var(--pink); border-color: var(--pink); }
+
+/* ======== round 3 ======== */
+
+/* ---- the Nest: even padding in the sheet, a smaller title, switches as a flat grid, quiet icons, a calmer footer ---- */
+:root[data-theme] .nestsheet { background: var(--glass-sheet); box-shadow: var(--g-edge), 0 30px 70px -20px #000; }
+:root[data-theme] .nestsheet .nsin { padding: 0; }
+:root[data-theme] .nestsheet .nest2 { padding: 30px 34px 26px; }
+:root[data-theme] .nestsheet .nhead { padding: 0; }
+:root[data-theme] .nestsheet .nhead h2 { font-size: 30px; }
+:root[data-theme] .nestsheet .nsec h3 { margin: 0 0 12px; }
+:root[data-theme] .nestsheet .nsec { margin-top: 28px; }
+:root[data-theme] .nestsheet .nrow { padding: 8px 0; }
+:root[data-theme] .nestsheet .nrow:hover { background: none; }
+:root[data-theme] .tgrow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 0; border-top: 1px solid var(--line); }
+:root[data-theme] .nestpage .tgrow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+:root[data-theme] .tgrow > form { border-bottom: 1px solid var(--line); }
+:root[data-theme] .nestsheet .tgrow > form:nth-child(odd) { border-right: 1px solid var(--line); }
+:root[data-theme] .nestpage .tgrow > form:not(:nth-child(4n)) { border-right: 1px solid var(--line); }
+:root[data-theme] .tgl { width: 100%; height: auto; min-height: 64px; padding: 12px 16px 12px 0; justify-content: space-between; gap: 12px; border-radius: 0; background: none; box-shadow: none; }
+:root[data-theme] .nestsheet .tgrow > form:nth-child(even) .tgl, :root[data-theme] .nestpage .tgrow > form:not(:nth-child(4n+1)) .tgl { padding-left: 16px; }
+:root[data-theme] .tgl:hover { background: var(--chip); }
+:root[data-theme] .tgl .tgt { min-width: 0; text-align: left; }
+:root[data-theme] .tgl .tg { margin: 0; }
+:root[data-theme] .ntile { padding: 16px; }
+:root[data-theme] .ntile .ico { display: block; grid-row: auto; width: 18px; height: 18px; padding: 0; margin: 0 0 14px; background: none; color: var(--fg-3); border-radius: 0; }
+:root[data-theme] .nfoot { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 30px; }
+:root[data-theme] .nfoot a { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px; border-radius: 999px; background: var(--navglass); box-shadow: var(--navring); color: var(--fg-2); font: 600 var(--type-small) var(--sans); }
+:root[data-theme] .nfoot a:hover { color: var(--fg); background: var(--navglass), var(--surf-2); }
+:root[data-theme] .nfoot .ico { width: 15px; height: 15px; }
+:root[data-theme] .nfoot a.nopen { background: #f7f3e8; color: #0b0b22; box-shadow: none; }
+:root[data-theme] .nfoot a.nflat { background: none; box-shadow: none; padding: 0 4px; margin-left: auto; color: var(--fg-3); }
+:root[data-theme] .nfoot a.nflat:hover { color: var(--fg); background: none; }
+:root[data-theme] .th.logo, :root[data-theme] .lth.logo { display: grid; place-items: center; background: var(--chip); color: #f7f3e8; }
+:root[data-theme] .th.logo .slogo, :root[data-theme] .lth.logo .slogo { width: 52%; height: 52%; }
+
+/* ---- Ask: one surface for the box, lifted off the sheet; taller; new chat with the bird ---- */
+:root[data-theme] .askp .askform, :root[data-theme] .askp .askform:focus-within, :root[data-theme] .askfull .askform { background: linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.025)), rgb(var(--c-field)); box-shadow: var(--navring), 0 16px 36px -16px #000; border: 0; border-radius: 26px; }
+:root[data-theme] .askp .askform textarea, :root[data-theme] .askform textarea { background: none !important; box-shadow: none !important; border: 0; min-height: 88px; }
+:root[data-theme] .askhello { position: relative; }
+.askart { position: relative; width: 150px; height: 120px; margin-bottom: 2px; }
+.ask-stack { position: absolute; left: 50%; bottom: 0; width: 100px; transform: translateX(-50%); }
+.ask-bird { position: absolute; left: 50%; bottom: 58px; width: 104px; transform: translateX(-46%); }
+
+/* the full Ask page: the picker bar belongs to the column; the frame has room underneath */
+:root[data-theme] .askfullhead { background: none; border: 0; box-shadow: none; }
+:root[data-theme] .askpage { height: calc(100dvh - var(--top-h, 64px) - 56px); margin-bottom: 32px; }
+:root[data-theme] .askplace { color: var(--fg-3); }
+
+/* our own picker, in place of the browser's select */
+.fsel-src { display: none !important; }
+.fsel { position: relative; display: inline-flex; max-width: 100%; }
+.fsel-btn { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; width: 100%; height: 40px; padding: 0 12px 0 14px; border-radius: 12px; background: var(--navglass); box-shadow: var(--navring); color: var(--fg); font: 500 var(--type-small) var(--sans); text-align: left; transition: background .2s; }
+.fsel-btn:hover, .fsel.open .fsel-btn { background: var(--navglass), var(--hov); }
+.fsel-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fsel-btn svg { flex: none; width: 15px; height: 15px; color: var(--fg-3); transition: transform .2s; }
+.fsel.open .fsel-btn svg { transform: rotate(180deg); }
+.fsel-pop { position: fixed; z-index: 9990; min-width: 200px; max-height: min(340px, 60vh); overflow: auto; padding: 6px; border-radius: 16px; background: rgb(var(--c-pop) / var(--g-a)); box-shadow: var(--g-edge), 0 24px 60px -16px #000; scrollbar-width: thin; opacity: 0; transform: translateY(-4px) scale(.98); transform-origin: top; transition: opacity .14s, transform .14s; }
+.fsel-pop.on { opacity: 1; transform: none; }
+.fsel-pop .fg { padding: 10px 10px 4px; font: 600 var(--type-micro) var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); }
+.fsel-pop button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 36px; padding: 0 10px; border-radius: 10px; color: var(--fg-2); font: 500 var(--type-small) var(--sans); text-align: left; }
+.fsel-pop button:hover, .fsel-pop button.kb { background: var(--hov); color: var(--fg); }
+.fsel-pop button[aria-selected="true"] { color: var(--fg); }
+.fsel-pop button svg { width: 15px; height: 15px; color: var(--pink); flex: none; }
+.askctlcol .fsel { display: flex; width: 100%; }
+.actl-form label { display: grid; gap: 6px; }
+
+/* ---- Help: a header with no fill, colour kept to the icon and the guides, buttons beside the close button ---- */
+:root[data-theme] .hdrop .hcard { background: none; color: var(--fg); padding: 22px 20px 18px 24px; border-radius: 0; border-bottom: 1px solid var(--line); align-items: center; gap: 16px; }
+:root[data-theme] .hcard .hic { width: 46px; height: 46px; background: color-mix(in srgb, var(--c) 24%, transparent); color: var(--c); box-shadow: none; border-radius: 14px; }
+:root[data-theme] .hcard .htx { flex: 1; min-width: 0; }
+:root[data-theme] .hdrop .hcard small { color: var(--c); }
+:root[data-theme] .hdrop .hcard p { color: var(--fg-2); padding-right: 0; }
+:root[data-theme] .hdrop .hcard b { font: 700 24px/1.15 var(--display); letter-spacing: -.015em; }
+.hacts { display: flex; align-items: center; gap: 6px; flex: none; align-self: flex-start; }
+.hbtn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; min-width: 36px; padding: 0 12px; border-radius: 999px; background: var(--navglass); box-shadow: var(--navring); color: var(--fg-2); font: 600 var(--type-small) var(--sans); white-space: nowrap; transition: color .2s; }
+.hbtn:hover { color: var(--fg); }
+.hbtn svg { width: 16px; height: 16px; }
+.hdrop .hbtn { padding: 0; width: 36px; } .hdrop .hbtn .hl { display: none; }
+.hdrop .hclose { width: 36px; height: 36px; border-radius: 50%; background: var(--navglass); box-shadow: var(--navring); color: var(--fg-2); font-size: 20px; line-height: 1; }
+.hdrop .hclose:hover { color: var(--fg); }
+.hhero { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.hhero .hbtn { margin-top: 10px; }
+:root[data-theme] .hguide, :root[data-theme] .hdrop .hguide { background: color-mix(in srgb, var(--g) 8%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 22%, transparent); }
+:root[data-theme] .hguide:hover, :root[data-theme] .hdrop .hguide:hover { background: color-mix(in srgb, var(--g) 14%, var(--card)); }
+:root[data-theme] .hguide[open] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 55%, transparent); }
+:root[data-theme] .gic, :root[data-theme] .hdrop .gic { width: 40px; background: color-mix(in srgb, var(--g) 22%, transparent); color: var(--g); border-radius: 13px; }
+:root[data-theme] .hguide > summary { grid-template-columns: 40px minmax(0, 1fr) auto; }
+:root[data-theme] .hguide em { background: color-mix(in srgb, var(--g) 16%, transparent); color: var(--fg-2); padding: 3px 9px; }
+:root[data-theme] .hsteps li::before { background: var(--g); color: #0b0b22; }
+:root[data-theme] .helppage .htopic h3 .hic { background: color-mix(in srgb, var(--c) 22%, transparent); color: var(--c); width: 38px; height: 38px; }
+
+/* ---- Settings: a step away from indigo, towards a quiet graphite ---- */
+:root[data-theme="indigo"] body[data-page="settings"] { --card: #0f0f1e; --chip: rgba(255,255,255,.055); --line: rgba(255,255,255,.085); --bg: #0a0a16; --tb: rgba(15,15,28,.94); }
+html[data-theme="indigo"]:has(body[data-page="settings"]) #bgfade, html.quiet[data-theme="indigo"]:has(body[data-page="settings"]) #bgfade { background: linear-gradient(to bottom, #0e0e22 0, #090916 45vh, #06060f 100%); }
+:root[data-theme="indigo"] body[data-page="settings"] .srows { background: #0f0f1d; }
+
+/* ---- Piles: plain labels, a larger name, the new count beside it, one height for all ---- */
+:root[data-theme] .pile .lab { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: auto; min-height: 0; padding: 14px 2px 0; background: none; box-shadow: none; border-radius: 0; color: var(--fg); text-shadow: none; }
+:root[data-theme] .pile .lt { display: flex; align-items: center; gap: 10px; min-width: 0; }
+:root[data-theme] .pile .lt::before { content: ""; flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--pcx); }
+:root[data-theme] .pile .lab b { font: 700 20px/1.2 var(--display); letter-spacing: -.01em; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
+:root[data-theme] .pile .newb { flex: none; font: 700 12px/1 var(--sans); padding: 4px 9px; border-radius: 999px; background: var(--pink); color: #fff; font-style: normal; }
+:root[data-theme] .pile .lc, :root[data-theme] .pile .cn { flex: none; font: 500 14px var(--sans); color: var(--fg-2); background: none; padding: 0; font-style: normal; white-space: nowrap; }
+:root[data-theme] .pile .sub { margin: 4px 2px 0; height: 20px; line-height: 20px; font-size: 13.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* a board has its own world: the shader is the background, and the page's own flat fade steps aside */
+:root[data-theme] .bpage::before, :root[data-theme] .bpage::after { display: none; }
+:root[data-theme] .nfoot { gap: 6px; }
+:root[data-theme] .nfoot a { padding: 0 13px; }
+:root[data-theme] .nfoot a.nflat { padding: 0 2px 0 6px; margin-left: auto; }
+.fsel, .actl-form .fsel, .askplace .fsel { background: none !important; border: 0 !important; padding: 0 !important; box-shadow: none !important; }
+.askplace .fsel-btn { height: 36px; }
+.hero.hhero { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.hero.hhero > div { min-width: 0; }
+
+/* ======== round 4 ======== */
+
+/* ---- the Nest sheet: no scrolling, Today as one plain row ---- */
+:root[data-theme] .nestsheet { max-height: none; overflow: visible; }
+:root[data-theme] .nestsheet .nest2 { padding: 28px 32px 24px; }
+:root[data-theme] .nestsheet .nsec { margin-top: 22px; }
+:root[data-theme] .nestsheet .nlist { max-height: none; overflow: visible; }
+:root[data-theme] .ntiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
+:root[data-theme] .ntile { display: block; padding: 4px 0 4px 16px; background: none; box-shadow: none; border-radius: 0; border-left: 1px solid var(--line); }
+:root[data-theme] .ntile:first-child { padding-left: 0; border-left: 0; }
+:root[data-theme] .ntile .ico { display: none; }
+:root[data-theme] .ntile b { font: 700 26px/1.1 var(--display); margin: 0 0 4px; }
+:root[data-theme] .ntile span { font-size: var(--type-micro); color: var(--fg-3); }
+:root[data-theme] .th.logo, :root[data-theme] .lth.logo { background-color: transparent; color: #fff; }
+:root[data-theme] .th.logo .slogo, :root[data-theme] .lth.logo .slogo { filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+
+/* ---- the Help sheet's header: the full width, the labelled buttons under the words, close at the right ---- */
+.hcard { width: 100%; }
+.hcard > .htx { flex: 1 1 auto; min-width: 0; }
+.hcard > .hclose { flex: none; align-self: flex-start; }
+.hacts { flex: none; align-self: auto; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.hdrop .hbtn { width: auto; padding: 0 14px; } .hdrop .hbtn .hl { display: inline; }
+.hbtn { height: 34px; }
+:root[data-theme] .hdrop .hcard { padding: 22px 22px 20px 24px; align-items: flex-start; }
+.helppage .hhero .hbtn { margin-top: 10px; }
+/* the figures at the bottom: three to a row, one line each */
+.htiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ht { padding: 9px 11px; }
+.ht b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+
+/* ---- Ask: the questions line up with the placeholder; the full page is one surface ---- */
+:root[data-theme] .askp:not(.askfull) .askstarters { padding-left: 32px; }
+:root[data-theme] .askp.askfull { background: none; box-shadow: none; }
+:root[data-theme] .askfullhead { background: none !important; border: 0 !important; box-shadow: none; padding: 18px 26px 8px !important; }
+:root[data-theme] .askfullhead .askctlbtn { right: 26px; top: 14px; }
+:root[data-theme] .askpage { margin-top: -14px; height: calc(100dvh - var(--top-h, 64px) - 44px); }
+
+/* the new chat picture: the bird perched on one big pink star */
+.askart { width: 96px; height: auto; margin: 0 0 -30px; z-index: 2; position: relative; }
+.ask-bird { position: static; display: block; width: 96px; transform: translateX(12px); }
+:root[data-theme] .askhello .askorb { position: relative; left: auto; top: auto; margin: 0; width: 76px; height: 76px; display: grid; place-items: center; }
+:root[data-theme] .askhello .askorb i { display: block; position: absolute; inset: -22px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,46,147,.34), transparent 72%); animation: none; border: 0; }
+:root[data-theme] .askhello .askstar { width: 76px; height: 76px; animation: none; filter: drop-shadow(0 0 16px rgba(255,46,147,.5)); }
+:root[data-theme] .askhello .askstar path { fill: var(--pink); }
+
+/* ======== round 5 ======== */
+/* Help's header buttons: flat, no glass */
+.hbtn { background: var(--chip); box-shadow: none; }
+.hbtn:hover { background: var(--hov); filter: none; }
+/* four figures to a row: two rows */
+.htiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ht { padding: 9px 10px; }
+.ht small { font-size: 11px; }
+.ht b { font-size: 12.5px; }
+/* Ask's new chat: the bird in front of the star, the star behind it */
+.askart { margin: 0 0 -50px; width: 104px; }
+.ask-bird { width: 104px; transform: translateX(14px); }
+:root[data-theme] .askhello .askorb { z-index: 1; width: 84px; height: 84px; }
+:root[data-theme] .askhello .askstar { width: 84px; height: 84px; }
+/* the full Ask page: the middle column is one surface from top to bottom, and its top row is centred inside it */
+:root[data-theme] .askmain { background: radial-gradient(120% 90% at 20% 0%, rgba(255,255,255,.02), rgba(255,255,255,0) 55%), rgb(var(--c-deep) / .96); }
+:root[data-theme] .askp.askfull, :root[data-theme] .askpage .askp.askfull { background: none !important; box-shadow: none !important; }
+:root[data-theme] .askfullhead { height: 64px; padding: 0 26px !important; display: flex; align-items: center; }
+:root[data-theme] .askfullhead .askctlbtn { top: 50%; transform: translateY(-50%); right: 26px; }
+:root[data-theme] .askfullhead .askplace { margin-top: 0; }
+/* the search box opens horizontally centred, at one height, if the script cannot place it */
+:root[data-theme] .sover { padding-top: 23.5vh; }
+
+/* ======== round 6 ======== */
+.hdrop .hclose { background: var(--chip); box-shadow: none; }
+.hdrop .hclose:hover { background: var(--hov); color: var(--fg); }
+.ask-bird { transform: translateX(-4px); }
+.askart { margin: 0 0 -56px; }
+/* the pickers: flat, dark indigo-grey */
+.fsel-btn { background: rgb(var(--c-field)); box-shadow: none; }
+.fsel-btn:hover, .fsel.open .fsel-btn { background: color-mix(in srgb, #fff 6%, rgb(var(--c-field))); filter: none; }
+.fsel-pop { background: rgb(var(--c-field) / var(--g-a)); box-shadow: var(--g-edge), 0 20px 50px -16px #000; }
+.fsel-pop button:hover, .fsel-pop button.kb { background: var(--hov); }
+
+/* ======== round 7: board cards drawn like library tiles ======== */
+:root[data-theme] .mx { position: relative; display: flex; flex-direction: column; justify-content: flex-end; aspect-ratio: 3 / 4; padding: 8px; border: 0; border-radius: 22px; background: transparent; box-shadow: none; overflow: hidden; transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s; }
+:root[data-theme] .mx:hover { transform: translateY(-6px) rotate(-.7deg); box-shadow: 0 26px 44px -18px rgba(0,0,0,.75); }
+:root[data-theme] .mx:nth-child(even):hover { transform: translateY(-6px) rotate(.7deg); }
+:root[data-theme] .mx > .sq { position: absolute; inset: 0; aspect-ratio: auto; background: var(--chip); }
+:root[data-theme] .mx .sq img, :root[data-theme] .mx .sq .typo { width: 100%; height: 100%; object-fit: cover; }
+:root[data-theme] .mx .bboth { top: 12px; right: 12px; background: var(--pink); }
+/* the caption: one soft dark panel, the title first, then the type, then who added it and the votes */
+:root[data-theme] .mx .mxb, :root[data-theme] .mx footer { position: relative; z-index: 2; background: rgb(var(--c-deep) / .88); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+:root[data-theme] .mx .mxb { flex: none; display: flex; flex-direction: column; padding: 10px 12px 4px; border-radius: 14px 14px 0 0; }
+:root[data-theme] .mx h3 { order: 1; margin: 0; font: 700 calc(var(--tfs) * .86)/1.2 var(--display); letter-spacing: -.01em; }
+:root[data-theme] .mx .kind { order: 2; align-self: flex-start; margin-top: 5px; padding: 0; background: none; color: var(--fg-2); font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; }
+:root[data-theme] .mx .kind::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--cd, var(--c)); }
+:root[data-theme] .mx p { order: 3; display: none; margin-top: 8px; font-size: 13px; line-height: 1.45; color: var(--fg-2); -webkit-line-clamp: 2; }
+:root[data-theme] .mx .ptags { display: none; }
+:root[data-theme][data-size="l"] .mx p { display: -webkit-box; }
+:root[data-theme] .mx footer { flex: none; margin: 0; padding: 4px 12px 10px; border-radius: 0 0 14px 14px; }
+:root[data-theme] .mx .pby { font-size: 12px; color: var(--fg-3); }
+:root[data-theme] .mx.waiting .mxb .kind { color: var(--fg-3); }
+
+/* the board page: the panels and the page itself, a step away from indigo */
+:root[data-theme="indigo"] body[data-page="board"] { --card: #0f0f15; --chip: rgba(255,255,255,.055); --line: rgba(255,255,255,.08); --tb: rgba(15,15,22,.94); }
+:root[data-theme="indigo"] body[data-page="board"] .bside section { background: #0f0f15; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+:root[data-theme="indigo"] body[data-page="board"] .bstats div { background: none; }
+
+/* board captions: one height. A one-line title leaves room for more of the summary; the summary just ends where the caption does */
+:root[data-theme] .mx .mxb { height: calc(var(--tfs) * 2.064 + 98px); overflow: hidden; }
+:root[data-theme] .mx p, :root[data-theme][data-size="l"] .mx p { display: block; flex: 1 1 0; min-height: 0; overflow: hidden; -webkit-line-clamp: unset; -webkit-box-orient: initial; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+:root[data-theme][data-size="s"] .mx .mxb { height: calc(var(--tfs) * 2.064 + 52px); }
+:root[data-theme][data-size="s"] .mx p { display: none; }
+:root[data-theme][data-size="s"] .mx h3 { min-height: 2.4em; }
+:root[data-theme] .mx h3 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: none; }
+
+/* ======== Settings: Privacy in the list looks like the others; its two long sections are not cards ======== */
+:root[data-theme] .setpriv { display: grid; grid-template-columns: 26px minmax(0, 1fr); column-gap: 14px; align-items: center; margin-top: 2px; padding: 9px 12px; border-radius: 12px; box-shadow: none; }
+:root[data-theme] .setpriv:hover { background: var(--chip); }
+:root[data-theme] .setpriv.on { background: rgba(247,243,232,.11); box-shadow: none; }
+:root[data-theme] .setpriv .seticon { width: 22px; height: 22px; border-radius: 0; background: none !important; box-shadow: none; color: var(--fg-2); display: grid; place-items: center; }
+:root[data-theme] .setpriv .seticon .ico { width: 18px; height: 18px; margin: 0; }
+:root[data-theme] .setpriv b { font: 700 15px/1.2 var(--display); letter-spacing: -.01em; }
+:root[data-theme] .setpriv small { font-size: 12px; line-height: 1.4; }
+:root[data-theme] .sgroup.plain .srows { background: none; box-shadow: none; border-radius: 0; padding: 0; }
+:root[data-theme] .sgroup.plain .gnote { padding-left: 0; }
+
+/* a board card whose video is playing: the caption steps away so the whole picture shows, and returns when the pointer leaves */
+:root[data-theme] .mx .mxb, :root[data-theme] .mx footer { transition: opacity .3s ease, transform .3s cubic-bezier(.2,.8,.2,1); }
+:root[data-theme] .mx.previewing .mxb, :root[data-theme] .mx.previewing footer { opacity: 0; transform: translateY(10px); pointer-events: none; }
+
+/* the floating layers: blur (only when Glass is On) and, in the Help sheet, the same surface as the others */
+:root[data-theme] .helpsheet { background: var(--glass-sheet); box-shadow: var(--g-edge), 0 30px 70px -20px #000; }
+html[data-theme] :is(.top .bar > .addp.btn, .top .bar > .shelfsw, .sslot .search, #wallctl .ctrl1, .crumbbar .pacts, .pgback, .nestsheet, .helpsheet, .askp:not(.inline), .askdock, .askhelp, .fsel-pop, .sover .sbig, .sover .spanel2, .selbar, #mgtip, .pop, .dlg) {
+  -webkit-backdrop-filter: var(--g-bf); backdrop-filter: var(--g-bf);
+}
+
+/* ======== the nav's right side: Nest and Settings are the same 44px pills as the rest ======== */
+:root[data-theme] .top .bar .right { gap: 8px; align-items: center; }
+:root[data-theme] .top .bar .ubtn { height: 44px; min-height: 44px; padding: 0 18px 0 14px; gap: 8px; border: 0; border-radius: 999px; font: 600 15px/1 var(--sans); display: inline-flex; align-items: center; box-sizing: border-box; }
+:root[data-theme] .top .bar .ubtn .ico { width: 18px; height: 18px; flex: none; }
+:root[data-theme] .top .bar .setbtn { color: var(--fg-2); transition: color .25s; }
+:root[data-theme] .top .bar .setbtn:hover, :root[data-theme] .top .bar .setbtn.on { color: var(--fg); }
+@media (max-width: 1100px) { :root[data-theme] .top .bar .ubtn { padding: 0 13px; min-width: 44px; justify-content: center; } }
+
+/* ======== buttons: one system ========
+   Four kinds. Each answers rest, hover, press, keyboard focus, busy and disabled the same way everywhere.
+   1 Glass: floats on the background (nav pills, dock, post buttons, filter chips). Hover lifts the whole thing a little.
+   2 Flat: sits on a sheet (Help's header buttons, pickers). Hover adds a faint wash.
+   3 Segment: lives inside a pill or toolbar. Hover adds a faint wash behind just that one.
+   4 Primary: the cream button. Hover goes to white.
+   The page /settings/buttons-sheet (preview only) lays every one out, with the states forced on. */
+:root[data-theme] { --hov: rgba(255,255,255,.09); --ease-b: cubic-bezier(.2,.8,.2,1); }
+:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn), .fchip, .top .bar > .addp.btn) { box-shadow: var(--navring), inset 0 0 0 999px rgba(255,255,255,0); transition: box-shadow .22s ease, color .22s ease, transform .16s var(--ease-b); }
+:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn), .fchip, .top .bar > .addp.btn):is(:hover, .st-hover):not(:disabled, .busy) { box-shadow: var(--navring), inset 0 0 0 999px rgba(255,255,255,.07); }
+:root[data-theme] .nestbtn { transition: filter .22s ease, transform .16s var(--ease-b); }
+:root[data-theme] .nestbtn:is(:hover, .st-hover) { filter: brightness(1.1); }
+:root[data-theme] :is(.hbtn, .hclose, .fsel-btn, .fsel-pop button, .selbar button, .pacts > a, .pacts > button, .pacts > details > summary, #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button)) { transition: background-color .2s ease, color .2s ease, transform .16s var(--ease-b); }
+:root[data-theme] :is(.hbtn, .hclose, .pacts > a, .pacts > button, .pacts > details > summary, #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button), .selbar button:not(.bdone)).st-hover { background: var(--hov); color: var(--fg); }
+:root[data-theme] :is(.btn.dark, .selbar .bdone, .pvask) { transition: background-color .2s ease, transform .16s var(--ease-b); }
+:root[data-theme] :is(.btn.dark, .pvask):is(:hover, .st-hover):not(:disabled, .busy) { background: #fff; color: #0b0b22; }
+/* press: every kind sinks a touch */
+:root[data-theme] :is(.btn, .ubtn, .askdock, .askhelp, .hbtn, .hclose, .fsel-btn, .pvact, .pgback, .fchip, .tbtn, .ibtn, .pacts > a, .pacts > button, .selbar button, .lhsearch, .sslot .search, .addp):active:not(:disabled, .busy:not(.nestbtn)) { transform: scale(.965); }
+/* keyboard focus only: never a ring after a click */
+:root[data-theme] :is(a, button, summary, [role="button"], .fsel-btn):focus-visible { outline: 2px solid color-mix(in srgb, var(--pink) 75%, transparent); outline-offset: 2px; }
+:root[data-theme] :is(a, button, summary, [role="button"]):focus:not(:focus-visible) { outline: none; }
+/* not available */
+:root[data-theme] :is(.btn, .ubtn, .hbtn, .fchip, .pvact):is(:disabled, [aria-disabled="true"]) { opacity: .42; cursor: not-allowed; filter: none; transform: none; }
+/* working: the button holds still, shows its small animation (hub.js busyOn) and ignores presses */
+:root[data-theme] :is(.btn, .ubtn:not(.nestbtn), .pvact, .hbtn).busy { pointer-events: none; opacity: 1; }  /* the Nest button's .busy means the Mac is working, not that the button is loading: it must stay clickable */
+:root[data-theme] :is(.btn, .ubtn:not(.nestbtn), .pvact, .hbtn).busy > :not(.ld) { opacity: .75; }
+/* the click burst: the landing page's little stars, a few per press */
+.spk { position: fixed; left: 0; top: 0; width: 9px; height: 9px; z-index: 2147483000; pointer-events: none; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); }
+@media (prefers-reduced-motion: reduce) { :root[data-theme] * { transition-duration: .01ms !important; } .spk { display: none; } }
+
+/* ======== hero sections: a hue-washed card for the few sections worth a spotlight ========
+   `hero` + one of mint / lilac / pink / gold on a Settings group. The wash comes from the top-left, the edge takes the hue, the title gets a dot. */
+:root[data-theme] .sgroup.hero { --hc: #b59cff; }
+:root[data-theme] .sgroup.hero.mint { --hc: #5fd6a6; } :root[data-theme] .sgroup.hero.pink { --hc: #ff8fb8; } :root[data-theme] .sgroup.hero.gold { --hc: #ffd27a; } :root[data-theme] .sgroup.hero.lilac { --hc: #b59cff; }
+:root[data-theme] .sgroup.hero > .srows { background: radial-gradient(90% 170% at 0% 0%, color-mix(in srgb, var(--hc) 19%, transparent), transparent 68%), rgb(var(--c-surf)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hc) 26%, transparent); }
+:root[data-theme] .sgroup.hero > .sgh h3::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 10px; border-radius: 50%; background: var(--hc); vertical-align: .12em; box-shadow: 0 0 0 4px color-mix(in srgb, var(--hc) 22%, transparent); }
+:root[data-theme] .sgroup.hero .hico { background: color-mix(in srgb, var(--hc) 24%, transparent); color: var(--hc); }
+:root[data-theme] .sgroup.hero .hopt input:checked + .hsw { background: var(--hc); }
+:root[data-theme] .sgroup.hero .hopt { border-top-color: color-mix(in srgb, var(--hc) 18%, transparent); }
+
+/* ======== the health check page ======== */
+.hc { --hc: #5fd6a6; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 26px; align-items: center; margin: 14px 0 34px; padding: 30px 32px 26px; border-radius: 30px;
+  background: radial-gradient(80% 190% at 0% 0%, color-mix(in srgb, var(--hc) 24%, transparent), transparent 66%), rgb(var(--c-surf)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hc) 30%, transparent); transition: box-shadow .4s, background .4s; }
+.hc-warn { --hc: #ffd27a; } .hc-bad { --hc: #ff8a8f; }
+.hc-orb { grid-row: 1; width: 78px; height: 78px; border-radius: 26px; display: grid; place-items: center; background: color-mix(in srgb, var(--hc) 24%, transparent); color: var(--hc); font: 700 38px/1 var(--display); transition: background .4s, color .4s; }
+.hc-orb .ico { width: 38px; height: 38px; stroke-width: 2.2; }
+.hc-tx h1 { margin: 0; font: 700 clamp(26px, 3.4vw, 36px)/1.1 var(--display); letter-spacing: -.02em; }
+.hc-tx p { margin: 6px 0 0; color: var(--fg-2); font-size: var(--type-small); }
+.hc-bar { height: 5px; margin-top: 16px; max-width: 420px; border-radius: 5px; background: rgba(255,255,255,.09); overflow: hidden; }
+.hc-bar i { display: block; height: 100%; width: 100%; border-radius: 5px; background: var(--hc); transition: width .5s var(--ease-b), background .4s; }
+.hc-run .hc-bar i { background: var(--pink); }
+.hc-act { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.hc-act .btn { height: 44px; padding: 0 20px; display: inline-flex; align-items: center; font-size: 15px; }
+.hc-note { grid-column: 2 / -1; margin: 8px 0 0; font-size: 12.5px; color: var(--fg-3); max-width: 70ch; }
+.hc-h { display: flex; align-items: center; gap: 10px; margin: 34px 0 12px; font: 700 22px/1.2 var(--display); letter-spacing: -.01em; }
+.hc-h span { min-width: 24px; height: 24px; padding: 0 8px; border-radius: 999px; display: inline-grid; place-items: center; background: color-mix(in srgb, var(--warn, #ffd27a) 22%, transparent); color: #ffd27a; font: 700 13px var(--sans); }
+.hc-list { display: grid; gap: 8px; }
+.hk { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 18px; background: rgb(var(--c-surf)); animation: jin .35s var(--ease-b) backwards; }
+.hk .hkm { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 800 15px var(--display); background: color-mix(in srgb, var(--hc) 22%, transparent); color: var(--hc); --hc: #5fd6a6; }
+.hk .hkm .ico { width: 16px; height: 16px; stroke-width: 2.6; }
+.hk.warn .hkm { --hc: #ffd27a; } .hk.bad .hkm { --hc: #ff8a8f; }
+.hk.warn { background: linear-gradient(90deg, rgba(255,210,122,.1), transparent 55%), rgb(var(--c-surf)); } .hk.bad { background: linear-gradient(90deg, rgba(255,138,143,.12), transparent 55%), rgb(var(--c-surf)); }
+.hk b { display: block; font-weight: 600; font-size: 15px; } .hk small { display: block; margin-top: 2px; font-size: 13px; color: var(--fg-3); line-height: 1.45; }
+.hk small.fix { color: var(--fg-2); }
+.hk .btn { white-space: nowrap; }
+.hc-groups { display: grid; gap: 10px; }
+.hc-grp { border-radius: 20px; background: rgb(var(--c-surf)); overflow: hidden; }
+.hc-grp > summary { display: flex; align-items: center; gap: 12px; padding: 16px 18px; cursor: pointer; list-style: none; transition: background-color .2s; }
+.hc-grp > summary::-webkit-details-marker { display: none; }
+.hc-grp > summary:hover { background: var(--hov); }
+.hc-area { font: 600 16px var(--sans); } .hc-n { color: #5fd6a6; font-size: 13px; font-weight: 600; }
+.hc-chev { margin-left: auto; color: var(--fg-3); transition: transform .2s; } .hc-chev .ico { width: 16px; height: 16px; }
+.hc-grp[open] .hc-chev { transform: rotate(180deg); }
+.hc-grp > .hc-list { padding: 0 10px 12px; }
+.hc-grp .hk { background: none; padding: 10px 8px; }
+@media (max-width: 760px) { .hc { grid-template-columns: auto minmax(0, 1fr); padding: 22px 20px; } .hc-act { grid-column: 1 / -1; justify-content: flex-start; } .hc-note { grid-column: 1 / -1; } .hk { grid-template-columns: 34px minmax(0, 1fr); } .hk .btn { grid-column: 2; justify-self: start; } }
+@media (prefers-reduced-motion: reduce) { .hk { animation: none; } }
+/* a hero group's card always fills the column, whatever the old layout did */
+:root[data-theme] .sgroup.hero { align-items: stretch; }
+:root[data-theme] .sgroup.hero > .srows { width: 100%; }
+
+.hc-spin { width: 34px; height: 34px; border-radius: 50%; border: 3.5px solid color-mix(in srgb, var(--pink) 25%, transparent); border-top-color: var(--pink); animation: hcspin .8s linear infinite; }
+@keyframes hcspin { to { transform: rotate(360deg); } }
+.hc-run .hc-orb { background: color-mix(in srgb, var(--pink) 16%, transparent); }
+.hc-check .hc-bar i { width: 34% !important; animation: ind 1.1s ease-in-out infinite; }
+.hc-act .btn.busy { opacity: .7; }
+.hc-bspin { width: 14px; height: 14px; margin-right: 9px; border-radius: 50%; border: 2px solid color-mix(in srgb, currentColor 28%, transparent); border-top-color: currentColor; animation: hcspin .7s linear infinite; flex: none; }
+.hc-act .btn.busy { display: inline-flex; align-items: center; }
+.hc-act .btn.hc-done { color: #5fd6a6; }
+.hc-pop { animation: hcpop .55s cubic-bezier(.3,1.7,.5,1); }
+@keyframes hcpop { from { transform: scale(.55) rotate(-8deg); } 60% { transform: scale(1.12); } }
+.hc-act .btn.hc-done { animation: hcpop .45s cubic-bezier(.3,1.7,.5,1); }
+.hc .hc-bar i { transition: width .5s var(--ease-b), background .4s; }
+@media (prefers-reduced-motion: reduce) { .hc-pop, .hc-act .btn.hc-done, .hc-spin, .hc-bspin { animation-duration: 1.6s; } }
+/* the Library / Archive / Trash pill: the one you hover gets a wash; the current one's sliding fill brightens */
+:root[data-theme] .shelfsw a { border-radius: 999px; transition: color .25s, background-color .2s; }
+:root[data-theme] .shelfsw a:not(.on):not([aria-current]):hover { background: var(--hov); color: var(--fg); }
+
+:root[data-theme] .shelfsw:has(a.on:hover, a[aria-current]:hover) > .slider { background: linear-gradient(rgba(255,255,255,.2), rgba(255,255,255,.13)); }
+:root[data-theme] .shelfsw a.on:hover, :root[data-theme] .shelfsw a[aria-current]:hover { color: var(--fg); }
+html.lhslim #wallctl .views a { border-radius: 999px; transition: color .25s, background-color .2s; }
+html.lhslim #wallctl .views a:not(.on):hover { background: var(--hov); color: var(--fg); }
+
+/* ======== the stragglers: controls that had no hover at all (found by scanning every page's buttons and links against the stylesheet) ======== */
+:root[data-theme] :is(a, button, summary, label.tgl, [role="button"]):not(:disabled) { cursor: pointer; }
+:root[data-theme] .bar > a.logo { transition: opacity .2s; } :root[data-theme] .bar > a.logo:hover { opacity: .78; }
+:root[data-theme] a.who { transition: color .2s; } :root[data-theme] a.who:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+:root[data-theme] a.more-tiles { transition: background-color .2s, color .2s; } :root[data-theme] a.more-tiles:hover { background: var(--hov); color: var(--fg); }
+:root[data-theme] .piles a.pile { transition: transform .22s var(--ease-b), filter .22s; } :root[data-theme] .piles a.pile:hover { transform: translateY(-3px); filter: brightness(1.1); }
+:root[data-theme] button.sw { transition: transform .18s var(--ease-b); } :root[data-theme] button.sw:hover { transform: scale(1.14); }
+:root[data-theme] a.hall { transition: color .2s; } :root[data-theme] a.hall:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+:root[data-theme] button.pavbtn { transition: filter .2s, transform .16s var(--ease-b); } :root[data-theme] button.pavbtn:hover { filter: brightness(1.15); }
+:root[data-theme] .nest .seg button, :root[data-theme] span.seg > button { border-radius: 999px; transition: background-color .2s, color .2s; }
+:root[data-theme] span.seg > button:not(.on):hover { background: var(--hov); color: var(--fg); }
+:root[data-theme] .dgacc > summary { transition: background-color .2s; } :root[data-theme] .dgacc > summary:hover { background: var(--hov); }
+:root[data-theme] a.dgth { transition: transform .35s cubic-bezier(.3,1.8,.5,1), filter .2s; } :root[data-theme] a.dgth:hover { transform: translateY(-5px) rotate(-5deg) scale(1.16); filter: brightness(1.12); }
+:root[data-theme] .dgnudge a { transition: color .2s; } :root[data-theme] .dgnudge a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+/* Nest switches: no hover on the whole labelled area, only the switch itself answers */
+:root[data-theme] .tgl:hover, :root[data-theme] .nestsheet .tgl:hover, :root[data-theme] .nestpage .tgl:hover { background: none; }
+:root[data-theme] .tgl .tg { transition: filter .2s, transform .16s var(--ease-b); }
+:root[data-theme] .tgl:hover .tg { filter: brightness(1.15); }
+:root[data-theme] .tgl:active .tg { transform: scale(.94); }
+
+/* ======== audit fixes: touch targets and the smallest text ======== */
+:root[data-theme] details.xmore > summary { min-height: 32px; display: inline-flex; align-items: center; }
+:root[data-theme] a.hall { display: inline-flex; align-items: center; min-height: 32px; }
+:root[data-theme] .advpill { font-size: 11px; }
+:root[data-theme] .advpill.sm { font-size: 10.5px; }
+:root[data-theme] button.dgpill { min-height: 30px; }
+:root[data-theme] .glassticks button { min-height: 28px; padding: 4px 6px; }
+/* Help's "Right now" figures: say the whole thing over two lines instead of cutting it with an ellipsis */
+:root[data-theme] .ht b { white-space: normal; overflow: visible; text-overflow: clip; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+/* phones: the view tabs and the three tool icons share one pill; if they still cannot fit they wrap inside it instead of spilling onto the first tile */
+@media (max-width: 520px) {
+  html.lhslim #wallctl .views a { padding: 0 12px; }
+  html.lhslim #wallctl .ctrl1 { height: auto; min-height: 44px; flex-wrap: wrap; justify-content: center; border-radius: 24px; }
+}
+@media (max-width: 520px) { html.lhslim #wallctl { height: auto; min-height: 52px; } html.lhslim #wallctl .views a { font-size: 14px; } }
+@media (max-width: 520px) {
+  html.lhslim #wallctl .views a { padding: 0 9px; font-size: 13.5px; }
+  html.lhslim #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button) { width: 34px; height: 34px; min-width: 34px; }
+}
+/* phones, before the bar slims: Everything / Piles / Boards and the three tool icons fit one line, and wrap rather than land on the first tile */
+@media (max-width: 520px) {
+  :root[data-theme] #wallctl { height: auto; min-height: 52px; }
+  :root[data-theme] #wallctl .ctrl1 { height: auto; flex-wrap: wrap; row-gap: 6px; align-items: center; }
+  :root[data-theme] #wallctl .views { gap: 14px; } :root[data-theme] #wallctl .views a { font-size: 16px; }
+}
+/* the filter and search chips mark each source with a dot: Threads and X are near-black, which vanished on the dark chips */
+:root[data-theme] :is(.schips, .fchip, .sover) { --s-threads: #cfcabd; --s-x: #cfcabd; }
+:root[data-theme] a.actl-all { display: inline-flex; align-items: center; min-height: 32px; }
+
+/* Ask settings, "Who answers": status, Remove and the switch each keep their own column on every row, like a table */
+.engctl { display: grid; grid-template-columns: 96px 88px 52px; column-gap: 14px; align-items: center; justify-items: end; flex: none; }
+.engctl > span { display: flex; align-items: center; justify-content: flex-end; min-height: 1px; white-space: nowrap; }
+.engctl .engst { justify-self: start; }
+@media (max-width: 640px) { .engctl { grid-template-columns: auto auto 52px; column-gap: 10px; } }
+:root[data-theme] .engsw .sw, :root[data-theme] .actl-row .sw { position: relative; }
+:root[data-theme] .engsw .sw::before, :root[data-theme] .actl-row .sw::before { content: ""; position: absolute; inset: -8px -4px; }
+/* one prompt, not two: the typed example line repeated what the suggestions below it already offer */
+.askhello .asktype { display: none; }
+
+/* Ask's full page on a phone: one column. The chat first, the history under it, the engine settings only when opened */
+@media (max-width: 820px) {
+  :root[data-theme] .askpage, :root[data-theme] .askpage.ctl { grid-template-columns: minmax(0, 1fr); height: auto; margin-top: 0; }
+  :root[data-theme] .askpage .askp.askfull { order: 1; min-height: calc(100dvh - 190px); }
+  :root[data-theme] .askpage .askside { order: 2; max-height: 240px; border-right: 0; border-top: 1px solid var(--line); box-shadow: none; }
+  :root[data-theme] .askpage .askctlcol { order: 3; border-left: 0; border-top: 1px solid var(--line); }
+  :root[data-theme] .askpage:not(.ctl) .askctlcol { display: none; }
+}
+
+/* post page, Links tab: Remove is a quiet pill that warms to red on hover, not loose underlined text */
+:root[data-theme] :is(form[action="/hub/links/remove"], form[action="/hub/not-related"]) button.link { height: 30px; padding: 0 12px; border-radius: 999px; color: var(--fg-3); text-decoration: none; font: 600 12.5px var(--sans); transition: background-color .2s, color .2s; }
+:root[data-theme] :is(form[action="/hub/links/remove"], form[action="/hub/not-related"]) button.link:hover { background: color-mix(in srgb, #ff8a8f 14%, transparent); color: #ff8a8f; }
+
+/* post page: the bar and the Back / pager row stay readable when text scrolls under them */
+:root[data-theme] body:has(.crumbbar) .top { background: linear-gradient(rgb(var(--c-page)) 62%, rgb(var(--c-page) / 0)); }
+:root[data-theme] .crumbbar::before { content: ""; position: absolute; z-index: -1; inset: -6px -40px -20px; background: linear-gradient(rgb(var(--c-page)) 60%, rgb(var(--c-page) / 0)); pointer-events: none; }
+
+/* the confirmation for jobs that cost time or quota */
+.dlg.dlgjob { width: min(480px, 100%); text-align: left; }
+.dlgjob h3 { margin: 0 0 14px; font: 700 20px/1.25 var(--display); letter-spacing: -.01em; }
+.dlgjob .jobrows { display: grid; gap: 12px; margin: 0 0 20px; }
+.dlgjob .jr { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: baseline; }
+.dlgjob .jr span { font: 600 11px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); }
+.dlgjob .jr p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+.dlgjob .row { justify-content: flex-end; }
+.nstats { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; margin: 14px 0 4px; padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,.04); }
+.nstats .nsi { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, #8fe5c2 20%, transparent); color: #8fe5c2; }
+.nstats .nsi .ico { width: 17px; height: 17px; }
+.nstats b { display: block; font-size: 14px; } .nstats small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--fg-3); line-height: 1.45; }
+
+/* ======== big tiles: one in about twelve, 2 wide and 2 tall, in the sections below Featured ======== */
+.grid { grid-auto-flow: dense; }
+@media (min-width: 700px) {
+  .grid > .tile.big { grid-column: span 2; grid-row: span 2; aspect-ratio: 3 / 4; --tfs: 30px; }  /* the same 3:4 as the rest, so two tiles wide is two rows tall */
+  .grid > .tile.big .label .t { -webkit-line-clamp: 3; min-height: 0; }
+  .grid > .tile.big .label .s { display: block; margin-top: 10px; font-size: 14px; line-height: 1.45; }
+}
+.reasonb { position: absolute; left: 12px; top: 12px; z-index: 2; max-width: calc(100% - 90px); padding: 5px 11px; border-radius: 999px; font: 600 var(--type-micro) var(--sans); color: #0b0b22; background: #ffd27a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 699px) { .reasonb { display: none; } }
+.tile:has(.reasonb) .sq .src { display: none; }
+.statb { position: absolute; left: 10px; top: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; font: 600 var(--type-micro) var(--sans); color: var(--fg); background: rgba(10,10,18,.7); backdrop-filter: blur(6px); }
+.statb .ico { width: 12px; height: 12px; margin-right: -4px; color: #ff8fb8; }
+.tile:has(.statb) .sq .src { display: none; }
+
+/* Select: the pill moves to the bottom, on a fade, and the Help / Ask buttons step aside while it is there */
+:root[data-theme] .selbar { top: auto; bottom: 22px; z-index: 60; }
+body.selecting::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 150px; z-index: 58; pointer-events: none; background: linear-gradient(rgb(var(--c-page) / 0), rgb(var(--c-page) / .94) 70%); }
+body.selecting .askdockwrap { opacity: .1; pointer-events: none; transition: opacity .2s; }
+/* While picking, only the tiles and the bottom pill stay: the nav, the hero and the controls dim to 10% (Done or Esc brings them back) */
+body[data-page="wall"] :is(#top, #hero, #wallctl, .askdockwrap, .helpdock) { transition: opacity .25s ease; }
+body.selecting[data-page="wall"] :is(#top, #hero, #wallctl, .helpdock) { opacity: .1; pointer-events: none; }
+@media (max-width: 1240px) { :root[data-theme] .selbar { flex-wrap: wrap; justify-content: center; overflow: visible; border-radius: 28px; padding: 8px 8px 8px 18px; row-gap: 2px; width: max-content; max-width: calc(100vw - 24px); } :root[data-theme] .selbar .bsp { display: none; } }
+
+/* ======== boards follow the Appearance setting for tile labels, like the library ======== */
+/* Black overlay: no panel; the title and the people sit straight on the picture over a dark fade */
+html[data-labels="black"]:root[data-theme] .mx { padding: 0; }
+html[data-labels="black"]:root[data-theme] .mx::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit; background: linear-gradient(to top, rgba(0,0,0,.9) 0, rgba(0,0,0,.66) 40%, rgba(0,0,0,0) 74%); }
+html[data-labels="black"]:root[data-theme] .mx .mxb, html[data-labels="black"]:root[data-theme] .mx footer { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html[data-labels="black"]:root[data-theme] .mx .mxb { padding: 12px 16px 4px; border-radius: 0; }
+html[data-labels="black"]:root[data-theme] .mx footer { padding: 4px 16px 14px; border-radius: 0; }
+/* Coloured: a solid band in the post type's colour across the bottom */
+html[data-labels="colour"]:root[data-theme] .mx { padding: 0; overflow: hidden; }
+html[data-labels="colour"]:root[data-theme] .mx .mxb, html[data-labels="colour"]:root[data-theme] .mx footer { background: var(--cd, var(--chip)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+html[data-labels="colour"]:root[data-theme] .mx .mxb { padding: 12px 16px 4px; border-radius: 0; }
+html[data-labels="colour"]:root[data-theme] .mx footer { padding: 4px 16px 14px; border-radius: 0; }
+html[data-labels="colour"]:root[data-theme] .mx .kind::before { display: none; }
+/* the most recent post is the large one: 2 wide, 2 tall, from 700px up */
+.mixes { grid-auto-flow: dense; }
+@media (min-width: 700px) { .mixes > .mx.big { grid-column: span 2; grid-row: span 2; aspect-ratio: 3 / 4; --tfs: 26px; } }
+
+/* Boards, Black overlay and Coloured: the same caption as a library tile. The caption is only as tall as its words, the title is
+   the tile's own size, and the summary appears on Large tiles (and the big tile) only, never on Small or Medium */
+html:is([data-labels="black"], [data-labels="colour"]):root[data-theme] .mx .mxb { height: auto; overflow: visible; padding-top: 18px; }
+html:is([data-labels="black"], [data-labels="colour"]):root[data-theme] .mx h3 { font-size: var(--tfs); line-height: 1.15; min-height: calc(var(--tfs) * 2.3); }
+html:is([data-labels="black"], [data-labels="colour"]):root[data-theme] .mx p { display: none; }
+html:is([data-labels="black"], [data-labels="colour"]):root[data-theme][data-size="l"] .mx p,
+html:is([data-labels="black"], [data-labels="colour"]):root[data-theme] .mx.big p { display: -webkit-box; flex: none; margin-top: 10px; min-height: 3.9em; font-size: 13px; line-height: 1.5; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; -webkit-mask-image: none; mask-image: none; }
+html:is([data-labels="black"], [data-labels="colour"]):root[data-theme] .mx .kind { margin-top: 6px; }
+
+/* a little more air between rows of tiles */
+.grid, .mixes { row-gap: calc(var(--gap) + 4px); }
+.statb.up .ico { color: #7be3a8; }
+.trendnote { margin: 4px 0 18px; max-width: 60ch; font: var(--type-small) var(--sans); color: var(--fg-2); }
+.lockb { display: inline-grid; place-items: center; margin-left: 6px; vertical-align: -2px; opacity: .85; }
+.lockb .ico { width: 12px; height: 12px; }
+.lockb.solo { position: absolute; left: 10px; top: 10px; z-index: 2; width: 24px; height: 24px; margin: 0; border-radius: 50%; background: rgba(10,10,18,.7); backdrop-filter: blur(6px); transition: opacity .2s; }
+.tile:hover .lockb.solo, .tile:focus-within .lockb.solo, body.selecting .lockb.solo, .tile:has(.statb) .lockb.solo, .tile:has(.reasonb) .lockb.solo { opacity: 0; }
+
+/* ---- the call-to-action button: the one loudest button on a screen (Read the digest, Get started...). Flat, no glow.
+   The colour is two variables, so gold or pink is a one-line change ---- */
+:root[data-theme] { --cta-a: #ffe08a; --cta-b: #ffc23d; --cta-ink: #2a1a00; }
+:root[data-theme] .btn.btn.cta { background: linear-gradient(180deg, var(--cta-a), var(--cta-b)); color: var(--cta-ink); font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+:root[data-theme] .btn.btn.cta:hover { filter: brightness(1.06); }
+:root[data-theme] .btn.btn.cta:active { filter: brightness(.96); }
+/* the same button for something that needs you: pink, for alerts and things gone wrong */
+:root[data-theme] .btn.btn.cta.alert { --cta-a: #ff9fc0; --cta-b: #ff5a92; --cta-ink: #3a0620; }

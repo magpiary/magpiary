@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magpiary · C3 · Studio</title>
+<link rel="icon" href="example-cover.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="c-common.css">
+<style>
+:root { --bg: #f3efe6; --card: #fbf9f4; --fg: #2a2520; --fg-2: #6d655b; --fg-3: #a39a8d; --line: #e5ded1;
+  --sh: 0 1px 2px rgba(60,45,25,.06), 0 8px 24px -8px rgba(60,45,25,.18);
+  --t-howto: #6f8fe8; --t-news: #e8846b; --t-tool: #a487e0; --t-design: #e483b0; --t-explainer: #5fb796; --t-discussion: #e3b04f; --t-recipe: #e0925a;
+  --lb-bg: #2a2520; --lb-panel: #fbf9f4; --lb-fg: #2a2520; --lb-fg-2: #8b8277; --lb-chip: #efe9de; --lb-hi: #e483b0; --lb-radius: 26px;
+  --tile: 220px; --pile: 260px; --tfs: 16px; }
+:root[data-size="s"] { --tile: 160px; --pile: 200px; --tfs: 14px; }
+:root[data-size="l"] { --tile: 310px; --pile: 340px; --tfs: 19px; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1d1a17; --card: #26221e; --fg: #efe8dc; --fg-2: #b5ab9c; --fg-3: #7d7468; --line: #36302a; --sh: 0 8px 24px -8px rgba(0,0,0,.6);
+    --lb-bg: #12100e; --lb-panel: #26221e; --lb-fg: #efe8dc; --lb-fg-2: #9d9385; --lb-chip: #332e28; }
+}
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 "DM Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 34px clamp(16px, 4vw, 48px) 160px; }
+.head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
+.logo { font: 800 24px/1 var(--display); letter-spacing: -.03em; }
+.logo i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--t-design); margin-left: 2px; }
+.crumbs { color: var(--fg-3); font-size: 14px; }
+.crumbs a { color: var(--fg-2); }
+h1 { font: 800 clamp(38px, 5.4vw, 66px)/.98 var(--display); letter-spacing: -.045em; margin: 0 0 8px; }
+h1 em { font-style: normal; color: var(--t-design); }
+.sub { color: var(--fg-2); margin: 0 0 36px; max-width: 520px; }
+.sect { font: 700 13px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); margin: 40px 0 16px; display: flex; justify-content: space-between; }
+.piles { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--pile), 1fr)); gap: 30px 26px; }
+.pile { cursor: pointer; }
+.stack { position: relative; aspect-ratio: 4/3.4; margin-bottom: 14px; }
+.stack div { position: absolute; width: 58%; aspect-ratio: 4/5; border-radius: 18px; box-shadow: var(--sh); border: 4px solid var(--card); transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+.stack div:nth-child(1) { left: 4%; top: 10%; transform: rotate(-7deg); }
+.stack div:nth-child(2) { left: 38%; top: 8%; transform: rotate(6deg); }
+.stack div:nth-child(3) { left: 21%; top: 0; transform: rotate(-1deg); z-index: 2; }
+.pile:hover .stack div:nth-child(1) { transform: rotate(-12deg) translate(-14px, 4px); }
+.pile:hover .stack div:nth-child(2) { transform: rotate(11deg) translate(14px, 4px); }
+.pile:hover .stack div:nth-child(3) { transform: translateY(-8px); }
+.pile h3 { font: 700 calc(var(--tfs) + 4px)/1.1 var(--display); letter-spacing: -.02em; margin: 0; display: flex; align-items: center; gap: 8px; }
+.pile h3 span { font: 500 13px var(--sans); color: var(--fg-3); }
+.pile p { margin: 4px 0 0; color: var(--fg-2); font-size: 13.5px; }
+.pile .new { white-space: nowrap; display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--t-design); color: #fff; margin-left: 4px; }
+.typerow { display: flex; gap: 10px; flex-wrap: wrap; }
+.tp { display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 999px; background: var(--card); box-shadow: var(--sh); cursor: pointer; font-weight: 600; }
+.tp i { width: 30px; height: 30px; border-radius: 50%; }
+.tp span { color: var(--fg-3); font-weight: 500; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr)); gap: 22px; }
+.card { background: var(--card); border-radius: 24px; padding: 8px; box-shadow: var(--sh); cursor: pointer; transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
+.card:hover { transform: translateY(-5px); }
+.card .im { aspect-ratio: 4/5; border-radius: 18px; position: relative; overflow: hidden; }
+.card .ty { position: absolute; left: 10px; top: 10px; font-size: 11.5px; font-weight: 700; color: #fff; padding: 4px 10px; border-radius: 999px; }
+.card .du { position: absolute; right: 10px; top: 10px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,.35); padding: 3px 8px; border-radius: 999px; backdrop-filter: blur(6px); }
+.card .typo { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; text-align: center; color: #fff; font: 800 calc(var(--tfs) * 1.3)/1.05 var(--display); }
+.card .pg { position: absolute; inset: auto 10px 10px; height: 6px; border-radius: 6px; background: rgba(255,255,255,.4); overflow: hidden; }
+.card .pg i { display: block; height: 100%; background: #fff; }
+.card .q { position: absolute; inset: auto 8px 8px; background: rgba(255,255,255,.95); color: #222; border-radius: 12px; padding: 8px 10px; font-size: 12.5px; line-height: 1.35; }
+.card .q small { display: block; font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; }
+.card .tx { padding: 12px 8px 6px; }
+.card .t { font: 700 var(--tfs)/1.2 var(--display); letter-spacing: -.015em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .m { color: var(--fg-3); font-size: 12.5px; margin-top: 3px; }
+.card.pend .im { filter: grayscale(.8) brightness(1.05); }
+:root[data-size="s"] .card .m, :root[data-size="s"] .card .du { display: none; }
+/* dock */
+.dock { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 6px; padding: 7px; border-radius: 999px; background: color-mix(in srgb, var(--card) 85%, transparent); backdrop-filter: blur(20px) saturate(1.4); box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 20px 50px -10px rgba(60,45,25,.35); border: 1px solid var(--line); max-width: calc(100vw - 24px); }
+.dock .db { height: 44px; padding: 0 16px; border-radius: 999px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.dock .db:hover, .dock .db.on { background: var(--lb-chip, #efe9de); }
+.dock .db.add { background: var(--fg); color: var(--bg); }
+.dock .sep { width: 1px; height: 26px; background: var(--line); margin: 0 4px; }
+.dock .live i { width: 8px; height: 8px; border-radius: 50%; background: #5fb796; animation: p 1.6s infinite; }
+@keyframes p { 50% { opacity: .3; } }
+.sizes button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.pop { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(10px); width: min(560px, calc(100vw - 24px)); background: var(--card); border-radius: 26px; box-shadow: 0 30px 70px -10px rgba(60,45,25,.4); border: 1px solid var(--line); padding: 18px; z-index: 29; opacity: 0; pointer-events: none; transition: opacity .2s, transform .25s cubic-bezier(.2, .8, .2, 1); max-height: 64vh; overflow: auto; }
+.pop.on { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+.pop input { width: 100%; border: 0; background: transparent; color: var(--fg); font: 800 30px var(--display); letter-spacing: -.03em; outline: none; padding: 2px 4px 10px; border-bottom: 1px solid var(--line); }
+.hit { display: grid; grid-template-columns: 52px 1fr; gap: 12px; padding: 10px 6px; border-radius: 14px; cursor: pointer; align-items: center; }
+.hit:hover { background: var(--bg); }
+.hit .im { aspect-ratio: 4/5; border-radius: 10px; }
+.hit b { font: 700 15px var(--display); display: block; }
+.hit small { color: var(--fg-2); font-size: 13px; }
+.hit small em { font-style: normal; font-weight: 700; color: var(--fg-3); font-size: 10.5px; text-transform: uppercase; margin-right: 4px; }
+.pop h4 { margin: 4px 4px 10px; font: 800 22px var(--display); letter-spacing: -.02em; }
+.flow { display: flex; gap: 6px; margin: 12px 0 4px; }
+.flow div { flex: 1; text-align: center; font-size: 11.5px; color: var(--fg-3); }
+.flow div i { display: block; height: 6px; border-radius: 3px; background: var(--line); margin-bottom: 5px; }
+.flow .d i { background: #5fb796; } .flow .r i { background: var(--t-design); animation: p 1s infinite; }
+.attn { margin-top: 12px; padding: 12px 14px; border-radius: 16px; border: 1.5px dashed var(--t-news); font-size: 13.5px; color: var(--fg-2); }
+@media (max-width: 720px) { .dock .lbl { display: none; } .dock .db { padding: 0 12px; } .dock .sep { display: none; } :root { --tile: 150px; --pile: 160px; } :root[data-size="s"] { --tile: 110px; --pile: 130px; } :root[data-size="l"] { --tile: 300px; --pile: 280px; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="view"></div>
+<div class="pop" id="pop"></div>
+<nav class="dock" aria-label="Controls">
+  <button class="db" id="d-home" data-go="#/">◫ <span class="lbl">Piles</span></button>
+  <button class="db" id="d-all" data-go="#/all">▦ <span class="lbl">Everything</span></button>
+  <button class="db" id="d-search">⌕ <span class="lbl">Search</span></button>
+  <span class="sep"></span>
+  <div class="sizes" id="sizes" role="group" aria-label="Tile size"></div>
+  <span class="sep"></span>
+  <button class="db live" id="d-live"><i></i><span class="lbl">Reading 1</span></button>
+  <button class="db add">+ <span class="lbl">Add</span></button>
+</nav>
+<div class="lb" id="lb"></div>
+<script src="data.js"></script><script src="c-common.js"></script>
+<script>
+const M = window.MAG, C = window.MAGC, $ = s => document.querySelector(s);
+// Topics merge related items across sources (the "Topics" idea in specs.md); here hand-made from tags.
+const TOPICS = [
+  { id: "ai", name: "Workshop projects", blurb: "Shared tools, recording, repair", ids: [16, 4, 3, 5, 15], fresh: 2 },
+  { id: "design", name: "Design inspiration", blurb: "Paper studies, onboarding, controls", ids: [17, 13, 11, 6, 8], fresh: 2 },
+  { id: "build", name: "Making at home", blurb: "Lamps, catalogues, cardboard builds", ids: [15, 2, 7, 16], fresh: 2 },
+  { id: "world", name: "Community & reuse", blurb: "Repair exchanges and return boxes", ids: [14, 3], fresh: 1 },
+  { id: "kitchen", name: "Kitchen", blurb: "Things to cook this week", ids: [10], fresh: 0 },
+  { id: "ideas", name: "Curious ideas", blurb: "Folds and paper experiments", ids: [9], fresh: 0 },
+];
+const card = (it, hit, q) => {
+  if (it.status === "attention") return `<div class="card" style="box-shadow:none;border:2px dashed var(--t-news);background:transparent"><div class="im" style="display:grid;place-items:center;text-align:center;padding:16px;color:var(--fg-2);font-size:14px"><div><b style="display:block;color:var(--fg);font:700 17px var(--display)">Couldn't open this one</b>${it.reason}. ${it.retry}.</div></div></div>`;
+  return `<div class="card ${it.status !== "done" ? "pend" : ""}" data-go="#/item/${it.id}"><div class="im" style="background:${C.hasThumb(it) ? C.bg(it) : C.color(it.type)}">
+    ${!C.hasThumb(it) ? `<div class="typo">“${C.esc(C.shortTitle(it))}”</div>` : ""}
+    ${it.type ? `<span class="ty" style="background:${C.color(it.type)}">${it.type}</span>` : ""}${it.dur ? `<span class="du">${it.dur}</span>` : ""}
+    ${it.status === "summarising" ? `<div class="pg"><i style="width:${it.pct}%"></i></div>` : ""}
+    ${hit ? `<div class="q"><small>${hit.where}${hit.at ? " · " + hit.at : ""}</small>${M.mark(hit.text.slice(0, 90), q)}</div>` : ""}</div>
+    <div class="tx"><div class="t">${q ? M.mark(it.title, q) : C.esc(it.title)}</div><div class="m">${it.status === "done" ? it.author + " · " + M.sources[it.source] : C.status(it)}</div></div></div>`;
+};
+function home() {
+  const types = [...new Set(M.items.filter(i => i.type).map(i => i.type))];
+  $("#view").innerHTML = `<div class="head"><a class="logo" href="#/">magpiary<i></i></a><span class="crumbs">16 saved · 6 today</span></div>
+    <h1>Your <em>piles.</em></h1><p class="sub">Magpiary sorts what you share into topics, across Instagram, YouTube, Reddit and the rest. Open a pile, or browse everything from the dock.</p>
+    <div class="piles">${TOPICS.map(t => { const its = t.ids.map(i => M.byId[i]); const top = [its[1] || its[0], its[2] || its[0], its[0]];
+      return `<div class="pile" data-go="#/topic/${t.id}"><div class="stack">${top.map(i => `<div style="background:${C.bg(i)}"></div>`).join("")}</div>
+      <h3>${t.name} <span>${t.ids.length}</span>${t.fresh ? `<b class="new">${t.fresh} new</b>` : ""}</h3><p>${t.blurb}</p></div>`; }).join("")}</div>
+    <div class="sect"><span>Or by kind</span></div>
+    <div class="typerow">${types.map(t => `<div class="tp" data-go="#/all/${encodeURIComponent(t)}"><i style="background:${C.color(t)}"></i>${t} <span>${M.items.filter(i => i.type === t).length}</span></div>`).join("")}</div>`;
+}
+function grid(title, items, crumbs, sub) {
+  $("#view").innerHTML = `<div class="head"><a class="logo" href="#/">magpiary<i></i></a><span class="crumbs">${crumbs}</span></div>
+    <h1>${title}</h1><p class="sub">${sub}</p><div class="grid">${items.map(i => card(i)).join("")}</div>`;
+}
+function pop(kind) {
+  const p = $("#pop");
+  if (!kind || p.dataset.kind === kind && p.classList.contains("on")) { p.classList.remove("on"); p.dataset.kind = ""; $("#d-search").classList.remove("on"); return; }
+  p.dataset.kind = kind; p.classList.add("on"); $("#d-search").classList.toggle("on", kind === "search");
+  if (kind === "search") {
+    p.innerHTML = `<input id="q" placeholder="Find anything…" autocomplete="off"><div id="hits"></div>`;
+    const run = () => { const v = $("#q").value.trim(); $("#hits").innerHTML = M.search(v).slice(0, 8).map(({ it, hits }) => { const h = hits.find(x => x.where !== "Title") || hits[0];
+      return `<div class="hit" data-go="#/item/${it.id}"><div class="im" style="background:${C.bg(it)}"></div><div><b>${M.mark(it.title, v)}</b><small><em>${h.where}${h.at ? " " + h.at : ""}</em>${M.mark(h.text.slice(0, 100), v)}</small></div></div>`; }).join("") || (v ? `<p style="color:var(--fg-3);padding:8px">Nothing for “${C.esc(v)}”.</p>` : `<p style="color:var(--fg-3);padding:8px">Searches the fictional examples of what was said, shown and written.</p>`); };
+    $("#q").oninput = run; run(); $("#q").focus();
+  } else {
+    const n = M.byId[17];
+    p.innerHTML = `<h4>What Magpiary is doing</h4>
+      <div class="hit" data-go="#/item/17"><div class="im" style="background:${C.bg(n)}"></div><div><b>${C.esc(n.title)}</b><small>${n.step} · ${n.pct}%</small></div></div>
+      <div class="flow"><div class="d"><i></i>Fetched</div><div class="d"><i></i>Listened</div><div class="d"><i></i>Looked</div><div class="r"><i></i>Writing</div></div>
+      <p style="color:var(--fg-3);font-size:13px;margin:14px 4px 4px">Up next · ≈ 2 min until clear</p>
+      ${M.queue.map(i => `<div class="hit" data-go="#/item/${i}"><div class="im" style="background:${C.bg(M.byId[i])}"></div><div><b>${C.esc(M.byId[i].title)}</b><small>${M.sources[M.byId[i].source]}</small></div></div>`).join("")}
+      <div class="attn"><b style="color:var(--fg)">One needs you.</b> An Instagram reel wants a login; next try in 3 h. <button style="text-decoration:underline">Try now</button></div>`;
+  }
+}
+$("#d-search").onclick = () => pop("search"); $("#d-live").onclick = () => pop("act");
+C.size($("#sizes"));
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) { if (!g.closest(".pop") || g.dataset.go.startsWith("#/item")) pop(null); location.hash = g.dataset.go; } });
+document.addEventListener("keydown", e => { if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); pop("search"); } if (e.key === "Escape") { pop(null); if ($("#lb").classList.contains("on")) history.back(); } });
+let base = "";
+function route() {
+  const p = decodeURIComponent((location.hash || "#/").slice(1)), parts = p.split("/");
+  if (p.startsWith("/item/")) { if (!base) home(); C.lightbox($("#lb"), +parts[2], () => history.back()); return; }
+  $("#lb").classList.remove("on");
+  if (p === base) return; base = p;
+  $("#d-home").classList.toggle("on", p === "/"); $("#d-all").classList.toggle("on", p.startsWith("/all"));
+  if (p.startsWith("/topic/")) { const t = TOPICS.find(x => x.id === parts[2]); grid(t.name, t.ids.map(i => M.byId[i]), `<a href="#/">Piles</a> / ${t.name}`, t.blurb + ". " + t.ids.length + " items from " + new Set(t.ids.map(i => M.byId[i].source)).size + " sources."); }
+  else if (p.startsWith("/all")) { const t = parts[2]; const its = M.items.filter(i => !t || i.type === t); grid(t || "Everything", its, `<a href="#/">Piles</a> / ${t || "Everything"}`, t ? `${its.length} ${t.toLowerCase()} items, newest first.` : "Newest first. Every tile is the same size; change it with the A’s in the dock."); }
+  else home();
+  window.scrollTo(0, 0);
+}
+addEventListener("hashchange", route); route();
+</script>
+</body>
+</html>

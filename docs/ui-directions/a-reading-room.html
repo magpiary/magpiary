@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magpiary · A · Reading Room</title>
+<link rel="icon" href="example-cover.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f7f4ee; --paper-2: #efebe2; --ink: #1f1c17; --ink-2: #5d574c; --ink-3: #948c7e;
+  --rule: #e2dccf; --accent: #9a3b26; --accent-soft: #f3e3dc; --ok: #4d6b3c;
+  --serif: "Newsreader", Georgia, serif; --sans: "Inter", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #191714; --paper-2: #221f1b; --ink: #ece6da; --ink-2: #b1a999; --ink-3: #7c7568;
+    --rule: #332f29; --accent: #e08a6f; --accent-soft: #3a2620; --ok: #9cbf86; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+.shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.rail { padding: 32px 24px; border-right: 1px solid var(--rule); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 28px; }
+.brand { font: 600 22px/1 var(--serif); letter-spacing: -.01em; }
+.brand i { font-weight: 400; color: var(--accent); }
+.rail nav { display: flex; flex-direction: column; gap: 2px; }
+.rail nav a { padding: 7px 10px; border-radius: 6px; color: var(--ink-2); display: flex; justify-content: space-between; }
+.rail nav a.on, .rail nav a:hover { background: var(--paper-2); color: var(--ink); }
+.rail nav a .n { color: var(--ink-3); font-size: 13px; }
+.rail h6 { margin: 0 0 6px 10px; font: 500 11px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.rail .foot { margin-top: auto; font-size: 13px; color: var(--ink-3); }
+.rail .foot .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 6px; animation: p 2s infinite; }
+@keyframes p { 50% { opacity: .35; } }
+main { padding: 48px clamp(20px, 6vw, 88px) 120px; max-width: 980px; }
+.kicker { font: 500 11px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 500 40px/1.1 var(--serif); letter-spacing: -.02em; margin: 6px 0 10px; }
+.lede { font: 400 19px/1.5 var(--serif); color: var(--ink-2); margin: 0 0 32px; max-width: 60ch; }
+.lede b { color: var(--ink); font-weight: 500; }
+.types { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 8px; font-size: 14px; color: var(--ink-3); border-bottom: 1px solid var(--rule); padding-bottom: 14px; }
+.types button.on { color: var(--ink); text-decoration: underline; text-underline-offset: 6px; text-decoration-color: var(--accent); }
+.types button:hover { color: var(--ink); }
+.day { font: italic 400 15px var(--serif); color: var(--ink-3); margin: 36px 0 4px; }
+.entry { display: grid; grid-template-columns: 96px 1fr; gap: 22px; padding: 22px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.entry:hover .t { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 4px; }
+.thumb { aspect-ratio: 4/5; border-radius: 4px; position: relative; overflow: hidden; filter: saturate(.55); }
+.thumb span { position: absolute; left: 6px; bottom: 5px; font: 500 10px var(--sans); color: #fff; opacity: .9; }
+.entry .t { font: 500 22px/1.25 var(--serif); letter-spacing: -.01em; margin: 3px 0 6px; }
+.entry .s { color: var(--ink-2); margin: 0 0 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.meta { font-size: 13px; color: var(--ink-3); }
+.meta .dot::before { content: "·"; margin: 0 6px; }
+.pending .t { color: var(--ink-2); font-style: italic; }
+.bar { height: 2px; background: var(--rule); border-radius: 2px; margin-top: 10px; max-width: 220px; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.note { margin: 28px 0 0; padding: 14px 18px; background: var(--accent-soft); border-radius: 6px; font-size: 14px; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.btn { font: 500 13px var(--sans); padding: 7px 14px; border-radius: 999px; border: 1px solid var(--rule); background: var(--paper); }
+.btn:hover { border-color: var(--ink-3); }
+.btn.solid { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* item */
+.back { font-size: 13px; color: var(--ink-3); }
+.article { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 56px; margin-top: 24px; }
+.article h1 { font-size: 44px; }
+.byline { color: var(--ink-3); font-size: 14px; margin-bottom: 28px; }
+.byline a { color: var(--ink-2); border-bottom: 1px solid var(--rule); }
+.article .summary { font: 400 21px/1.55 var(--serif); margin: 0 0 36px; }
+.article h3 { font: 500 11px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin: 36px 0 10px; }
+.pts { list-style: none; margin: 0; padding: 0; counter-reset: k; }
+.pts li { display: grid; grid-template-columns: 56px 1fr; gap: 8px; padding: 10px 0; border-top: 1px solid var(--rule); font: 400 17px/1.5 var(--serif); }
+.pts li button { font: 500 12px var(--sans); color: var(--accent); text-align: left; padding-top: 4px; }
+.pts li button:hover { text-decoration: underline; }
+.dl { display: grid; grid-template-columns: 120px 1fr; gap: 6px 16px; font-size: 15px; }
+.dl dt { color: var(--ink-3); }
+.dl dd { margin: 0; }
+.tagrow { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--paper-2); color: var(--ink-2); }
+.tag.sug { background: none; border: 1px dashed var(--rule); color: var(--ink-3); }
+.margin { position: sticky; top: 32px; align-self: start; }
+.player { aspect-ratio: 9/16; border-radius: 6px; position: relative; overflow: hidden; }
+.player .pl { position: absolute; inset: auto 0 0 0; padding: 10px 12px; background: linear-gradient(transparent, rgba(0,0,0,.6)); color: #fff; font-size: 12px; display: flex; justify-content: space-between; }
+.player .at { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.55); color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 999px; opacity: 0; transition: opacity .2s; }
+.player .at.show { opacity: 1; }
+.margin .meta p { margin: 6px 0; }
+.notebox { width: 100%; min-height: 90px; border: 1px solid var(--rule); background: transparent; border-radius: 6px; padding: 12px; font: 400 16px/1.5 var(--serif); color: var(--ink); resize: vertical; }
+details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
+/* search */
+.bigsearch { width: 100%; border: 0; border-bottom: 1px solid var(--ink); background: transparent; font: 400 34px var(--serif); padding: 8px 0; color: var(--ink); outline: none; }
+.bigsearch::placeholder { color: var(--ink-3); font-style: italic; }
+.hint { margin: 12px 0 30px; color: var(--ink-3); font-size: 14px; }
+.hint button { color: var(--ink-2); border-bottom: 1px solid var(--rule); margin: 0 4px; }
+.res { padding: 20px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.res .t { font: 500 20px/1.3 var(--serif); margin: 2px 0 8px; }
+.hit { font: 400 16px/1.5 var(--serif); color: var(--ink-2); margin: 4px 0; padding-left: 14px; border-left: 2px solid var(--rule); }
+.hit small { font: 500 11px var(--sans); color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-right: 8px; }
+mark { background: var(--accent-soft); color: var(--ink); padding: 0 2px; border-radius: 2px; }
+/* activity */
+.now { padding: 26px 28px; border: 1px solid var(--rule); border-radius: 10px; margin: 8px 0 36px; }
+.now .t { font: 500 24px/1.3 var(--serif); margin: 6px 0 4px; }
+.steps { display: flex; gap: 22px; margin-top: 16px; font-size: 13px; color: var(--ink-3); }
+.steps b { color: var(--ink); font-weight: 500; display: block; }
+.list { list-style: none; padding: 0; margin: 0; }
+.list li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--rule); font: 400 17px var(--serif); cursor: pointer; }
+.list li span:last-child { font: 400 13px var(--sans); color: var(--ink-3); }
+.switches { display: flex; gap: 28px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
+.sw { display: flex; align-items: center; gap: 10px; }
+.sw i { width: 30px; height: 18px; border-radius: 999px; background: var(--ok); position: relative; }
+.sw i::after { content: ""; position: absolute; right: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--paper); }
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail { position: static; height: auto; flex-direction: row; align-items: center; padding: 14px 16px; gap: 14px; border-right: 0; border-bottom: 1px solid var(--rule); overflow-x: auto; }
+  .rail nav { flex-direction: row; } .rail h6, .rail .foot, .rail .tagnav { display: none; }
+  main { padding: 28px 16px 80px; }
+  .article { grid-template-columns: 1fr; } .margin { position: static; max-width: 260px; }
+  h1, .article h1 { font-size: 32px; }
+  .entry { grid-template-columns: 64px 1fr; gap: 14px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail">
+    <a class="brand" href="#/">Mag<i>piary</i></a>
+    <nav id="nav">
+      <a href="#/" data-r="lib">Library <span class="n">16</span></a>
+      <a href="#/search" data-r="search">Search <span class="n">/</span></a>
+      <a href="#/activity" data-r="act">Activity <span class="n">3</span></a>
+      <a href="#/">Done <span class="n">0</span></a>
+      <a href="#/">Trash <span class="n">0</span></a>
+    </nav>
+    <div class="tagnav"><h6>Topics</h6><nav>
+      <a href="#/">Making <span class="n">5</span></a><a href="#/">Design <span class="n">5</span></a><a href="#/">Studio tools <span class="n">2</span></a><a href="#/">Cooking <span class="n">1</span></a>
+    </nav></div>
+    <div class="foot"><span class="pulse"></span>Reading 1 · 3 waiting<br>Phones · Settings</div>
+  </aside>
+  <main id="view"></main>
+</div>
+<script src="data.js"></script>
+<script>
+const M = window.MAG, $ = s => document.querySelector(s), esc = s => M.mark(s || "", "");
+const thumb = (it, label = true) => `<div class="thumb" style="background:linear-gradient(150deg,hsl(${it.hue} 45% 62%),hsl(${it.hue + 30} 40% 30%))">${label ? `<span>${M.sources[it.source]}${it.dur ? " · " + it.dur : ""}</span>` : ""}</div>`;
+let typeFilter = "";
+
+function library() {
+  const types = ["All", ...new Set(M.items.filter(i => i.type).map(i => i.type))];
+  const shown = M.items.filter(i => i.status !== "attention" && (!typeFilter || i.type === typeFilter));
+  let html = `<div class="kicker">Friday evening</div><h1>Your library</h1>
+    <p class="lede"><b>6 new today.</b> Five are summarised and ready to read; one is being read now, and two are waiting their turn.</p>
+    <div class="types">${types.map(t => `<button class="${(t === "All" ? !typeFilter : typeFilter === t) ? "on" : ""}" data-type="${t}">${t}</button>`).join("")}</div>`;
+  let day = "";
+  for (const it of shown) {
+    if (it.day !== day) { day = it.day; html += `<div class="day">${day}</div>`; }
+    const pending = it.status !== "done";
+    const sub = it.status === "summarising" ? `<div class="meta">Being read · ${it.step.toLowerCase()}</div><div class="bar"><i style="width:${it.pct}%"></i></div>`
+      : it.status === "waiting" ? `<p class="s">${esc(it.caption)}</p><div class="meta">Waiting to be read · from the caption</div>`
+      : `<p class="s">${esc(it.summary)}</p>`;
+    html += `<article class="entry ${pending ? "pending" : ""}" data-go="#/item/${it.id}">${thumb(it)}
+      <div><div class="kicker">${it.type || "Untitled"}</div><div class="t">${esc(it.title)}</div>${sub}
+      <div class="meta">${it.author}<span class="dot"></span>${M.sources[it.source]}<span class="dot"></span>${it.saved}</div></div></article>`;
+  }
+  const bad = M.items.find(i => i.status === "attention");
+  html += `<div class="note"><span><b>One link couldn't be opened.</b> ${bad.reason}. ${bad.retry}.</span><button class="btn">Try now</button></div>`;
+  $("#view").innerHTML = html;
+  document.querySelectorAll("[data-type]").forEach(b => b.onclick = () => { typeFilter = b.dataset.type === "All" ? "" : b.dataset.type; library(); });
+}
+
+function item(id) {
+  const it = M.byId[id];
+  if (it.status !== "done") {
+    $("#view").innerHTML = `<a class="back" href="#/">← Library</a><div class="article"><div><div class="kicker">${it.type || "Not read yet"}</div><h1>${esc(it.title)}</h1>
+      <div class="byline">${it.author || "Unknown"} · ${M.sources[it.source]}</div>
+      <p class="summary" style="color:var(--ink-3)">${it.status === "summarising" ? `Magpiary is reading this now: ${it.step.toLowerCase()}. The page fills in when it's done.` : it.status === "attention" ? it.reason + ". " + it.retry + "." : "Waiting its turn. You can watch it now; the summary will appear here."}</p></div>
+      <aside class="margin"><div class="player" style="background:linear-gradient(160deg,hsl(${it.hue} 40% 55%),hsl(${it.hue + 40} 35% 22%))"></div></aside></div>`;
+    return;
+  }
+  const extras = it.extras ? `<h3>${it.type} details</h3><dl class="dl">${Object.entries(it.extras).map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : "";
+  $("#view").innerHTML = `<a class="back" href="#/">← Library</a>
+  <div class="article"><div>
+    <div class="kicker">${it.type}</div><h1>${esc(it.title)}</h1>
+    <div class="byline">By <a href="#/">${it.author}</a> on ${M.sources[it.source]} · saved ${it.saved.toLowerCase()} · <a href="#/">Open original ↗</a></div>
+    <p class="summary">${esc(it.summary)}</p>
+    <h3>Key points</h3><ol class="pts">${it.points.map(([at, t]) => `<li>${at ? `<button data-at="${at}">${at}</button>` : "<span></span>"}<span>${esc(t)}</span></li>`).join("")}</ol>
+    ${extras}
+    ${it.discussion ? `<h3>The discussion</h3><p style="font:400 17px/1.5 var(--serif)">${esc(it.discussion)}</p>` : ""}
+    ${it.things.length ? `<h3>Mentioned</h3><div class="tagrow">${it.things.map(t => `<a class="tag" href="#/search?q=${encodeURIComponent(t)}">${t}</a>`).join("")}</div>` : ""}
+    <h3>Your note</h3><textarea class="notebox" placeholder="Why did you save this?"></textarea>
+    <h3>Tags</h3><div class="tagrow">${it.tags.map(t => `<span class="tag">#${t}</span>`).join("")}<span class="tag sug">+ cloud costs</span><span class="tag sug">+ startups</span></div>
+    <h3>More</h3><details><summary>Original caption, transcript and how it was read</summary><p class="meta">Read by Gemini 3.6 Flash on your key · transcript 5.4 s · frames 3.3 s · summary 10.9 s</p></details>
+    <div style="display:flex;gap:8px;margin-top:32px"><button class="btn">Mark done</button><button class="btn">Summarise again</button><button class="btn">Move to Trash</button></div>
+  </div>
+  <aside class="margin">${it.kind === "text" ? "" : `<div class="player" style="background:linear-gradient(160deg,hsl(${it.hue} 40% 55%),hsl(${it.hue + 40} 35% 22%))"><span class="at" id="at"></span><div class="pl"><span>▶ 0:00</span><span>${it.dur || it.photos + " photos"}</span></div></div>`}
+    <div class="meta"><p>${it.author}</p><p>${M.sources[it.source]} · ${it.kind}</p><p>91 likes · 0 comments</p><p>Counts as of today</p></div></aside></div>`;
+  document.querySelectorAll("[data-at]").forEach(b => b.onclick = () => { const a = $("#at"); a.textContent = "Jumped to " + b.dataset.at; a.classList.add("show"); setTimeout(() => a.classList.remove("show"), 1400); });
+}
+
+function search(q) {
+  $("#view").innerHTML = `<input class="bigsearch" id="q" placeholder="What was that video about…" value="${esc(q)}" autofocus>
+    <div class="hint">Searches the fictional examples of what was said, shown and written. Try <button data-q="hinge">hinge</button><button data-q="paper">paper</button><button data-q="Pebble">Pebble</button></div><div id="out"></div>`;
+  const run = () => {
+    const v = $("#q").value, r = M.search(v);
+    $("#out").innerHTML = !v ? "" : r.length ? `<div class="meta" style="margin-bottom:8px">${r.length} found</div>` + r.map(({ it, hits }) => `<div class="res" data-go="#/item/${it.id}"><div class="kicker">${it.type}</div><div class="t">${esc(it.title)}</div>
+      ${hits.slice(0, 2).map(h => `<div class="hit"><small>${h.where}${h.at ? " · " + h.at : ""}</small>${M.mark(h.text.length > 160 ? h.text.slice(0, 160) + "…" : h.text, v)}</div>`).join("")}</div>`).join("") : `<p class="lede">Nothing yet. Items still waiting to be read can only be found by their caption.</p>`;
+  };
+  $("#q").oninput = run; document.querySelectorAll("[data-q]").forEach(b => b.onclick = () => { $("#q").value = b.dataset.q; run(); });
+  run(); $("#q").focus();
+}
+
+function activity() {
+  const it = M.byId[17];
+  $("#view").innerHTML = `<div class="kicker">Activity</div><h1>At the desk</h1><p class="lede">Magpiary reads one thing at a time. <b>About 2 minutes</b> until the queue is clear.</p>
+    <div class="now"><div class="kicker">Reading now</div><div class="t">${esc(it.title)}</div><div class="meta">${it.author} · ${M.sources[it.source]}</div>
+    <div class="bar" style="max-width:none"><i style="width:${it.pct}%"></i></div>
+    <div class="steps"><span><b>Transcript</b>5.4 s</span><span><b>Frames</b>3.3 s</span><span><b>Summary</b>writing…</span></div></div>
+    <h3 class="kicker" style="color:var(--ink-3)">Next up</h3><ul class="list">${M.queue.map(i => `<li data-go="#/item/${i}"><span>${esc(M.byId[i].title)}</span><span>${M.sources[M.byId[i].source]}</span></li>`).join("")}</ul>
+    <h3 class="kicker" style="color:var(--ink-3);margin-top:36px">Filed today</h3><ul class="list">${M.recent.map(([i, s]) => `<li data-go="#/item/${i}"><span>${esc(M.byId[i].title)}</span><span>${s}</span></li>`).join("")}</ul>
+    <h3 class="kicker" style="color:var(--ink-3);margin-top:36px">Controls</h3><div class="switches"><span class="sw"><i></i>Fetching</span><span class="sw"><i></i>Transcribing on this Mac</span><span class="sw"><i></i>Summaries · all</span></div>`;
+}
+
+function route() {
+  const h = location.hash || "#/"; const [path, qs] = h.slice(1).split("?");
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", (path.startsWith("/search") && a.dataset.r === "search") || (path.startsWith("/activity") && a.dataset.r === "act") || ((path === "/" || path.startsWith("/item")) && a.dataset.r === "lib")));
+  if (path.startsWith("/item/")) item(+path.split("/")[2]);
+  else if (path.startsWith("/search")) search(new URLSearchParams(qs).get("q") || "");
+  else if (path.startsWith("/activity")) activity();
+  else library();
+  window.scrollTo(0, 0);
+}
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) location.hash = g.dataset.go; });
+document.addEventListener("keydown", e => { if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") { e.preventDefault(); location.hash = "#/search"; } });
+addEventListener("hashchange", route); route();
+</script>
+</body>
+</html>

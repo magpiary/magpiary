@@ -1,0 +1,116 @@
+# --- Secrets: never commit ---
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+.pairing_key
+**/.pairing_key
+secrets/
+*.p12
+
+# --- Databases (queue, library, test data) ---
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
+
+# --- Media and archives (the user's library, test downloads) ---
+*.mp4
+*.mov
+*.m4v
+*.webm
+*.mkv
+*.mp3
+*.m4a
+*.wav
+*.jpg
+*.jpeg
+*.heic
+media/
+downloads/
+frames/
+
+# --- Personal data folders (live in ~ but guard against copies here) ---
+/Magpiary/
+/.config/
+
+# --- Signed/generated Shortcuts (contain pairing keys) ---
+*.shortcut
+spikes/**/out/
+
+# --- Python / uv ---
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# --- macOS / editors ---
+.DS_Store
+.idea/
+.vscode/
+
+# --- Claude Code local state ---
+.claude/settings.local.json
+
+# --- Owner's real saved posts from the S1 spike (personal; kept on disk only) ---
+spikes/S1/links.txt
+spikes/S1/results.jsonl
+
+# --- UI mockups: owner's real thumbnails, copied locally (personal) ---
+docs/ui-directions/thumbs/
+
+# --- Evaluation sets built from the owner's real saves (personal; kept on disk only) ---
+/evals/
+spikes/S9a/state.json
+
+# --- Magpiary's own secret files, should a copy ever land here ---
+keys.json
+identity.key
+b2.env
+instagram-login.txt
+*cookies*.txt
+*cookies*.json
+boards.json
+/exports/
+/audit-private/
+
+# --- Private workspace folders: these live NEXT TO the repo (../workbench etc.), never inside it.
+# Guards in case one is ever copied or symlinked in by mistake.
+/workbench/
+/backups/
+/archive/
+/project-state/
+*.bundle
+.claude/
+.codex/
+AGENTS.override.md
+
+# --- Logs, coverage and tool caches ---
+*.log
+.coverage
+htmlcov/
+.mypy_cache/
+node_modules/
+tmp/
+scratch/
+*.zip
+/handover/
+/generated/
+
+# Agent activity and optional proxy credentials (also blocked by secret_check.py).
+stats-proxy
+agent-activity.jsonl

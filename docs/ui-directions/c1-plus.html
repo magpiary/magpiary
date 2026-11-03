@@ -1,0 +1,1068 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magpiary · C1+</title>
+<link rel="icon" href="example-cover.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="c-common.css">
+<style>
+:root { --box: 100vw; --pad: max(clamp(16px, 3vw, 36px), calc((100vw - var(--box)) / 2)); }
+:root { --bg: #ffffff; --fg: #111; --fg-2: #555; --fg-3: #9a9a9a; --line: #ececec; --chip: #f4f4f2; --card: #fff; --ok: #1ec27a;
+  --tile: 220px; --gap: 18px; --tfs: 17px; --sh: 0 30px 80px -20px rgba(0,0,0,.35); }
+:root[data-size="s"] { --tile: 150px; --gap: 12px; --tfs: 14px; }
+:root[data-size="l"] { --tile: 320px; --gap: 24px; --tfs: 22px; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0f0f0f; --fg: #f5f3ee; --fg-2: #b9b6ae; --fg-3: #77746d; --line: #262626; --chip: #1c1c1c; --card: #161616; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 "DM Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+body.lock { overflow: hidden; }
+/* top */
+.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); }
+.bar { display: flex; align-items: center; gap: 12px; padding: 12px var(--pad); }
+.logo { font: 800 25px/1 var(--display); letter-spacing: -.03em; white-space: nowrap; }
+.logo i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--t-design); margin-left: 2px; }
+.search { flex: 1; max-width: 440px; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-radius: 999px; background: var(--chip); }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; color: var(--fg); outline: none; }
+.bar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.sizes { background: var(--chip); }
+.sizes button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.btn { height: 40px; padding: 0 18px; border-radius: 999px; background: var(--chip); font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
+.btn[aria-disabled="true"] { background: var(--chip) !important; color: var(--fg-3) !important; pointer-events: none; }
+.btn.dark { background: var(--fg); color: var(--bg); }
+.btn.sm { height: 32px; padding: 0 14px; font-size: 13.5px; }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--chip); }
+.seg button, .seg a { height: 34px; padding: 0 16px; border-radius: 999px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; color: var(--fg-2); }
+.seg .on { background: var(--fg); color: var(--bg); }
+.gear { width: 40px; height: 40px; border-radius: 50%; background: var(--chip); font-size: 18px; display: grid; place-items: center; }
+.gear.on { background: var(--fg); color: var(--bg); }
+/* strip */
+/* the strip: background activity, one quiet shade of dark in both themes */
+:root { --strip: #2a2926; --strip-fg: rgba(255,255,255,.72); --strip-chip: rgba(255,255,255,.07); }
+@media (prefers-color-scheme: dark) { :root { --strip: #1a1a19; --strip-fg: rgba(255,255,255,.62); --strip-chip: rgba(255,255,255,.06); } }
+.ticker { display: flex; align-items: center; gap: 12px; padding: 6px var(--pad); background: var(--strip); color: var(--strip-fg); font-size: 12.5px; cursor: pointer; border-top: 1px solid rgba(255,255,255,.04); }
+.ticker:hover { color: #fff; }
+.ticker b { font: 700 11.5px var(--display); opacity: .8; letter-spacing: .02em; text-transform: uppercase; flex: none; display: flex; align-items: center; gap: 8px; }
+.ticker b i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: p 1.5s infinite; }
+@keyframes p { 50% { opacity: .3; } }
+.tks { display: flex; gap: 10px; overflow: hidden; flex: 1; min-width: 0; }
+.tk { flex: none; display: flex; align-items: center; gap: 7px; padding: 2px 10px 2px 2px; border-radius: 999px; background: var(--strip-chip); }
+.tk .th { width: 20px; height: 20px; border-radius: 50%; }
+.tk .pb { width: 40px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.15); overflow: hidden; }
+.tk .pb i { display: block; height: 100%; background: var(--t-design); }
+.ticker .more { flex: none; font-weight: 600; }
+.ticker .warn { flex: none; color: #f0a08f; font-weight: 600; }
+.drop { overflow: hidden; max-height: 0; transition: max-height .35s cubic-bezier(.2, .8, .2, 1); background: var(--fg); color: var(--bg); }
+.drop.on { max-height: 460px; }
+.drop .in { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; padding: 4px var(--pad) 18px; }
+.dcard { background: color-mix(in srgb, var(--bg) 10%, transparent); border-radius: 18px; padding: 14px; }
+.dcard h5 { margin: 0 0 10px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .6; }
+.dnow { display: grid; grid-template-columns: 64px 1fr; gap: 12px; }
+.dnow .p { aspect-ratio: 1; border-radius: 12px; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; font-size: 11px; opacity: .85; }
+.steps i { display: block; height: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 22%, transparent); margin-bottom: 4px; }
+.steps .d i { background: var(--ok); } .steps .r i { background: var(--t-design); animation: p 1s infinite; }
+.dl { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; }
+.dl .th { width: 28px; height: 28px; border-radius: 8px; flex: none; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tg { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: color-mix(in srgb, currentColor 10%, transparent); font-size: 13px; cursor: pointer; }
+.tg i { width: 28px; height: 16px; border-radius: 999px; background: var(--ok); position: relative; }
+.tg i::after { content: ""; position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: right .2s; }
+.tg.off i { background: color-mix(in srgb, currentColor 30%, transparent); } .tg.off i::after { right: 14px; }
+/* wall */
+.wrap { padding: 26px var(--pad) 120px; }
+.hero { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 22px; }
+.hero h1 { font: 800 clamp(40px, 6vw, 72px)/.95 var(--display); letter-spacing: -.045em; margin: 0; }
+.hero h1 em { font-style: normal; color: var(--t-design); }
+.hero p { margin: 0; color: var(--fg-2); max-width: 560px; font-size: 15.5px; }
+.hero .meta1 { max-width: none; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hero .meta1 b { color: var(--fg); }
+.ctrl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+.f { flex: none; height: 34px; padding: 0 13px; border-radius: 999px; font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px; background: var(--chip); }
+.f i { width: 9px; height: 9px; border-radius: 3px; }
+.f .n { color: var(--fg-3); font-weight: 500; }
+.f.on { background: var(--fg); color: var(--bg); }
+.sec { display: flex; align-items: baseline; gap: 12px; margin: 34px 0 14px; }
+.sec h2 { font: 800 30px/1 var(--display); letter-spacing: -.035em; margin: 0; }
+.sec span { color: var(--fg-3); font-size: 14px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr)); gap: var(--gap); }
+.tile { cursor: pointer; border-radius: 20px; overflow: hidden; background: var(--chip); display: flex; flex-direction: column; transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s; position: relative; }
+.tile:hover { transform: translateY(-4px) rotate(-.6deg); box-shadow: 0 18px 36px -12px rgba(0,0,0,.28); }
+.tile:nth-child(even):hover { transform: translateY(-4px) rotate(.6deg); }
+.tile.sel { outline: 3px solid var(--fg); outline-offset: 3px; }
+.sq { aspect-ratio: 1; position: relative; }
+.sq .src { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,.4); backdrop-filter: blur(6px); padding: 3px 9px; border-radius: 999px; }
+.sq .dur { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,.4); padding: 3px 8px; border-radius: 999px; }
+.sq .typo { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; text-align: center; color: #fff; font: 800 calc(var(--tfs) * 1.25)/1.05 var(--display); letter-spacing: -.02em; }
+.sq .quote { position: absolute; inset: auto 8px 8px 8px; background: rgba(255,255,255,.94); color: #111; border-radius: 12px; padding: 8px 10px; font-size: 12.5px; line-height: 1.35; }
+.sq .quote small { display: block; font-weight: 700; font-size: 10.5px; color: #777; text-transform: uppercase; letter-spacing: .05em; }
+.sq .prog { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 6px; border-radius: 6px; background: rgba(255,255,255,.35); overflow: hidden; }
+.sq .prog i { display: block; height: 100%; background: #fff; transition: width .6s; }
+.sq .prog.ind i { width: 35% !important; animation: ind 1.2s infinite linear; }
+@keyframes ind { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+.label { padding: 12px 14px 14px; color: #fff; flex: 1; }
+.label .t { font: 700 var(--tfs)/1.15 var(--display); letter-spacing: -.015em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.label .m { font-size: 12px; opacity: .8; margin-top: 4px; }
+.label .s { font-size: 13px; opacity: .9; margin-top: 8px; display: none; }
+:root[data-size="l"] .label .s { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+:root[data-size="s"] .label .m, :root[data-size="s"] .sq .dur { display: none; }
+.label .m.nk { display: flex !important; align-items: center; gap: 8px; }
+.sumb { margin-left: auto; flex: none; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.22); color: #fff; opacity: 1; }
+.tile:hover .sumb { background: #fff; color: #111; }
+.ctl { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.cbox { display: grid; grid-template-columns: auto 1fr; gap: 14px; background: var(--chip); border-radius: 20px; padding: 16px; cursor: pointer; align-items: start; }
+.cbox .tg { padding: 0; background: none; margin-top: 3px; }
+.cbox b { font: 700 16px var(--display); }
+.cbox p { margin: 2px 0 0; color: var(--fg-2); font-size: 13px; }
+.tile.pend .sq { filter: grayscale(.85); }
+.tile.pend .label { background: var(--chip) !important; color: var(--fg-2); }
+.tile.attn { border: 2.5px dashed var(--t-news); background: transparent; }
+.tile.attn .sq { display: grid; place-items: center; text-align: center; padding: 16px; color: var(--fg-2); font-size: 14px; }
+.tile.attn .sq b { display: block; color: var(--fg); font: 700 17px var(--display); }
+.tile.ghost { border: 2.5px dashed var(--line); background: transparent; cursor: default; }
+.tile.ghost:hover { transform: none; box-shadow: none; }
+.tile.ghost .sq { display: grid; place-items: center; color: var(--fg-3); font-size: 13px; text-align: center; padding: 14px; }
+.tile.new { animation: pop .5s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } }
+/* piles */
+.piles { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--tile) + 50px), 1fr)); gap: 30px var(--gap); }
+.pile { cursor: pointer; }
+.stack { position: relative; aspect-ratio: 1.25; margin-bottom: 12px; }
+.stack div { position: absolute; width: 62%; aspect-ratio: 1; border-radius: 18px; border: 4px solid var(--bg); box-shadow: 0 8px 24px -8px rgba(0,0,0,.3); transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+.stack div:nth-child(1) { left: 2%; top: 12%; transform: rotate(-8deg); }
+.stack div:nth-child(2) { left: 36%; top: 10%; transform: rotate(7deg); }
+.stack div:nth-child(3) { left: 19%; top: 0; z-index: 2; }
+.pile:hover .stack div:nth-child(1) { transform: rotate(-13deg) translate(-12px, 4px); }
+.pile:hover .stack div:nth-child(2) { transform: rotate(12deg) translate(12px, 4px); }
+.pile:hover .stack div:nth-child(3) { transform: translateY(-8px); }
+.pile .lab { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 16px; color: #fff; }
+.pile .lab b { font: 700 calc(var(--tfs) + 1px)/1.15 var(--display); letter-spacing: -.015em; flex: 1; }
+.pile .lab span { font-size: 12.5px; opacity: .85; white-space: nowrap; }
+.pile .lab em { font-style: normal; font-size: 11px; font-weight: 700; background: #fff; color: #111; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pile p { margin: 6px 4px 0; color: var(--fg-2); font-size: 13px; }
+.back { color: var(--fg-3); font-weight: 600; font-size: 14px; }
+/* banners and first run */
+.banner { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: 20px; background: color-mix(in srgb, var(--t-howto) 10%, var(--bg)); border: 1.5px solid color-mix(in srgb, var(--t-howto) 30%, transparent); margin-bottom: 24px; flex-wrap: wrap; }
+.banner b { font: 700 18px var(--display); display: block; }
+.banner p { margin: 0; color: var(--fg-2); font-size: 14px; flex: 1; min-width: 240px; }
+.steps3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 6px 0 36px; }
+.step { border-radius: 22px; padding: 20px; color: #fff; position: relative; min-height: 210px; display: flex; flex-direction: column; }
+.step .n { font: 800 44px/1 var(--display); opacity: .5; }
+.step b { font: 700 21px/1.15 var(--display); margin: 10px 0 6px; display: block; }
+.step p { margin: 0 0 14px; opacity: .9; font-size: 14px; flex: 1; }
+.step .btn { background: #fff; color: #111; align-self: flex-start; height: 36px; }
+.step.done { opacity: .55; } .step.done .n::after { content: " ✓"; }
+/* item: shared */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgba(10,10,10,.35); backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity .25s; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+.it-type { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg-3); font-weight: 500; }
+.it-type b { font-size: 12px; font-weight: 700; padding: 4px 11px; border-radius: 999px; color: #fff; }
+.it-h { font: 800 34px/1.02 var(--display); letter-spacing: -.035em; margin: 12px 0 8px; }
+.it-by { color: var(--fg-3); font-size: 13.5px; margin-bottom: 16px; }
+.it-act { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+.it-sum { font-size: 17px; line-height: 1.6; margin: 0 0 6px; }
+.it h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em; color: var(--fg-3); margin: 28px 0 10px; }
+.kp { display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; align-items: start; padding: 11px 12px; border-radius: 14px; cursor: pointer; line-height: 1.45; font-size: 15.5px; }
+.kp:hover, .kp.on { background: var(--chip); }
+.kp b { width: 26px; height: 26px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; display: grid; place-items: center; }
+.kp.on b { background: var(--t-design); color: #fff; }
+.kp small { color: var(--fg-3); font-weight: 600; font-size: 12.5px; padding-top: 2px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips span { padding: 5px 12px; border-radius: 999px; background: var(--chip); font-size: 13.5px; }
+.chips .dash { background: none; border: 1.5px dashed var(--line); color: var(--fg-3); cursor: pointer; }
+.note { width: 100%; min-height: 70px; border: 1.5px solid var(--line); border-radius: 14px; background: transparent; color: var(--fg); font: inherit; padding: 10px 12px; resize: vertical; }
+details.more { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; }
+details.more summary { cursor: pointer; font-weight: 600; color: var(--fg-2); }
+.tbar { display: grid; grid-template-columns: 90px 1fr 50px; gap: 10px; align-items: center; font-size: 13px; margin: 6px 0; color: var(--fg-2); }
+.tbar i { height: 8px; border-radius: 4px; display: block; }
+/* mini player */
+.pl { position: relative; border-radius: 16px; overflow: hidden; aspect-ratio: 9/16; background: #000; }
+.pl.wide { aspect-ratio: 16/9; }
+.pl .pp { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,.5); backdrop-filter: blur(6px); color: #fff; display: grid; place-items: center; }
+.pl .tc { position: absolute; left: 8px; bottom: 8px; right: 8px; color: #fff; font-size: 11.5px; font-weight: 600; background: rgba(0,0,0,.55); padding: 4px 8px; border-radius: 8px; transition: background .2s; }
+.pl .tc.hl { background: var(--t-design); }
+.fr { display: grid; gap: 4px; position: relative; }
+.fr div { aspect-ratio: 9/16; border-radius: 6px; position: relative; transition: outline .15s; }
+.fr div.on { outline: 2.5px solid var(--t-design); outline-offset: 1px; }
+.fr div span { position: absolute; top: -7px; right: -5px; width: 18px; height: 18px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 10px; font-weight: 700; display: grid; place-items: center; }
+.rb { width: 38px; height: 38px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; font-size: 16px; flex: none; }
+/* card: the video gets 40% of a near-full-screen card, information the other 60% */
+.cardm { position: fixed; z-index: 41; inset: 0; margin: auto; width: min(1480px, calc(100vw - 32px)); height: calc(100vh - 32px); opacity: 0; transform: scale(.98) translateY(10px); pointer-events: none; transition: transform .3s cubic-bezier(.2, .8, .2, 1), opacity .2s; background: var(--card); border-radius: 28px; box-shadow: var(--sh); display: grid; grid-template-columns: 40% minmax(0, 1fr); overflow: hidden; }
+.cardm.on { opacity: 1; transform: none; pointer-events: auto; }
+.cardm .vid { background: #0c0c0c; display: flex; flex-direction: column; gap: 10px; padding: 18px; min-height: 0; min-width: 0; }
+.cardm .stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.cardm .stage .pl { height: 100%; max-width: 100%; border-radius: 18px; }
+.cardm .stage .pl.wide { width: 100%; height: auto; max-height: 100%; }
+.cardm .pp { width: 72px; height: 72px; font-size: 24px; }
+.cardm .tc { font-size: 13px; padding: 7px 12px; left: 12px; right: 12px; bottom: 12px; }
+.cardm .vid .fr { grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: 50px; overflow-x: auto; padding: 9px 4px 2px; scrollbar-width: none; }
+.cardm .vid .cap { color: #8a8a8a; font-size: 12px; display: flex; justify-content: space-between; }
+.cardm .main { overflow: auto; padding: 22px 44px 60px; }
+.cardm .navrow { display: flex; gap: 6px; justify-content: flex-end; margin-right: -22px; }
+.cardm .main .it-act { margin-bottom: 18px; }
+.meta2 { font-size: 12.5px; color: var(--fg-3); display: grid; gap: 3px; }
+/* pending/problem inside item */
+.pstate { border-radius: 20px; padding: 18px; background: var(--chip); margin-bottom: 18px; }
+.pstate .steps { color: var(--fg); }
+.pstate.bad { background: color-mix(in srgb, var(--t-news) 9%, var(--bg)); border: 1.5px dashed var(--t-news); }
+.pstate b { font: 700 18px var(--display); display: block; margin-bottom: 4px; }
+.pstate p { margin: 0 0 12px; color: var(--fg-2); font-size: 14px; }
+/* nest */
+.nest .now { display: grid; grid-template-columns: 180px 1fr; gap: 24px; background: var(--fg); color: var(--bg); border-radius: 28px; padding: 20px; margin-bottom: 18px; }
+.nest .now .p { aspect-ratio: 1; border-radius: 18px; }
+.nest .now h3 { font: 800 28px/1.05 var(--display); letter-spacing: -.03em; margin: 6px 0 4px; }
+.nest .now .k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .6; }
+.nest .now .steps { font-size: 12.5px; max-width: 520px; }
+.cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.panel { background: var(--chip); border-radius: 24px; padding: 18px; }
+.panel h3 { font: 800 20px var(--display); letter-spacing: -.02em; margin: 0 0 12px; display: flex; justify-content: space-between; }
+.panel h3 span { color: var(--fg-3); font-weight: 500; font-size: 14px; }
+.row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 8px; border-radius: 14px; cursor: pointer; font-size: 14px; line-height: 1.3; }
+.row:hover { background: var(--bg); }
+.row .th { aspect-ratio: 1; border-radius: 10px; }
+.row small { color: var(--fg-3); display: block; }
+.hist { width: 100%; border-collapse: collapse; font-size: 14px; }
+.hist th { text-align: left; font-size: 11.5px; color: var(--fg-3); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px; }
+.hist td { padding: 8px; border-top: 1px solid var(--line); vertical-align: middle; }
+.hist .t { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
+.hist .t span.th { width: 34px; height: 34px; border-radius: 9px; flex: none; }
+.sbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; min-width: 180px; }
+.sbar i { display: block; height: 100%; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--fg-3); margin-bottom: 8px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.stat { background: var(--chip); border-radius: 22px; padding: 16px 18px; }
+.stat b { font: 800 34px/1 var(--display); letter-spacing: -.03em; display: block; }
+.stat span { color: var(--fg-3); font-size: 13px; }
+/* settings */
+.set { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 34px; align-items: start; }
+.set nav { position: sticky; top: 140px; display: flex; flex-direction: column; gap: 2px; }
+.set nav a { padding: 9px 14px; border-radius: 12px; font-weight: 600; color: var(--fg-2); }
+.set nav a.on { background: var(--chip); color: var(--fg); }
+.box { background: var(--chip); border-radius: 26px; padding: 22px; margin-bottom: 18px; }
+.box h3 { font: 800 24px var(--display); letter-spacing: -.025em; margin: 0 0 4px; }
+.box > p { margin: 0 0 16px; color: var(--fg-2); font-size: 14px; }
+.presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.preset { border-radius: 20px; padding: 16px; background: var(--bg); border: 2px solid transparent; cursor: pointer; }
+.preset.on { border-color: var(--fg); }
+.preset b { font: 700 18px var(--display); display: flex; justify-content: space-between; }
+.preset b em { font: 600 11px var(--sans); font-style: normal; padding: 2px 8px; border-radius: 999px; background: var(--t-explainer); color: #fff; }
+.preset p { margin: 6px 0 0; font-size: 13px; color: var(--fg-2); }
+.preset .dots { display: flex; gap: 4px; margin-top: 10px; font-size: 11.5px; color: var(--fg-3); flex-wrap: wrap; }
+.preset .dots span { padding: 2px 8px; border-radius: 999px; background: var(--chip); }
+.key { display: grid; grid-template-columns: 26px 1fr auto auto; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--bg); margin-bottom: 8px; }
+.key .ord { width: 26px; height: 26px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.key small { display: block; color: var(--fg-3); font-size: 12.5px; }
+.pillok { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.phone { display: grid; grid-template-columns: 54px 1fr auto; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--bg); margin-bottom: 8px; }
+.phone .ic { width: 54px; height: 54px; border-radius: 14px; background: var(--fg); color: var(--bg); display: grid; place-items: center; font-size: 22px; }
+.phone small { display: block; color: var(--fg-3); font-size: 12.5px; }
+/* paste modal + toast */
+.modal { position: fixed; z-index: 41; left: 50%; top: 18vh; width: min(620px, calc(100vw - 32px)); transform: translateX(-50%) translateY(10px); opacity: 0; pointer-events: none; transition: all .25s cubic-bezier(.2, .8, .2, 1); background: var(--card); border-radius: 28px; box-shadow: var(--sh); padding: 26px; }
+.modal.on { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+.modal h3 { font: 800 28px var(--display); letter-spacing: -.03em; margin: 0 0 4px; }
+.modal input { width: 100%; height: 52px; border-radius: 16px; border: 2px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; font-size: 15px; padding: 0 16px; outline: none; margin: 14px 0; }
+.modal input:focus { border-color: var(--fg); }
+.prev { border-radius: 18px; background: var(--chip); padding: 14px 16px; font-size: 14px; display: none; }
+.prev.on { display: block; }
+.prev code { font-size: 13px; word-break: break-all; }
+.prev .rm { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.prev .rm s { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--t-news) 14%, transparent); color: var(--t-news); }
+.prev.err { background: color-mix(in srgb, var(--t-news) 10%, var(--bg)); }
+.toast { position: fixed; z-index: 60; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--fg); color: var(--bg); padding: 12px 18px; border-radius: 999px; font-weight: 600; font-size: 14px; transition: all .3s cubic-bezier(.2, .8, .2, 1); pointer-events: none; }
+.toast.on { opacity: 1; transform: translateX(-50%); }
+/* mockup switcher */
+.mock { position: fixed; left: 16px; bottom: 16px; z-index: 70; background: #ffe14d; color: #111; border-radius: 18px; padding: 10px 12px; font-size: 12.5px; box-shadow: 0 10px 30px rgba(0,0,0,.25); width: 270px; }
+body.lock .mock { display: none; }
+.mock summary { font-weight: 800; cursor: pointer; font-family: var(--display); font-size: 14px; }
+.mock .o { margin-top: 8px; }
+.mock .o label { display: block; font-weight: 600; margin-bottom: 3px; }
+.mock .o div { display: flex; gap: 3px; background: rgba(0,0,0,.08); border-radius: 999px; padding: 2px; }
+.mock .o button { flex: 1; padding: 4px 6px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.mock .o button.on { background: #111; color: #ffe14d; }
+/* top bar: every control is 40 px tall, in three tiers.
+   1 the one action (Add a post): filled dark. 2 where you are (Library / Archive / Trash): a filled segmented track.
+   3 tools (tile size, Nest, Settings): outlined, quieter. */
+.addp { flex: none; }
+.vsep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+.bar .sizes { height: 40px; padding: 0 4px; align-items: center; background: transparent; border: 1.5px solid var(--line); box-sizing: border-box; }
+.bar .sizes button { height: 30px; width: 30px; }
+.ubtn { height: 40px; box-sizing: border-box; padding: 0 14px 0 11px; border-radius: 999px; border: 1.5px solid var(--line); display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 14px; color: var(--fg-2); white-space: nowrap; }
+.ubtn:hover { color: var(--fg); border-color: var(--fg-3); }
+.ubtn.on { color: var(--fg); background: var(--chip); border-color: var(--chip); }
+.nesti { width: 24px; height: 21px; overflow: visible; }
+.nesti .bowl { fill: currentColor; }
+.nesti .weave { fill: none; stroke: var(--bg); stroke-width: 1.1; stroke-linecap: round; opacity: .7; }
+.nesti .twig { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
+.nesti .egg ellipse { fill: #fbecd0; stroke: currentColor; stroke-width: 1.4; }
+.nesti .egg circle { fill: #c9a46a; }
+.nesti .egg { transform-origin: 14px 16px; }
+.busy .nesti .egg { animation: wob 1.6s ease-in-out infinite; }
+@keyframes wob { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-11deg); } 80% { transform: rotate(9deg); } 90% { transform: rotate(-5deg); } }
+@media (prefers-reduced-motion: reduce) { .busy .nesti .egg { animation: none; } }
+/* shelves: Library / Archive / Trash */
+.shelfsw { flex: none; }
+.shelfsw { height: 40px; padding: 3px; box-sizing: border-box; }
+.shelfsw a { height: 34px; padding: 0 14px; font-size: 14px; }
+.shelfsw a small { opacity: .6; font-weight: 500; }
+.shelfnote { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; border-radius: 18px; background: var(--chip); margin-bottom: 18px; font-size: 14px; color: var(--fg-2); }
+.shelfnote b { color: var(--fg); }
+.tile .days { position: absolute; bottom: 10px; left: 10px; font-size: 11px; font-weight: 700; color: #fff; background: rgba(0,0,0,.55); padding: 3px 9px; border-radius: 999px; }
+.tile .restore { position: absolute; bottom: 10px; right: 10px; font-size: 12px; font-weight: 700; background: #fff; color: #111; padding: 5px 11px; border-radius: 999px; }
+/* filters: source menu, has links, active tag */
+.views { display: flex; gap: 22px; }
+.views button { font: 800 22px/1 var(--display); letter-spacing: -.025em; color: var(--fg-3); padding: 6px 0 9px; border-bottom: 3px solid transparent; }
+.views button.on { color: var(--fg); border-color: var(--t-design); }
+.views button:hover { color: var(--fg); }
+.ctrl1 { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.sfil { display: flex; gap: 6px; align-items: center; padding-bottom: 8px; flex-wrap: wrap; }
+.sfil .fl { font-size: 12px; color: var(--fg-3); font-weight: 600; margin-right: 2px; }
+.o2 { flex: none; height: 32px; padding: 0 12px; border-radius: 999px; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--line); color: var(--fg-2); background: transparent; }
+.o2.on { border-color: var(--fg); color: var(--fg); background: var(--chip); }
+.o2 .n { color: var(--fg-3); font-weight: 500; }
+.fsel { flex: none; height: 32px; padding: 0 30px 0 13px; border-radius: 999px; font: 600 13px var(--sans); border: 1.5px solid var(--line) !important; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' fill='none' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 12px center; color: var(--fg); border: 0; appearance: none; cursor: pointer; }
+.fsel.on { border-color: var(--fg) !important; background-color: var(--chip); }
+.fdiv { flex: none; width: 1px; height: 22px; background: var(--line); }
+.tagon { display: flex; align-items: center; gap: 10px; margin: 6px 0 4px; font-size: 14px; color: var(--fg-2); }
+.tagon b { font: 700 15px var(--display); color: var(--fg); padding: 5px 12px; border-radius: 999px; background: var(--chip); }
+.tagon button { text-decoration: underline; }
+.why { position: absolute; inset: auto 8px 8px 8px; background: rgba(255,255,255,.95); color: #111; border-radius: 12px; padding: 7px 10px; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.why small { display: block; font-size: 10.5px; color: #777; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.nr { position: absolute; top: 8px; right: 8px; z-index: 2; font-size: 11px; font-weight: 700; background: rgba(0,0,0,.55); color: #fff; padding: 4px 9px; border-radius: 999px; opacity: 0; transition: opacity .2s; }
+.tile:hover .nr { opacity: 1; }
+/* piles: subtitle, regroup, pile page management */
+.pile .sub { margin: 6px 4px 0; color: var(--fg-2); font-size: 13px; }
+.pile .meta { margin: 2px 4px 0; color: var(--fg-3); font-size: 12px; }
+.pilebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0 4px; font-size: 13.5px; color: var(--fg-2); }
+.pilebar p { margin: 0; flex: 1; min-width: 260px; }
+.ov { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 6px 0 8px; }
+.ov .stat b { font-size: 26px; }
+.ov .stat .chips { margin-top: 6px; }
+.ov .stat .chips span { background: var(--bg); font-size: 12.5px; padding: 3px 10px; }
+.ov .stat .chips b { font: 700 12.5px var(--sans); display: inline; color: var(--fg-3); }
+.hero p.psub { display: block; max-width: none; margin-top: 10px; }
+.manage { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 14px 0 0; }
+.manage select { height: 32px; border-radius: 999px; border: 0; background: var(--chip); color: var(--fg); font: 600 13px var(--sans); padding: 0 12px; }
+.ttl[contenteditable="true"] { outline: 2.5px dashed var(--t-design); outline-offset: 6px; border-radius: 8px; }
+.picking .tile .tick { position: absolute; top: 10px; right: 10px; z-index: 3; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.9); border: 2px solid #111; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #111; }
+.picking .tile.ticked .tick { background: var(--t-design); border-color: var(--t-design); color: #fff; }
+.picking .tile.ticked { outline: 3px solid var(--t-design); outline-offset: 3px; }
+.pickbar { position: sticky; bottom: 18px; z-index: 15; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 18px; padding: 12px 14px 12px 20px; border-radius: 999px; background: var(--fg); color: var(--bg); width: fit-content; box-shadow: var(--sh); }
+.pickbar input { height: 32px; border-radius: 999px; border: 0; padding: 0 12px; font: inherit; font-size: 13.5px; min-width: 200px; }
+.pickbar .btn { background: var(--bg); color: var(--fg); }
+.pickbar .btn.ghost { background: transparent; color: var(--bg); }
+/* card: tabs, links, related, rich caption, details */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 4px 0 6px; position: sticky; top: -22px; background: var(--card); z-index: 2; padding-top: 4px; }
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs button { flex: none; white-space: nowrap; padding: 10px 14px; font-weight: 600; font-size: 14px; color: var(--fg-3); border-bottom: 2.5px solid transparent; margin-bottom: -1px; }
+.tabs button.on { color: var(--fg); border-color: var(--fg); }
+.tabs button small { font-weight: 500; opacity: .7; }
+.inpiles { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: -6px 0 16px; font-size: 12.5px; color: var(--fg-3); }
+.inpiles a { padding: 3px 10px; border-radius: 999px; background: var(--chip); color: var(--fg); font-weight: 600; }
+.lk { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 9px 12px; border-radius: 14px; }
+.lk:hover { background: var(--chip); }
+.lk b { font-weight: 600; } .lk a { text-decoration: underline; text-underline-offset: 2px; }
+.lk small { display: block; color: var(--fg-3); font-size: 12px; }
+.lk .bd { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--fg-2); margin-left: 4px; }
+.lk .bd.p { background: color-mix(in srgb, var(--t-tool) 18%, transparent); color: var(--fg); }
+.lk button { font-size: 12px; color: var(--fg-3); text-decoration: underline; }
+.lkh { font-size: 11px; font-weight: 700; color: var(--fg-3); margin: 12px 12px 2px; }
+.rel { display: grid; grid-template-columns: 54px 1fr auto; gap: 12px; align-items: center; padding: 8px; border-radius: 14px; cursor: pointer; }
+.rel:hover { background: var(--chip); }
+.rel .th { aspect-ratio: 1; border-radius: 12px; }
+.rel b { font-weight: 600; font-size: 14.5px; line-height: 1.25; display: block; }
+.rel small { display: block; color: var(--fg-3); font-size: 12px; }
+.rel em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--t-design); }
+.rel button { font-size: 12px; color: var(--fg-3); text-decoration: underline; white-space: nowrap; }
+.capb { position: relative; background: var(--chip); border-radius: 18px; padding: 14px 16px; margin: 0 0 4px; }
+.capb .cap2 { font-size: 15.5px; }
+.capb.short .cap2 { font: 600 19px/1.35 var(--display); letter-spacing: -.01em; }
+.capb.long:not(.open) .cap2 { max-height: 7.8em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+.capb .capt { margin-top: 8px; font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.capb small { display: block; font-size: 11.5px; color: var(--fg-3); font-weight: 600; margin-bottom: 6px; }
+.counts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; color: var(--fg-2); margin: -8px 0 14px; }
+.counts b { color: var(--fg); font-weight: 700; }
+.counts .rf { font-size: 12.5px; font-weight: 600; color: var(--fg-3); display: inline-flex; gap: 4px; align-items: center; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--line); }
+.counts .rf:hover { color: var(--fg); border-color: var(--fg-3); }
+.cap2 { font-size: 15px; line-height: 1.55; white-space: pre-line; margin: 0; }
+.cap2 a { color: var(--t-howto); font-weight: 600; }
+.timet { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.timet td { padding: 5px 0; border-top: 1px solid var(--line); color: var(--fg-2); }
+.timet td:last-child { text-align: right; font-weight: 600; color: var(--fg); }
+.timet tr.tot td { font-weight: 700; color: var(--fg); }
+.dgrid { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 13.5px; }
+.dgrid span:nth-child(odd) { color: var(--fg-3); }
+/* gallery and text posts in the player */
+.pl .dots { position: absolute; top: 12px; left: 0; right: 0; display: flex; gap: 4px; justify-content: center; }
+.pl .dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.5); }
+.pl .dots i:first-child { background: #fff; }
+.pl .arr { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.85); color: #111; display: grid; place-items: center; font-weight: 700; }
+.txtpost { background: #fff; color: #111; border-radius: 18px; padding: 22px; font-size: 15px; line-height: 1.5; max-height: 100%; overflow: auto; width: 100%; }
+.txtpost .sub { font-size: 12px; color: #777; font-weight: 600; margin-bottom: 8px; }
+.txtpost b { font: 700 20px/1.2 var(--display); display: block; margin-bottom: 10px; }
+.cmt { border-left: 3px solid #eee; padding: 4px 0 4px 12px; margin-top: 12px; font-size: 13.5px; color: #444; }
+.cmt small { display: block; color: #999; font-weight: 600; }
+/* nest extras */
+.avg { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.avg th { text-align: right; font-size: 11px; color: var(--fg-3); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; }
+.avg th:first-child, .avg td:first-child { text-align: left; }
+.avg td { text-align: right; padding: 7px 8px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.avg td:last-child { font-weight: 700; }
+/* settings extras */
+.kst { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--t-tool) 25%, transparent); color: var(--fg); white-space: nowrap; }
+.updn { display: flex; gap: 2px; } .updn button { width: 28px; height: 28px; border-radius: 50%; background: var(--chip); font-size: 12px; }
+.form { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px 14px; align-items: center; margin-top: 8px; }
+.form label { font-weight: 600; font-size: 13.5px; }
+.form input, .form select { height: 38px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; font-size: 14px; padding: 0 12px; }
+.form .hint { grid-column: 2; font-size: 12.5px; color: var(--fg-3); margin-top: -4px; }
+.guide2 { background: var(--bg); border-radius: 16px; padding: 12px 16px; font-size: 13.5px; color: var(--fg-2); margin: 10px 0; }
+.guide2 ol { margin: 6px 0; padding-left: 20px; }
+.radio { display: grid; gap: 8px; }
+.radio label { display: flex; gap: 10px; align-items: center; font-size: 14px; cursor: pointer; }
+.radio input[type="number"] { width: 64px; height: 30px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 0 8px; font: inherit; }
+.note2 { font-size: 13px; color: var(--fg-3); margin: 12px 0 0; }
+@media (max-width: 860px) {
+  .addp { order: 2; } .right { order: 3; width: 100%; margin-left: 0 !important; } .vsep { display: none; } .ubtn { padding: 0 11px; } .shelfsw { flex: 1; } .shelfsw a { flex: 1; justify-content: center; padding: 0 8px; }
+  .form { grid-template-columns: 1fr; } .form .hint { grid-column: 1; } .ctrl1 { align-items: start; }
+}
+@media (max-width: 860px) {
+  .search .k, .bar .sizes, .ubtn .lbl { display: none; } .bar { flex-wrap: wrap; } .search { order: 9; max-width: none; flex-basis: 100%; }
+  .drop .in, .cols, .steps3, .presets, .set { grid-template-columns: 1fr; } .set nav { position: static; flex-direction: row; overflow-x: auto; }
+  .cardm { grid-template-columns: 1fr; grid-template-rows: 58vh auto; overflow: auto; } .cardm .main { overflow: visible; padding: 18px 18px 60px; } .cardm .navrow { margin-right: 0; }
+  .nest .now { grid-template-columns: 90px 1fr; } .sheet .bd { padding: 18px 16px 60px; }
+  :root { --tile: 140px; } :root[data-size="s"] { --tile: 100px; } :root[data-size="l"] { --tile: 280px; }
+  .mock { width: auto; right: 16px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="logo" href="#/">magpiary<i></i></a>
+    <label class="search">⌕ <input id="q" placeholder="Search what was said, shown or written" autocomplete="off"><span class="k" style="color:var(--fg-3);font-size:12px">/</span></label>
+    <button class="btn dark addp" id="paste" title="Paste a link to any post or page">＋ <span class="lbl">Add a post</span></button>
+    <div class="right">
+      <nav class="seg shelfsw" id="shelfsw" aria-label="Library, Archive, Trash"></nav>
+      <span class="vsep" aria-hidden="true"></span>
+      <div class="sizes" id="sizes" role="group" aria-label="Tile size"></div>
+      <a class="ubtn" href="#/nest" id="t-nest"><svg class="nesti" viewBox="0 0 28 24" aria-hidden="true"><g class="egg"><ellipse cx="14" cy="9.5" rx="5.4" ry="7"/><circle cx="12.3" cy="7" r=".9"/><circle cx="15.6" cy="9.6" r=".7"/><circle cx="12.8" cy="11.6" r=".6"/></g><path class="bowl" d="M2 12.2Q14 15.4 26 12.2Q24.6 22.4 14 22.4Q3.4 22.4 2 12.2Z"/><path class="weave" d="M4.6 15.6Q14 18.4 23.4 15.6M6.8 19.2Q14 21 21.2 19.2"/><path class="twig" d="M.8 11.2 4.4 13.4M27.2 11.2 23.6 13.4M3 10 6.4 12.6"/></svg><span class="lbl">Nest</span></a>
+      <a class="ubtn" href="#/settings" id="t-set"><span aria-hidden="true" style="font-size:16px">⚙</span><span class="lbl">Settings</span></a>
+    </div>
+  </div>
+  <div class="ticker" id="ticker" role="link" tabindex="0" aria-label="Open the Nest"></div>
+</header>
+<main class="wrap" id="view"></main>
+<div class="scrim" id="scrim"></div>
+<section class="cardm it" id="cardm" role="dialog" aria-modal="true"></section>
+<div class="wel" id="wel"></div>
+<div class="modal" id="modal"></div>
+<div class="toast" id="toast"></div>
+<details class="mock"><summary>Mockup options</summary>
+  <div class="o"><label>Layout on this screen</label><div data-lay><button data-l="auto">Auto</button><button data-l="boxed">Boxed</button><button data-l="full">Full width</button></div></div>
+  <div class="o"><label>Box width · <span id="boxv"></span></label><input type="range" id="boxr" min="960" max="2400" step="40" style="width:100%"></div>
+  <p style="margin:6px 0 0;font-size:11.5px;opacity:.75">Auto = boxed only on screens wider than 1920 px (the real default). Boxed forces it here to preview.</p>
+  <div class="o"><label>Library state</label><div data-opt="state"><button data-v="normal">Normal</button><button data-v="nokey">No AI key</button><button data-v="first">First run</button></div></div>
+</details>
+<script src="data.js"></script><script src="c-common.js"></script><script src="c1-welcome.js"></script>
+<script>
+const M = window.MAG, C = window.MAGC, F = window.MAG_FRAMES || {}, $ = s => document.querySelector(s), esc = C.esc;
+const opt = { state: "normal" };
+try { Object.assign(opt, JSON.parse(localStorage.getItem("mag-c1plus") || "{}")); } catch (e) {}
+// Piles as the product makes them (M4, revised 24 Oct): worked out on the Mac, every save is in a pile (1 or 2 is
+// fine), named from what the pile shares, a subtitle from the next shared things, "N new" until the pile is opened.
+// The owner's renames, merges, splits, removals and deletions stay. `type` only picks the label colour here.
+const PILES = [
+  { id: 1, name: "Workshop projects", sub: "Shared tools, recording, repair", ids: [4, 5, 16], fresh: 1, type: "How-to" },
+  { id: 2, name: "Design", sub: "Paper studies, controls, welcome screens", ids: [17, 13, 11, 6, 8], fresh: 2, type: "Design" },
+  { id: 3, name: "Community & News", sub: "Repair exchanges, reusable boxes", ids: [14, 3], fresh: 1, type: "News & opinion" },
+  { id: 4, name: "Making at home", sub: "Foldlight Kit, cardboard builds", ids: [15, 7], fresh: 1, type: "Tool" },
+  { id: 5, name: "Materials & Studio tools", sub: "Pebble Desk, Swatch Tray", ids: [2], fresh: 1, type: "Tool" },
+  { id: 6, name: "Paper experiments", sub: "Folds, strips, spirals", ids: [9], fresh: 0, type: "Explainer" },
+  { id: 7, name: "Recipe & Skillet", sub: "Carrots, lentils, lemon", ids: [10], fresh: 0, type: "Recipe" },
+];
+const pileById = id => PILES.find(p => p.id === +id);
+const pilesOf = id => PILES.filter(p => p.ids.includes(id));
+let notRelated = new Set(), newSince = 3;
+// Related: one score per pair from shared named things, shared tags and the same topic (here: the same pile).
+// The same creator is not a signal. Reasons read like the product's.
+function relatedTo(id) {
+  const a = byId(id); if (!a || a.status !== "done") return [];
+  return all().filter(b => b.id !== id && b.status === "done" && !notRelated.has([id, b.id].sort().join("-"))).map(b => {
+    const names = a.things.filter(t => b.things.includes(t)), tags = a.tags.filter(t => b.tags.includes(t));
+    const same = pilesOf(id).some(p => p.ids.includes(b.id));
+    const score = names.length * 2 + tags.length * 1.2 + (same ? 1.3 : 0);
+    const reason = names.length ? "Both mention " + names.slice(0, 2).join(" and ") : tags.length ? "Both tagged " + tags.slice(0, 2).map(t => "#" + t).join(" and ") : "Similar topic";
+    return { it: b, score, reason };
+  }).filter(r => r.score >= 1.2).sort((x, y) => y.score - x.score);
+}
+const HIST = [[15, [2.1, 5.4, 3.3, 10.9, 6.2], "23:14"], [16, [1.8, 4.2, 2.9, 9.1, 3.4], "22:55"], [14, [2.4, 8.8, 3.6, 9.2, 0], "21:31"], [2, [1.2, 0, 0, 155.8, 4.9], "19:05"], [4, [6.1, 31.2, 4.4, 14.0, 2.2], "Yesterday"], [3, [7.9, 52.3, 6.1, 16.2, 0], "Yesterday"], [10, [1.9, 3.1, 9.8, 12.4, 1.1], "Sat"]];
+const STEPC = ["#c9c6bf", "var(--t-howto)", "var(--t-explainer)", "var(--t-design)", "var(--t-tool)"];
+let filter = "", query = "", wallMode = "everything", extra = [], srcF = "", linksF = false, tagF = "";
+const all = () => [...extra, ...M.items, ...M.shelved].filter(i => !i.shelf);
+const shelfItems = s => [...extra, ...M.items, ...M.shelved].filter(i => i.shelf === s);
+const shelfOf = () => { const h = location.hash; return h.startsWith("#/archive") ? "archive" : h.startsWith("#/trash") ? "trash" : "library"; };
+const byId = id => extra.find(x => x.id === id) || M.byId[id];
+const isNoKey = () => opt.state === "nokey";
+const SRC_C = { instagram: "#c13584", threads: "#2b2b2b", youtube: "#d81f1f", reddit: "#ff4500", x: "#1d1d1d", linkedin: "#0a66c2" };
+// Without a key there's no AI title: use the caption's first line, else the plain "Reel by …" name.
+const CAPS = Object.fromEntries(M.items.map(it => [it.id, it.caption || it.title]));
+const capTitle = it => it.caption ? it.caption.split(/[.!?\n]/)[0] : CAPS[it.id] || it.title;
+const statusOf = it => isNoKey() && !["attention", "fetching"].includes(it.status) ? "waiting" : it.status;
+
+/* ---------- tiles ---------- */
+function tile(it, hit, over) {
+  const st = statusOf(it);
+  if (st === "attention") return `<div class="tile attn" data-go="#/item/${it.id}"><div class="sq"><div><b>Couldn't open this one</b>${it.reason}.<br>${it.retry}.</div></div></div>`;
+  if (isNoKey() && st === "waiting") {
+    // No AI key: still a full, colourful library. Label takes the source colour; title comes from the caption.
+    return `<div class="tile" data-go="#/item/${it.id}" data-id="${it.id}"><div class="sq" style="background:${C.bg(it)}">${!C.hasThumb(it) ? `<div class="typo">“${esc(capTitle(it))}”</div>` : ""}
+      <span class="src">${M.sources[it.source]}</span>${it.dur || it.photos ? `<span class="dur">${it.dur || it.photos + " photos"}</span>` : ""}</div>
+      <div class="label" style="background:${SRC_C[it.source]}"><div class="t">${M.mark(capTitle(it), query)}</div>
+      <div class="m nk">${it.author || M.sources[it.source]}<span class="sumb">✦ Summarise</span></div></div></div>`;
+  }
+  const pend = st !== "done";
+  const typo = !C.hasThumb(it) ? `<div class="typo">“${esc(C.shortTitle(it))}”</div>` : "";
+  const sub = st === "fetching" ? "Fetching…" : st === "summarising" ? `Being read · ${it.pct}%` : st === "waiting" ? (isNoKey() ? "Saved · no summary yet" : "Not read yet") : it.type + " · " + it.author;
+  return `<div class="tile ${pend ? "pend" : ""} ${it.isNew ? "new" : ""}" data-go="#/item/${it.id}" data-id="${it.id}"><div class="sq" style="background:${it.bgOverride || C.bg(it)}">${typo}
+    <span class="src">${M.sources[it.source]}</span>${it.dur || it.photos ? `<span class="dur">${it.dur || it.photos + " photos"}</span>` : ""}
+    ${st === "summarising" ? `<div class="prog"><i style="width:${it.pct}%"></i></div>` : st === "fetching" ? `<div class="prog ind"><i></i></div>` : ""}
+    ${hit ? `<div class="quote"><small>${hit.where}${hit.at ? " at " + hit.at : ""}</small>${M.mark(hit.text.slice(0, 90), query)}</div>` : ""}
+    ${over || ""}</div>
+    <div class="label" style="background:${pend ? "" : C.color(it.type)}"><div class="t">${M.mark(it.title, query)}</div>
+    <div class="m">${sub}</div>${it.summary && !pend ? `<div class="s">${esc(it.summary)}</div>` : ""}</div></div>`;
+}
+function sections(items, over) {
+  const groups = [["Today", i => i.day === "Today"], ["This week", i => i.day !== "Today" && i.day !== "Earlier"], ["Earlier", i => i.day === "Earlier"]];
+  return groups.map(([name, f]) => { const xs = items.filter(f); return xs.length ? `<div class="sec"><h2>${name}</h2><span>${xs.length} saved</span></div><div class="grid">${xs.map(i => tile(i, null, over ? over(i) : undefined)).join("")}</div>` : ""; }).join("");
+}
+function chips() {
+  const types = [...new Set(M.items.filter(i => i.type).map(i => i.type))];
+  const n = t => all().filter(i => i.type === t).length;
+  return `<button class="f ${!filter ? "on" : ""}" data-f="">All types</button>`
+    + types.map(t => `<button class="f ${filter === t ? "on" : ""}" data-f="${t}"><i style="background:${C.color(t)}"></i>${t} <span class="n">${n(t)}</span></button>`).join("");
+}
+function sideFilters() {
+  const srcs = Object.keys(M.sources).filter(k => all().some(i => i.source === k));
+  return `<span class="fl">Filter</span><select class="fsel ${srcF ? "on" : ""}" id="srcf" aria-label="Source"><option value="">All sources</option>${srcs.map(k => `<option value="${k}" ${srcF === k ? "selected" : ""}>${M.sources[k]} (${all().filter(i => i.source === k).length})</option>`).join("")}</select>`
+    + `<button class="o2 ${linksF ? "on" : ""}" data-links>Has links <span class="n">${all().filter(i => i.links.length).length}</span></button>`
+    + `<button class="o2 ${filter === "!" ? "on" : ""}" data-f="${filter === "!" ? "" : "!"}" style="${filter === "!" ? "" : "color:var(--t-news)"}">Needs you <span class="n">1</span></button>`;
+}
+// Three levels on the wall: the view (Piles / Everything) as big tabs; quiet outlined filters beside them;
+// the colourful type chips under them.
+function ctrl() {
+  const ev = wallMode === "everything";
+  return `<div class="ctrl1"><div class="views" role="tablist"><button role="tab" data-wm="piles" class="${!ev ? "on" : ""}">Piles</button><button role="tab" data-wm="everything" class="${ev ? "on" : ""}">Everything</button></div>
+      ${ev ? `<div class="sfil">${sideFilters()}</div>` : ""}</div>
+    ${ev ? `<div class="ctrl"><div class="filters">${chips()}</div></div>` : ""}
+    ${tagF && ev ? `<div class="tagon">Showing <b>#${esc(tagF)}</b><button data-tagclear>Show all</button></div>` : ""}`;
+}
+function shelfSwitch() {
+  const el = $("#shelfsw"), sh = /^#\/(nest|settings)/.test(location.hash) ? "" : shelfOf();
+  if (opt.state === "first") { el.style.display = "none"; return; }
+  el.style.display = "";
+  el.innerHTML = `<a href="#/" class="${sh === "library" ? "on" : ""}">Library</a><a href="#/archive" class="${sh === "archive" ? "on" : ""}">Archive</a><a href="#/trash" class="${sh === "trash" ? "on" : ""}">Trash</a>`;
+}
+// The wall's heading changes on every visit (the product could change it once a day). No counts: they stop meaning much at 400.
+const HEADS = [["Shiny things,", "safely <em>kept.</em>"], ["Everything that", "caught your <em>eye.</em>"], ["Your little", "<em>hoard.</em>"], ["Saved for", "a <em>reason.</em>"],
+  ["Worth a", "second <em>look.</em>"], ["The good bits,", "all in <em>one place.</em>"], ["Collected,", "not <em>forgotten.</em>"]];
+const HEAD = HEADS[Math.floor(Math.random() * HEADS.length)];
+
+/* ---------- wall ---------- */
+function wall() {
+  if (opt.state === "first") { location.replace("#/welcome"); return; }
+  shelfSwitch();
+  const banner = isNoKey() ? `<div class="banner"><div style="flex:1;min-width:240px"><b>✦ Want summaries and key moments too?</b><p>Your ${all().length} posts are saved and searchable by caption. Add a free Gemini key (2 minutes) and Magpiary will read them all, or choose Private to read them on this Mac.</p></div><a class="btn dark" href="#/settings">Add a free key</a><a class="btn" href="#/settings" data-mode="private">Read them on this Mac</a><button class="btn" style="background:none" onclick="this.closest('.banner').remove()">Not now</button></div>` : "";
+  if (query) {
+    // Search looks at title, author, caption, tags, note, summary, transcript, named things and link names.
+    const r = M.search(query).filter(x => !x.it.shelf || x.it.shelf === "archive");
+    $("#view").innerHTML = `<div class="sec" style="margin-top:0"><h2>${r.length} found</h2><span>for “${esc(query)}”, across the library and the archive, with the matching line on each tile</span></div><div class="grid">${r.map(x => tile(x.it, x.hits.find(h => h.where !== "Title"))).join("")}</div>`;
+    return;
+  }
+  const sh = shelfOf();
+  if (sh !== "library") return shelfView(sh, banner);
+  const head = `<div class="hero"><h1>${HEAD[0]}<br>${HEAD[1]}</h1><p class="meta1"><span><b>6 new today</b> · ${all().length} saved</span><span>Sort them into piles, or see everything by when you saved it.</span></p></div>`;
+  if (wallMode === "piles") {
+    $("#view").innerHTML = banner + head + ctrl() + `<div class="pilebar"><p>Made on this Mac from what your saves have in common. Every save is in a pile; new ones join the closest. Your renames, merges and splits stay.</p>
+        <button class="btn sm" data-regroup>↻ Regroup everything</button></div>
+      <div class="piles" style="margin-top:18px">${PILES.map(pileCard).join("")}</div>`;
+  } else {
+    const items = all().filter(i => (!filter || (filter === "!" ? i.status === "attention" : i.type === filter)) && (!srcF || i.source === srcF) && (!linksF || i.links.length) && (!tagF || i.tags.includes(tagF)));
+    $("#view").innerHTML = banner + head + ctrl() + (items.length ? sections(items) : `<div class="shelfnote" style="margin-top:22px">Nothing matches these filters. <button class="btn sm" data-fclear>Clear filters</button></div>`);
+  }
+}
+function pileCard(t) {
+  const its = t.ids.map(byId); const top = [its[1] || its[0], its[2] || its[0], its[0]];
+  const srcs = [...new Set(its.map(i => M.sources[i.source]))];
+  return `<div class="pile" data-go="#/pile/${t.id}" data-flip-id="p${t.id}"><div class="stack">${top.map(i => `<div style="background:${C.bg(i)}"></div>`).join("")}</div>
+    <div class="lab" style="background:${C.color(t.type)}"><b>${esc(t.name)}</b><span>${t.ids.length}</span>${t.fresh ? `<em>${t.fresh} new</em>` : ""}</div>
+    <p class="sub">${esc(t.sub)}</p><p class="meta">${t.ids.length} save${t.ids.length > 1 ? "s" : ""} · ${srcs.join(", ")}</p></div>`;
+}
+function shelfView(sh, banner = "") {
+  const xs = shelfItems(sh);
+  const note = sh === "archive"
+    ? `<div class="shelfnote"><span>✓</span><span><b>Done with these.</b> Out of the main library, still searchable. Nothing is deleted.</span></div>`
+    : `<div class="shelfnote"><span>🗑</span><span style="flex:1"><b>Deleted for good after 30 days</b>, files and all. Sharing a post again brings it back.</span>${xs.length ? `<button class="btn sm dark" data-empty>Empty trash</button>` : ""}</div>`;
+  const over = it => sh === "trash" ? `<span class="days">${30 - (it.trashedDays || 0)} days left</span><span class="restore" data-restore="${it.id}">Restore</span>` : `<span class="restore" data-restore="${it.id}">Back to library</span>`;
+  $("#view").innerHTML = banner + `<div class="hero"><h1>${sh === "archive" ? "Archive" : "Trash"}</h1><p>${xs.length} save${xs.length === 1 ? "" : "s"}</p></div>` + note
+    + (xs.length ? `<div class="grid">${xs.map(i => tile(i, null, over(i))).join("")}</div>` : `<div class="shelfnote">${sh === "archive" ? "Nothing archived yet. Use Archive on a post once you're done with it." : "The trash is empty."}</div>`);
+}
+let picking = null; // pile page: ticking saves to split off or remove
+function pileView(id) { drawPile(id); } // motion.js animates this one; redraws while ticking use drawPile
+function drawPile(id) {
+  const t = pileById(id); if (!t) { location.replace("#/"); return; }
+  shelfSwitch(); t.fresh = 0;
+  const its = t.ids.map(byId), srcs = {};
+  its.forEach(i => srcs[M.sources[i.source]] = (srcs[M.sources[i.source]] || 0) + 1);
+  const share = {}; its.forEach(i => [...i.things, ...i.tags.map(x => "#" + x)].forEach(k => share[k] = (share[k] || 0) + 1));
+  const common = Object.entries(share).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const others = PILES.filter(p => p.id !== t.id);
+  const pk = picking && picking.pile === t.id;
+  const over = pk ? it => `<span class="tick">${picking.ids.has(it.id) ? "✓" : ""}</span>` : null;
+  $("#view").innerHTML = `<a class="back" href="#/" data-wmset="piles">← All piles</a>
+    <div class="hero" style="margin-top:12px"><div><h1 class="ttl" id="pname">${esc(t.name)}</h1><p class="psub">${esc(t.sub)}</p></div></div>
+    <div class="ov"><div class="stat"><b>${t.ids.length}</b><span>save${t.ids.length > 1 ? "s" : ""} from ${Object.entries(srcs).map(([k, v]) => `${k} (${v})`).join(", ")}</span></div>
+      <div class="stat"><b style="font-size:20px">${its.length > 1 ? its[its.length - 1].saved + " – " + its[0].saved : its[0].saved}</b><span>when they were saved</span></div>
+      <div class="stat"><span>What they share</span><div class="chips">${common.length ? common.map(([k, c]) => `<span>${esc(k)} <b>${c}</b></span>`).join("") : `<span>One save so far</span>`}</div></div></div>
+    <div class="manage"><button class="btn sm" data-prename>✎ Rename</button>
+      ${others.length ? `<select id="mergeto" aria-label="Merge into"><option value="">Merge into…</option>${others.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>` : ""}
+      ${t.ids.length > 1 ? `<button class="btn sm" data-pick="${t.id}">☐ Choose saves to split off or remove</button>` : ""}
+      <button class="btn sm" data-pdel style="color:var(--t-news)">Delete pile</button>
+      <span style="font-size:12.5px;color:var(--fg-3)">Deleting keeps the saves; this pile isn't made again.</span></div>
+    <div class="${pk ? "picking" : ""}">${sections(its, over).replace(/data-go="#\/item\/(\d+)"/g, pk ? 'data-tick="$1"' : 'data-go="#/item/$1"')}</div>
+    ${pk ? `<div class="pickbar"><span><b>${picking.ids.size}</b> chosen</span><input id="splitname" placeholder="Name for the new pile (optional)"><button class="btn sm" data-split ${picking.ids.size && picking.ids.size < t.ids.length ? "" : 'aria-disabled="true"'}>Split off into a new pile</button><button class="btn sm" data-premove ${picking.ids.size ? "" : 'aria-disabled="true"'}>Remove from this pile</button><button class="btn sm ghost" data-pickdone>Cancel</button></div>` : ""}`;
+  if (pk) document.querySelectorAll("#view .tile[data-tick]").forEach(el => el.classList.toggle("ticked", picking.ids.has(+el.dataset.tick)));
+}
+// "More like this": the full ranked Related list for one save, each with its reason.
+function relatedView(id) {
+  const it = byId(id); if (!it) { location.replace("#/"); return; }
+  shelfSwitch();
+  const r = relatedTo(id);
+  const over = x => `<div class="why"><small>Why</small>${esc(x.reason)}</div><span class="nr" data-nr="${id}-${x.it.id}">Not related</span>`;
+  $("#view").innerHTML = `<a class="back" href="#/">← Library</a>
+    <div class="hero" style="margin-top:12px"><div><h1 style="font-size:clamp(32px,4.4vw,54px)">More like<br><em>${esc(C.shortTitle(it))}</em></h1></div><p>${r.length} related save${r.length === 1 ? "" : "s"}, best first, across every source. Worked out on this Mac, with no AI key. “Not related” hides a pair for good.</p></div>
+    ${r.length ? `<div class="grid">${r.map(x => tile(x.it, null, over(x))).join("")}</div>` : `<div class="shelfnote">Nothing close yet. Related saves show up as your library grows.</div>`}`;
+}
+/* ---------- strip & drop ---------- */
+function ticker() {
+  if (opt.state === "first") { $("#ticker").innerHTML = `<b><i style="background:#888;animation:none"></i>Idle</b><span class="tks" style="opacity:.75">Waiting for your first share. The Mac is listening on your home Wi-Fi.</span>`; return; }
+  const now = M.byId[17];
+  const live = isNoKey() ? `<span class="tk">Fetched 16 · summaries paused: no AI key</span>` : `<span class="tk"><span class="th" style="background:${C.bg(now)}"></span>Reading “${C.shortTitle(now)}”<span class="pb"><i style="width:${now.pct}%"></i></span></span>`
+    + M.queue.map((id, i) => `<span class="tk"><span class="th" style="background:${C.bg(M.byId[id])}"></span>Next ${i + 1}: ${C.shortTitle(M.byId[id]).slice(0, 26)}</span>`).join("");
+  $("#ticker").innerHTML = `<b><i></i>On the go</b><span class="tks">${live}</span><span class="warn">1 needs you</span><span class="more">${location.hash.startsWith("#/nest") ? "You're in the Nest" : "Open the Nest →"}</span>`;
+}
+function unusedDropPanel() {
+  const n = M.byId[17];
+  $("#drop").innerHTML = `<div class="in">
+    <div class="dcard"><h5>Reading now · ≈ 2 min until clear</h5><div class="dnow" data-go="#/item/17" style="cursor:pointer"><div class="p" style="background:${C.bg(n)}"></div><div><b>${esc(n.title)}</b><div style="opacity:.7;font-size:13px">${n.step} · ${n.pct}%</div>
+      <div class="steps"><div class="d"><i></i>Fetched</div><div class="d"><i></i>Listened</div><div class="d"><i></i>Looked</div><div class="r"><i></i>Writing</div></div></div></div></div>
+    <div class="dcard"><h5>Up next</h5>${M.queue.map(i => `<div class="dl" data-go="#/item/${i}" style="cursor:pointer"><span class="th" style="background:${C.bg(M.byId[i])}"></span>${esc(C.shortTitle(M.byId[i]).slice(0, 34))}</div>`).join("")}
+      <h5 style="margin-top:12px;color:#ff8f78;opacity:1">Needs you</h5><div class="dl" data-go="#/item/12" style="cursor:pointer"><span class="th" style="background:var(--t-news)"></span>Instagram reel wants a login · retry in 3 h</div></div>
+    <div class="dcard"><h5>Controls</h5><div class="toggles"><span class="tg"><i></i>Fetching</span><span class="tg"><i></i>Transcribing</span><span class="tg"><i></i>Summaries</span></div>
+      <p style="font-size:12.5px;opacity:.7;margin:12px 0">Today: 6 saved, 5 read, 61 s of Mac time.</p><a class="btn sm" href="#/nest" style="background:var(--bg);color:var(--fg);display:inline-flex;align-items:center">Open the Nest →</a></div></div>`;
+}
+$("#ticker").onclick = () => { location.hash = "#/nest"; };
+$("#ticker").onkeydown = e => { if (e.key === "Enter") location.hash = "#/nest"; };
+
+/* ---------- nest ---------- */
+// The product's Activity page: master pauses per step, what's on now, the waiting lines, averages and history.
+const AVG = [["Instagram", 11, [2.3, 3.0, 11, 2.0, 8.2], "1m 3s"], ["YouTube", 2, [0, 0, 31, 14, 4.4], "1m 16s"], ["Threads", 1, [0, 0, 0, 0, 157], "3m 29s"], ["Reddit", 1, [0, 0, 0, 0, 2.6], "37s"], ["X", 1, [0, 0, 0.7, 2.5, 12], "2m 6s"], ["LinkedIn", 1, [0, 0, 2.9, 1.3, 4.2], "34s"]];
+function nest() {
+  shelfSwitch();
+  const n = M.byId[17]; const tot = h => h[1].reduce((a, b) => a + b, 0);
+  const max = Math.max(...HIST.map(tot)), fmt = v => v ? (v >= 60 ? `${Math.floor(v / 60)}m ${Math.round(v % 60)}s` : v + "s") : "–";
+  const nk = isNoKey();
+  $("#view").innerHTML = `<div class="nest"><div class="hero"><h1>The <em>nest.</em></h1><p>Everything Magpiary is doing, has done, and needs from you. Two lanes: one fetches, one reads. Nothing waits on you.</p></div>
+    <div class="now"><div class="p" style="background:${C.bg(n)}"></div><div><div class="k">Reading now · ${n.pct}%</div><h3>${esc(n.title)}</h3><div style="opacity:.7">${n.author} · ${M.sources[n.source]} · started 23:15</div>
+      <div class="steps" style="grid-template-columns:repeat(5,1fr)"><div class="d"><i></i>Fetched 2.0 s</div><div class="d"><i></i>Transcribed 4.8 s</div><div class="d"><i></i>Frames 3.1 s</div><div class="r"><i></i>Summarising…</div><div><i></i>Finding links</div></div></div></div>
+    <div class="cols">
+      <div class="panel"><h3>Waiting <span>≈ 2 min</span></h3>
+        <div style="font-size:11.5px;font-weight:700;color:var(--fg-3);margin:0 8px 4px">TO BE FETCHED · 0</div><div style="font-size:13.5px;color:var(--fg-3);padding:0 8px 8px">None.</div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--fg-3);margin:4px 8px">FOR A TRANSCRIPT OR SUMMARY · ${M.queue.length}</div>
+        ${M.queue.map((i, k) => `<div class="row" data-go="#/item/${i}"><div class="th" style="background:${C.bg(M.byId[i])}"></div><div>${esc(M.byId[i].title)}<small>#${k + 1} · ${M.sources[M.byId[i].source]} · newest first</small></div><span></span></div>`).join("")}
+        ${nk ? `<p style="font-size:12.5px;color:var(--fg-3);margin:8px">Summaries wait for an AI key: <a href="#/settings" style="text-decoration:underline">add one in Settings</a>.</p>` : ""}</div>
+      <div class="panel" style="background:color-mix(in srgb,var(--t-news) 8%,var(--bg));border:1.5px dashed var(--t-news)"><h3>Needs you <span>1</span></h3><div class="row" data-go="#/item/12"><div class="th" style="background:var(--t-news)"></div><div>Instagram reel DcX2…<small>Instagram asked us to slow down · next try about 02:31</small></div><span></span></div>
+        <div style="display:flex;gap:6px;margin-top:10px"><button class="btn sm dark">Retry now</button><button class="btn sm">Open original ↗</button></div></div>
+      <div class="panel"><h3>Today <span>so far</span></h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="stat" style="background:var(--bg)"><b>6</b><span>saved</span></div><div class="stat" style="background:var(--bg)"><b>5</b><span>read</span></div>
+        <div class="stat" style="background:var(--bg)"><b>21 s</b><span>median per post</span></div><div class="stat" style="background:var(--bg)"><b>0</b><span>failed</span></div></div></div></div>
+    <div class="sec"><h2>Controls</h2><span>pause any step; a paused step finishes the post it's on. “Try again” on a post always goes ahead.</span></div>
+    <div class="ctl">
+      <div class="cbox"><span class="tg"><i></i></span><div><b>Transcribing</b><p>On this Mac, free. Whisper listens to each video using the Mac's chip, not the internet.</p></div></div>
+      <div class="cbox"><span class="tg ${nk ? "off" : ""}"><i></i></span><div><b>Summarising</b><p>Sends the caption, transcript and a few frames to your AI key. The video never leaves this Mac.</p><div class="seg" style="margin-top:8px"><button class="on">All</button><button>Only the next 10</button></div></div></div>
+      <div class="cbox"><span class="tg"><i></i></span><div><b>Finding links</b><p>Free directories first (GitHub, App Store, Wikipedia, OpenStreetMap), then Brave Search if you added a key.</p></div></div>
+      <div class="cbox"><span class="tg off"><i></i></span><div><b>Keep this Mac awake</b><p>Only while plugged in, so shares are read overnight. A closed lid still sleeps.</p></div></div>
+    </div>
+    <div class="sec"><h2>History</h2><span>every post Magpiary read, with where the time went</span></div>
+    <div class="panel"><div class="legend">${["Fetch", "Transcript", "Frames", "Summary", "Links"].map((l, i) => `<span><i style="background:${STEPC[i]}"></i>${l}</span>`).join("")}</div>
+      <div style="overflow-x:auto"><table class="hist"><tr><th>Post</th><th>When</th><th>Where the time went</th><th style="text-align:right">Total</th></tr>
+      ${HIST.map(h => { const it = M.byId[h[0]]; const t = tot(h); return `<tr><td><span class="t" data-go="#/item/${it.id}"><span class="th" style="background:${C.bg(it)}"></span>${esc(C.shortTitle(it).slice(0, 44))}</span></td><td style="color:var(--fg-3);white-space:nowrap">${h[2]}</td>
+        <td><div class="sbar" style="width:${Math.max(12, t / max * 100)}%">${h[1].map((v, i) => `<i style="width:${v / t * 100}%;background:${STEPC[i]}" title="${v} s"></i>`).join("")}</div></td><td style="text-align:right;font-weight:600">${t.toFixed(1)} s</td></tr>`; }).join("")}</table></div>
+      <p style="font-size:12.5px;color:var(--fg-3);margin:10px 0 0">This fictional processing history includes a slow summary to illustrate model fallback. Total is time Magpiary spent; waiting in line isn't counted.</p></div>
+    <div class="sec"><h2>Average per step</h2><span>last 17 read, by source</span></div>
+    <div class="panel" style="overflow-x:auto"><table class="avg"><tr><th>Source</th><th>Details</th><th>Download</th><th>Transcript</th><th>Frames</th><th>Summary</th><th>Total</th></tr>
+      ${AVG.map(([s, c, v, t]) => `<tr><td>${s} <span style="color:var(--fg-3)">(${c})</span></td>${v.map(x => `<td>${fmt(x)}</td>`).join("")}<td>${t}</td></tr>`).join("")}</table></div></div>`;
+}
+
+/* ---------- item views ---------- */
+function media(it, cols, rows = 2) {
+  const fr = F[it.id] || [];
+  const pts = it.points.map((p, i) => [p[0], i]).filter(p => p[0]);
+  const near = at => { if (!fr.length) return -1; const s = C.secs(at); let b = 0, bd = 1e9; fr.forEach((f, i) => { const d = Math.abs(C.frameSecs(f) - s); if (d < bd) { bd = d; b = i; } }); return b; };
+  const marks = {}; pts.forEach(([at, i]) => { const k = near(at); if (k >= 0 && !(k in marks)) marks[k] = i + 1; });
+  const wide = it.source === "youtube" || it.source === "linkedin";
+  let player;
+  if (it.kind === "text") // Reddit and X text posts: the post itself, with the saved comments under it.
+    player = `<div class="txtpost"><div class="sub">${M.sources[it.source]} · ${esc(it.author)}${it.comments ? ` · ${it.comments} comments saved` : ""}</div><b>${esc(it.title)}</b>${esc((it.caption || it.summary).slice(0, 360))}
+      ${it.discussion ? `<div class="cmt"><small>Top comment</small>Review every diff. It will happily skip the tests if you let it.</div><div class="cmt"><small>Reply</small>Same here, shipped more in a week than in a month.</div>` : ""}</div>`;
+  else if (it.kind === "photos") // carousels: every photo is archived, swipe through them
+    player = `<div class="pl" style="background:${C.bg(it)}"><div class="dots">${Array.from({ length: it.photos || 3 }, () => "<i></i>").join("")}</div><span class="arr" style="left:10px">‹</span><span class="arr" style="right:10px">›</span><span class="tc" id="tc">Photo 1 of ${it.photos || 3}</span></div>`;
+  else player = `<div class="pl ${wide ? "wide" : ""}" style="background:${C.bg(it)}"><span class="pp">▶</span><span class="tc" id="tc">0:00 / ${it.dur || "video"}</span></div>`;
+  return { player, frames: fr.length ? `<div class="fr" style="grid-template-columns:repeat(${cols},1fr)">${fr.slice(0, cols * rows).map((f, i) => `<div data-fi="${i}" style="background:url(thumbs/${f}) center/cover">${marks[i] ? `<span>${marks[i]}</span>` : ""}</div>`).join("")}</div>` : "", near };
+}
+// Captions are rich: links open, @mentions open the profile on the same platform, #hashtags filter your library.
+function rich(text, source) {
+  const prof = { instagram: "instagram.com/", threads: "threads.net/@", x: "x.com/", youtube: "youtube.com/@", reddit: "reddit.com/u/", linkedin: "linkedin.com/in/" }[source] || "";
+  return esc(text).replace(/(https?:\/\/[^\s<]+|\b[a-z0-9-]+\.(?:dev|app|com|io|ai)(?:\/[^\s<]*)?)|(@[A-Za-z0-9_.]{2,30})|(#\w{2,50})/g, (m, url, at, tag) =>
+    url ? `<a href="#" onclick="return false" title="Opens ${url}">${url}</a>` : at ? `<a href="#" onclick="return false" title="Opens ${prof}${at.slice(1)}">${at}</a>` : `<a href="#/" data-tag="${tag.slice(1).toLowerCase()}">${tag}</a>`);
+}
+function pilesLine(it) {
+  const ps = pilesOf(it.id);
+  return ps.length ? `<div class="inpiles">In piles: ${ps.map(p => `<a href="#/pile/${p.id}" data-go="#/pile/${p.id}">${esc(p.name)}</a>`).join("")}</div>` : "";
+}
+function captionBlock(it, text) {
+  const cap = text || it.caption; if (!cap) return "";
+  const long = cap.length > 240 || cap.split("\n").length > 4, short = cap.length <= 90 && !cap.includes("\n");
+  return `<div class="capb ${long ? "long" : short ? "short" : ""}"><small>Caption${it.author ? " · " + esc(it.author) : ""}</small><p class="cap2">${rich(cap, it.source)}</p>
+    ${long ? `<button class="capt" data-capt>Show the full caption</button>` : ""}</div>`;
+}
+function summaryBlock(it) {
+  return `${captionBlock(it)}<h4>Summary</h4><p class="it-sum">${esc(it.summary)}</p>
+    ${it.points.length ? `<h4>Key moments ${it.points[0][0] ? "· click to jump" : ""}</h4>${it.points.map(([at, t], i) => `<div class="kp" data-k="${i}"><b>${i + 1}</b><span>${esc(t)}</span><small>${at}</small></div>`).join("")}` : ""}
+    ${it.extras ? `<h4>${it.type}</h4>${Object.entries(it.extras).map(([k, v]) => `<p class="it-sum" style="font-size:15px"><b>${k}:</b> ${esc(v)}</p>`).join("")}` : ""}
+    ${it.discussion ? `<h4>The discussion</h4><p class="it-sum" style="font-size:15px">${esc(it.discussion)}</p>` : ""}
+    ${it.things.length ? `<h4>Mentioned</h4><div class="chips">${it.things.map(t => `<span>${t}</span>`).join("")}</div>` : ""}
+    <h4>Tags <span style="text-transform:none;letter-spacing:0;font-weight:500">· added by the AI, yours to change</span></h4><div class="chips">${it.tags.map(t => `<span data-tag="${t}" style="cursor:pointer">#${t}</span>`).join("")}<span class="dash">+ add</span></div>
+    <h4>Your note</h4><textarea class="note" placeholder="Why did you save this?"></textarea>`;
+}
+function linksBlock(it) {
+  if (!it.links.length) return `<p style="color:var(--fg-3);font-size:14px;margin:0 0 10px">No links found for this one yet.</p><div style="display:flex;gap:8px"><button class="btn sm">+ Add a link</button><button class="btn sm">Find more links</button></div>`;
+  const kinds = [...new Set(it.links.map(l => l.kind))];
+  return kinds.map(k => `<div class="lkh">${k.toUpperCase()}</div>` + it.links.filter(l => l.kind === k).map(l => `<div class="lk"><div><b>${esc(l.name)}</b> <a href="#" onclick="return false">${esc(l.url)} ↗</a>${l.possible ? `<span class="bd p">possible match</span>` : ""}${l.unchecked ? `<span class="bd">not checked</span>` : ""}<small>found via ${l.src}${l.unchecked ? " · the site refused a check, so it's kept but unconfirmed" : " · opened and matched"}</small></div><button data-rmlink>Remove</button></div>`).join("")).join("")
+    + `<div style="display:flex;gap:8px;margin-top:12px"><button class="btn sm">+ Add a link</button><button class="btn sm">Find more links</button></div><p class="note2">Found on this Mac from free directories (and Brave Search if you add a key). Never uses your AI quota. Your edits are never overwritten.</p>`;
+}
+function relatedBlock(it, n = 6) {
+  const r = relatedTo(it.id);
+  if (!r.length) return `<p style="color:var(--fg-3);font-size:14px">Nothing close yet.</p>`;
+  return r.slice(0, n).map(x => `<div class="rel" data-go="#/item/${x.it.id}"><div class="th" style="background:${C.bg(x.it)}"></div><div><b>${esc(x.it.title)}</b><small>${esc(x.it.author || "")} · ${M.sources[x.it.source]}</small><em>${esc(x.reason)}</em></div><button data-nr="${it.id}-${x.it.id}">Not related</button></div>`).join("")
+    + `<a class="btn sm" style="margin-top:8px" href="#/related/${it.id}">See all related (${r.length}) →</a>`;
+}
+function detailsBlock(it) {
+  const h = HIST.find(x => x[0] === it.id), v = h ? h[1] : [2.3, 3.0, 5.4, 1.4, 4.7, 2.0];
+  const steps = h ? [["Waiting on the phone", "1.0s"], ["Reading details", v[0] + "s"], ["Transcribing", v[1] + "s"], ["Picking frames", v[2] + "s"], ["Summarising", v[3] + "s"], ["Finding links", v[4] + "s"]]
+    : [["Waiting on the phone", "1.0s"], ["Reading details", v[0] + "s"], ["Downloading", v[1] + "s"], ["Transcribing", v[2] + "s"], ["Picking frames", v[3] + "s"], ["Summarising", v[4] + "s"], ["Finding links", v[5] + "s"]];
+  const total = (h ? v.reduce((a, b) => a + b, 1) : 18.8).toFixed(1);
+  return `${it.transcript.length ? `<h4>Transcript</h4>${it.transcript.map(([at, t]) => `<p class="it-sum" style="font-size:14px"><b>${at}</b> ${esc(t)}</p>`).join("")}` : it.kind === "video" ? `<h4>Transcript</h4><p style="color:var(--fg-3);font-size:14px">No speech: music only, so 40 frames were taken instead of 8.</p>` : ""}
+    <h4>How long it took</h4><table class="timet">${steps.map(([k, x]) => `<tr><td>${k}</td><td>${x}</td></tr>`).join("")}<tr class="tot"><td>Magpiary total</td><td>${total}s</td></tr></table>
+    <h4>Details</h4><div class="dgrid">
+      <span>Summary</span><span>gemini-3.5-flash-lite with your key “Personal Gemini” · ${(F[it.id] || []).length || 8} frames</span>
+      <span>Shared</span><span>${it.saves}× · first saved ${it.saved.toLowerCase()} from Example iPhone</span>
+      <span>On this Mac</span><span><code style="font-size:12.5px">~/Magpiary/${it.folder}</code> · a Markdown note in ~/Magpiary/notes</span></div>`;
+}
+function infoBody(it) {
+  const st = statusOf(it);
+  if (st === "attention") return `<div class="pstate bad"><b>Couldn't open this post</b><p>${it.reason}. Magpiary fetches logged out, slowly, so it waits and tries again by itself. ${it.retry}.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm dark">Retry now</button><button class="btn sm">Open original ↗</button><button class="btn sm" data-trash="${it.id}">Remove</button></div></div>
+    <h4>What happened</h4><div class="meta2"><span>Fri 22:58 · shared from Example iPhone · waited 14 s on the phone</span><span>22:58 · reading details took 2.4 s</span><span>22:59 · Instagram sent an empty answer: it asked us to slow down</span><span>Tries again on its own: 5 min, 15 min, 1 h, 3 h… for about a day</span></div>
+    <h4>Other reasons you may see</h4><div class="meta2"><span>Login wall · Private post · Deleted · Not supported · Unknown: these wait for Retry now</span></div>
+    <h4>Your note</h4><textarea class="note" placeholder="Why did you save this?"></textarea>`;
+  if (st !== "done") {
+    const stepsHtml = st === "fetching" ? `<div class="d"><i></i>Saved</div><div class="r"><i></i>Fetching</div><div><i></i>Transcript</div><div><i></i>Summary</div>`
+      : st === "summarising" ? `<div class="d"><i></i>Fetched</div><div class="d"><i></i>Transcribed</div><div class="d"><i></i>Frames</div><div class="r"><i></i>Summarising</div>` : `<div class="d"><i></i>Fetched</div><div><i></i>Transcript</div><div><i></i>Frames</div><div><i></i>Summary</div>`;
+    const msg = st === "fetching" ? ["Fetching from " + M.sources[it.source], "Downloading the post to this Mac. The summary follows automatically."]
+      : st === "summarising" ? ["Being read right now", `${it.step}, ${it.pct}% done. This page fills in when it's ready; you can keep browsing.`]
+      : isNoKey() ? ["✦ Get a summary of this post", "It's saved on your Mac with its caption, and you can watch it here. With a free key, Magpiary adds a summary, key moments, things mentioned and links."] : ["Waiting its turn", `#${Math.max(1, M.queue.indexOf(it.id) + 1)} in line, about ${Math.max(1, M.queue.indexOf(it.id) + 1)} min. You can watch it now; the summary appears here.`];
+    const nk = isNoKey() && st === "waiting";
+    const cap = it.caption || CAPS[it.id] || "";
+    return `<div class="pstate"><b>${msg[0]}</b><p>${msg[1]}</p>${nk ? `<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn sm dark" href="#/settings">Add a free key</a></div>` : `<div class="steps">${stepsHtml}</div>`}</div>
+      ${cap ? captionBlock(it, cap) : ""}<h4>Your note</h4><textarea class="note" placeholder="Why did you save this?"></textarea>`;
+  }
+  {
+    const r = relatedTo(it.id).length;
+    const tabs = [["sum", "Summary"], ["links", `Links <small>${it.links.length}</small>`], ["rel", `Related <small>${r}</small>`], ["det", "Details"]];
+    const body = { sum: summaryBlock, links: linksBlock, rel: relatedBlock, det: detailsBlock }[cardTab](it);
+    return `<div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-ctab="${k}" class="${cardTab === k ? "on" : ""}">${l}</button>`).join("")}</div><div class="tabp">${body}</div>`;
+  }
+}
+let cardTab = "sum";
+function itemHead(it) {
+  const st = statusOf(it);
+  const acts = it.shelf ? `<button class="btn sm dark" data-restore="${it.id}">${it.shelf === "trash" ? "Restore" : "Back to library"}</button><button class="btn sm">Open original ↗</button>`
+    : `<button class="btn sm dark">Open original ↗</button>${st === "done" ? `<button class="btn sm" data-archive="${it.id}">✓ Archive</button><button class="btn sm">Summarise again</button>` : ""}<button class="btn sm" data-trash="${it.id}">Remove</button>`;
+  return `<span class="it-type">${it.type && st === "done" ? `<b style="background:${C.color(it.type)}">${it.type}</b>` : ""}${M.sources[it.source]} · saved ${it.saved.toLowerCase()}${it.saves > 1 ? ` · shared ${it.saves}×` : ""}</span>
+    <h2 class="it-h">${esc(isNoKey() && st === "waiting" ? capTitle(it) : it.title)}</h2><div class="it-by">${it.author ? "by " + it.author : ""}</div>
+    ${st === "attention" || st === "fetching" ? "" : `<div class="counts">${it.counts ? it.counts.split(" · ").map(c => c.replace(/^([\d.,]+[KM]?)/, "<b>$1</b>")).join(" · ") + ` <span style="color:var(--fg-3)">· as of today</span>` : `<span style="color:var(--fg-3)">${M.sources[it.source]} doesn't show counts without logging in</span>`}${it.counts ? `<button class="rf" data-refresh>↻ Refresh</button>` : ""}</div>`}
+    ${st === "done" ? pilesLine(it) : ""}
+    ${st === "attention" ? "" : `<div class="it-act">${acts}</div>`}`;
+}
+function wireMoments(host, it, m) {
+  host.querySelectorAll("[data-k]").forEach(el => el.onclick = () => {
+    const k = +el.dataset.k, p = it.points[k];
+    host.querySelectorAll(".kp").forEach(x => x.classList.toggle("on", +x.dataset.k === k));
+    const tc = host.querySelector("#tc"); if (tc && p[0]) { tc.textContent = `▶ ${p[0]} · moment ${k + 1}`; tc.classList.add("hl"); }
+    const fi = p[0] ? m.near(p[0]) : -1; host.querySelectorAll("[data-fi]").forEach(x => x.classList.toggle("on", +x.dataset.fi === fi));
+  });
+}
+function openItem(id) { cardTab = "sum"; fillCard(id); } // motion.js animates opening; tab switches and edits redraw with fillCard
+function fillCard(id, keepTab) {
+  const it = byId(id); if (!it) return closeItem();
+  const list = it.shelf ? shelfItems(it.shelf) : all();
+  const ids = list.map(i => i.id), k = ids.indexOf(id), prev = ids[k - 1], next = ids[k + 1];
+  document.body.classList.add("lock"); $("#scrim").classList.add("on");
+  document.querySelectorAll(".tile.sel").forEach(x => x.classList.remove("sel")); document.querySelector(`.tile[data-id="${id}"]`)?.classList.add("sel");
+  const st = statusOf(it), m = media(it, 12, 1);
+  const left = st === "attention"
+    ? `<div class="stage"><div class="pl" style="background:var(--t-news);display:grid;place-items:center;color:#fff;font:800 26px/1.1 var(--display);text-align:center;padding:24px">Couldn't open<br>this post</div></div>`
+    : `<div class="stage">${m.player}</div>${m.frames}${m.frames ? `<div class="cap"><span>Scene frames</span><span>numbers mark the key moments</span></div>` : ""}`
+;
+  $("#cardm").innerHTML = `<div class="vid">${left}</div><div class="main"><div class="navrow">${prev ? `<button class="rb" data-go="#/item/${prev}" aria-label="Previous">←</button>` : ""}${next ? `<button class="rb" data-go="#/item/${next}" aria-label="Next">→</button>` : ""}<button class="rb" data-close aria-label="Close">×</button></div>${itemHead(it)}${infoBody(it)}</div>`;
+  $("#cardm").classList.add("on"); if (!keepTab) $("#cardm").querySelector(".main").scrollTop = 0; wireMoments($("#cardm"), it, m);
+}
+function closeItem() {
+  document.body.classList.remove("lock"); $("#scrim").classList.remove("on"); $("#cardm").classList.remove("on");
+  document.querySelectorAll(".tile.sel").forEach(x => x.classList.remove("sel"));
+}
+
+/* ---------- paste ---------- */
+function openPaste() {
+  $("#modal").innerHTML = `<h3>Add a post</h3><p style="margin:0;color:var(--fg-2);font-size:14px">Paste a link from Instagram, Threads, YouTube, Reddit, X, LinkedIn or any other website. Tracking is stripped before anything is saved.</p>
+    <input id="purl" placeholder="https://www.instagram.com/reel/…" autocomplete="off">
+    <div class="prev" id="pprev"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn" data-pclose>Cancel</button><button class="btn dark" id="padd" disabled style="opacity:.4">Add to Today</button></div>
+    <p style="font-size:12.5px;color:var(--fg-3);margin:10px 0 0">Try: <button style="text-decoration:underline" data-try="https://www.instagram.com/reel/Example0004/?igsh=example-tracking&utm_source=ig_web_copy_link">an Instagram reel</button> · <button style="text-decoration:underline" data-try="https://youtu.be/Example0005?si=example-tracking">a YouTube short link</button> · <button style="text-decoration:underline" data-try="https://example.com/article?utm_source=x">another website</button> · <button style="text-decoration:underline" data-try="hello world">not a link</button></p>`;
+  $("#modal").classList.add("on"); $("#scrim").classList.add("on");
+  const inp = $("#purl"); inp.focus();
+  const check = () => {
+    const v = inp.value.trim(), p = $("#pprev"), add = $("#padd");
+    if (!v) { p.className = "prev"; add.disabled = true; add.style.opacity = .4; return; }
+    let u; try { u = new URL(v); } catch (e) { p.className = "prev on err"; p.innerHTML = "<b>That isn't a link.</b> Paste the full address, starting with https://"; add.disabled = true; add.style.opacity = .4; return; }
+    const yt = /youtu/.test(u.host), src = /instagram/.test(u.host) ? "Instagram" : yt ? "YouTube" : /threads/.test(u.host) ? "Threads" : /reddit/.test(u.host) ? "Reddit" : /x\.com|twitter/.test(u.host) ? "X" : /linkedin/.test(u.host) ? "LinkedIn" : "";
+    if (!src) { p.className = "prev on"; p.innerHTML = `<b>${esc(u.host)} · another website</b><br><code>${esc(u.origin + u.pathname)}</code><div class="rm" style="color:var(--fg-3)">Saved with its page details (title, text, picture). Tracking removed: everything after “?”.</div>`; add.disabled = false; add.style.opacity = 1; add.dataset.src = "other"; return; }
+    const removed = [...u.searchParams.keys()];
+    const clean = yt && u.host === "youtu.be" ? `https://www.youtube.com/watch?v=${u.pathname.slice(1)}` : u.origin + u.pathname;
+    p.className = "prev on"; p.innerHTML = `<b>${src}${yt && u.host === "youtu.be" ? " · short link expanded" : ""}</b><br><code>${esc(clean)}</code>${removed.length ? `<div class="rm">Removed: ${removed.map(k => `<s>${esc(k)}</s>`).join("")}</div>` : `<div class="rm" style="color:var(--fg-3)">Nothing to remove.</div>`}`;
+    add.disabled = false; add.style.opacity = 1; add.dataset.src = src.toLowerCase();
+  };
+  inp.oninput = check;
+  $("#modal").querySelectorAll("[data-try]").forEach(b => b.onclick = () => { inp.value = b.dataset.try; check(); });
+  $("#modal").querySelector("[data-pclose]").onclick = closePaste;
+  $("#padd").onclick = () => {
+    const src = $("#padd").dataset.src === "other" ? "instagram" : $("#padd").dataset.src; const id = 100 + extra.length;
+    const it = { id, source: src, kind: "video", author: "", dur: "", saved: "Just now", day: "Today", title: src === "youtube" ? "YouTube video" : "Instagram reel", type: "", status: "fetching", hue: 200, keep: true, isNew: true,
+      summary: "", points: [], things: [], tags: [], transcript: [], links: [], saves: 1, folder: "library/new", bgOverride: `url(example-cover.svg) center/cover` };
+    extra.unshift(it); closePaste();
+    if (opt.state === "first") { opt.state = "normal"; syncMock(); ticker(); }
+    wallMode = "everything"; filter = ""; location.hash = "#/"; wall(); toast("Added to Today · fetching now");
+    setTimeout(() => { it.status = "summarising"; it.step = "Listening"; it.pct = 25; it.isNew = false; it.title = "Make a folded paper lantern"; it.author = "Example Paper Lab"; it.dur = "0:44"; if (location.hash === "#/" || location.hash === "") wall(); }, 2600);
+    setTimeout(() => { it.pct = 80; it.step = "Writing the summary"; if (location.hash === "#/" || location.hash === "") wall(); }, 4800);
+    setTimeout(() => { Object.assign(it, { status: "done", type: "Explainer", summary: "Uses a hotel with infinitely many rooms to show why infinity plus one is still infinity.", points: [["0:05", "Hilbert's hotel"], ["0:22", "Moving every guest one room up"]] }); if (location.hash === "#/" || location.hash === "") wall(); toast("Read: “How do you explain infinity to a kid?”"); }, 7000);
+  };
+}
+function closePaste() { $("#modal").classList.remove("on"); if (!$("#cardm").classList.contains("on")) $("#scrim").classList.remove("on"); }
+function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 2600); }
+
+/* ---------- settings ---------- */
+// Matches the product's Settings and Setup pages: one way to read posts (Balanced), keys with fallback,
+// summary limits, AI tags, a Brave key for links, phones, storage and appearance.
+let readMode = "smart"; // Smart (Balanced in the specs) or Private
+function settings(section) {
+  shelfSwitch();
+  const nk = isNoKey();
+  const nav = [["", "AI & summaries"], ["links", "Links"], ["phones", "Phones & this Mac"], ["storage", "Library & storage"], ["appearance", "Appearance"]];
+  const addKey = `<div class="box"><h3>Add a key</h3><p>Checked with the provider when you save it, then stored only on this Mac and never shown again.</p>
+      <div class="form"><label>Provider</label><select><option>Google Gemini</option></select>
+        <label>Free or paid</label><div class="seg" style="width:fit-content"><button class="on">Free</button><button>Paid (billing on)</button></div>
+        <label>Name</label><input placeholder="Optional, like “Personal Gemini”">
+        <label>Key</label><input placeholder="AIza…" autocomplete="off"></div>
+      <div class="guide2"><b>Get a free Gemini key</b><ol><li>Open Google AI Studio and sign in with your Google account.</li><li>Click “Create API key”. If asked, pick or create a project.</li><li>Copy the key (it starts with “AIza”) and paste it above.</li></ol>A key is free unless you turned on billing for its project. With billing on, Google says it doesn't use your content to improve its products.</div>
+      <button class="btn dark">Check and save</button>
+      <p class="note2">What's sent: the caption, the transcript and a few frames. The video itself never leaves this Mac. With a free key, Google may use what's sent to improve its products. Free keys are paced to stay within Google's limits.</p></div>`;
+  const body = section === "appearance" ? `
+    <div class="box"><h3>Layout on large screens</h3><p>On screens wider than 1920 px, keep everything in a centred box instead of stretching edge to edge.</p>
+      <div class="seg"><button data-lset="auto">Boxed</button><button data-lset="full">Full width</button></div>
+      <div style="margin-top:18px"><label style="font-weight:600;font-size:14px">Box width · <span id="boxv2"></span></label><input type="range" id="boxr2" min="960" max="2400" step="40" style="width:100%;max-width:520px;display:block;margin-top:8px"></div>
+      <p style="font-size:13px;color:var(--fg-3);margin:10px 0 0">Your screen is ${innerWidth} px wide${innerWidth > 1920 ? ", so this applies now." : ". Boxing starts above 1920 px; use the Mockup options chip to preview it here."}</p></div>
+    <div class="box"><h3>Tile size</h3><p>Same as the A / A / A control in the top bar.</p><div class="sizes" id="sizes2" role="group" aria-label="Tile size" style="background:var(--bg)"></div></div>`
+  : section === "phones" ? `
+    <div class="box"><h3>Your phones</h3><p>Each phone has its own pairing key. It sends links only while it's on its home Wi-Fi, and deletes them once this Mac confirms.</p>
+      <div class="phone"><span class="ic">📱</span><div><b>Example iPhone</b><small>Home Wi-Fi: Example Wi-Fi · paired 22 Oct · last delivery today 23:02 (2 posts)</small></div><div style="display:flex;gap:6px"><button class="btn sm">New install code</button><button class="btn sm">Remove</button></div></div>
+      <p class="note2" style="margin-top:4px">A new install code replaces the phone's key: the old Shortcut stops working until you install the new one.</p>
+      <button class="btn dark" id="addphone" style="margin-top:12px">+ Add a phone</button>
+      <div id="qr" style="display:none;margin-top:16px">
+        <div class="form"><label>Name for this phone</label><input placeholder="Like “Work iPhone”"><label>Home Wi-Fi name</label><input placeholder="Exactly as in Settings → Wi-Fi on the iPhone">
+          <div class="hint">Type it exactly as it appears in Settings → Wi-Fi. The name at the top of the screen can be your phone company's label instead.</div></div>
+        <div class="phone" style="margin-top:12px"><span class="ic" style="width:120px;height:120px;border-radius:16px;background:repeating-conic-gradient(var(--fg) 0 25%, var(--bg) 0 50%) 0 0/16px 16px"></span><div><b>Scan with the iPhone camera</b><small>Opens the install page and the Share shortcut. The code works for 15 minutes and 3 downloads.</small><small style="margin-top:8px">Then: allow the Shortcut, and add the “join home Wi-Fi” automation (the guide walks you through it).</small></div><span></span></div></div></div>
+    <div class="box"><h3>Keep this Mac awake</h3><p>A sleeping Mac can't receive links: the phone's share waits about a minute and fails (nothing is lost). While this is on, the Mac doesn't sleep by itself when plugged in. On battery it changes nothing, and closing a laptop's lid still puts it to sleep.</p>
+      <div class="toggles" style="margin:0"><span class="tg off"><i></i>Keep awake while plugged in</span></div></div>
+    <div class="box"><h3>This Mac</h3><p>Where your phones send to. This page only opens on this Mac.</p><div class="meta2"><span>Receiver running on port 8765 · starts at login, restarts if it stops</span><span>If the Mac's firewall is on, macOS may ask to allow incoming connections the first time a phone connects. Choose Allow.</span></div>
+      <a class="btn sm" style="margin-top:12px" href="#/nest">See the delivery queue →</a></div>`
+  : section === "links" ? `
+    <div class="box"><h3>Finding links</h3><p>For everything a post names (tools, apps, repos, books, places), Magpiary finds the link and opens it to check it matches. It never uses your AI quota.</p>
+      <div class="meta2" style="font-size:13.5px;gap:6px"><span>1 · Free directories, no key: GitHub, the App Store, Wikipedia, OpenStreetMap</span><span>2 · Brave Search, only if you add a key below</span></div></div>
+    <div class="box"><h3>Brave Search key <span style="font:600 12px var(--sans);color:var(--fg-3)">optional</span></h3><p>Finds links the free directories miss. The free tier is about 2,000 searches a month. Kept apart from your AI keys.</p>
+      <div class="form"><label>Key</label><input placeholder="BSA…" autocomplete="off"></div>
+      <div class="guide2"><b>Get a Brave Search key</b><ol><li>Open the Brave Search API page and sign up for the free plan.</li><li>Create a key in the dashboard.</li><li>Paste it above.</li></ol></div><button class="btn dark">Check and save</button></div>`
+  : section === "storage" ? `
+    <div class="box"><h3>Your library</h3><p>Everything is in one folder you own: a database, the archived media, and a Markdown note per post (works with Obsidian).</p>
+      <div class="meta2" style="font-size:13.5px;gap:6px"><span><code>~/Magpiary/library</code> · videos, photos, captions, transcripts, frames · 164 MB</span><span><code>~/Magpiary/notes</code> · one Markdown note per post</span><span><code>~/Magpiary/models</code> · the small model that finds related posts and piles · 135 MB</span></div>
+      <button class="btn sm" style="margin-top:12px">Show in Finder</button></div>
+    <div class="box"><h3>Trash</h3><p>Removed posts wait 30 days, then they and their files are deleted for good. Sharing a post again brings it back.</p>
+      <div style="display:flex;gap:8px"><a class="btn sm" href="#/trash">Open the trash (${shelfItems("trash").length})</a><button class="btn sm">Empty trash</button></div></div>`
+  : `
+    <div class="box"><h3>How posts are read</h3><p>Pick one. You can switch any time; posts already read stay as they are, and “Summarise again” re-reads one the new way.</p>
+      <div class="presets" style="grid-template-columns:repeat(2,1fr)">
+        <div class="preset ${readMode === "smart" ? "on" : ""}" data-mode="smart"><b>Smart <em>default</em></b><p>Your Mac makes the transcript and picks a few frames; your own AI key reads them. The best summaries, about 20 s a post.</p><div class="dots"><span>needs a free key</span><span>leaves the Mac: caption, transcript, a few frames</span></div></div>
+        <div class="preset ${readMode === "private" ? "on" : ""}" data-mode="private"><b>Private</b><p>Everything happens on this Mac with a model that runs here. No key, nothing leaves. Simpler summaries, and slower.</p><div class="dots"><span>no key</span><span>leaves the Mac: nothing</span><span>~2 min a post</span></div></div></div></div>
+    ${readMode === "smart" ? `
+    <div class="sec" style="margin:30px 0 14px"><h2 style="font-size:24px">Smart settings</h2><span>your AI key, limits and tags</span></div>
+    <div class="box"><h3>AI keys</h3><p>Magpiary uses the first key that works. When one reaches its daily limit or is refused, it moves to the next, and goes back to the first the next day. Each post records which key wrote it.</p>
+      ${nk ? `<div class="pstate" style="background:var(--bg);margin:0 0 10px"><b>No key yet</b><p>Summaries are waiting. A free Gemini key takes about 2 minutes.</p></div>`
+        : `<div class="key"><span class="ord">1</span><div><b>Personal Gemini</b><small>Google Gemini · free · now using gemini-3.5-flash-lite (the newest that answered quickly) · added 23 Oct</small></div><span class="kst">Reached its limit today · back tomorrow</span><div class="updn"><button aria-label="Move up">↑</button><button aria-label="Move down">↓</button><button aria-label="Remove">×</button></div></div>
+           <div class="key"><span class="ord">2</span><div><b>Work Gemini</b><small>Google Gemini · paid · no waiting between posts · added 24 Oct</small></div><span class="pillok">Working</span><div class="updn"><button aria-label="Move up">↑</button><button aria-label="Move down">↓</button><button aria-label="Remove">×</button></div></div>`}</div>
+    ${addKey}
+    <div class="box"><h3>Summaries</h3><p>Limit them while you try a key. Pause and resume each step from the Nest. “Try again” on a post always goes ahead, even while paused.</p>
+      <div class="radio"><label><input type="radio" name="lim"> Only the next <input type="number" value="10" min="1"> posts, then pause</label><label><input type="radio" name="lim" checked> All posts, newest first</label></div></div>
+    <div class="box"><h3>Tags from the AI</h3><p>Your key suggests a few tags with each summary.</p>
+      <div class="radio"><label><input type="radio" name="tg" checked> Add them automatically</label><label><input type="radio" name="tg"> Only suggest them; I add them myself</label></div></div>
+    <div class="box"><h3>Summaries that had a problem</h3><p>0 posts. Busy or refused answers are retried by themselves; anything left shows up here.</p><button class="btn sm" aria-disabled="true">Try them all again</button></div>`
+    : `
+    <div class="sec" style="margin:30px 0 14px"><h2 style="font-size:24px">Private settings</h2><span>the model on this Mac, and how hard it works</span></div>
+    <div class="box"><h3>The model on this Mac</h3><p>Downloaded once into ~/Magpiary/models and checked. It reads the transcript and frames your Mac already made.</p>
+      <div class="key"><span class="ord">↓</span><div><b>Mac reading model</b><small>about 2.5 GB · not downloaded yet · runs on the Mac's chip, offline</small></div><span class="kst">Needed for Private</span><button class="btn sm dark">Download</button></div>
+      <div class="radio" style="margin-top:12px"><label><input type="radio" name="msz" checked> Standard · about 2 min a post on an M1 Pro</label><label><input type="radio" name="msz"> Larger · better summaries, about 5 min a post, needs 16 GB of memory</label></div></div>
+    <div class="box"><h3>When to read</h3><p>Reading on the Mac is heavy work. Choose when it happens.</p>
+      <div class="radio"><label><input type="radio" name="when" checked> Whenever there's something to read</label><label><input type="radio" name="when"> Only while plugged in</label><label><input type="radio" name="when"> Only when the Mac is idle</label></div></div>
+    <div class="box"><h3>Summaries</h3><p>Limit them while you try it out. Pause and resume each step from the Nest.</p>
+      <div class="radio"><label><input type="radio" name="lim2"> Only the next <input type="number" value="5" min="1"> posts, then pause</label><label><input type="radio" name="lim2" checked> All posts, newest first</label></div></div>
+    <div class="box"><h3>Tags</h3><p>The Mac model suggests a few tags with each summary.</p>
+      <div class="radio"><label><input type="radio" name="tg2" checked> Add them automatically</label><label><input type="radio" name="tg2"> Only suggest them; I add them myself</label></div></div>
+    <div class="box"><h3>What you give up</h3><p>Summaries are shorter and key moments less precise than Smart's. Links, Related and Piles work the same: they're always worked out on this Mac.</p></div>`}`;
+  $("#view").innerHTML = `<div class="hero"><h1>Settings</h1><p>Everything stays on this Mac. Keys are stored in ~/.config/magpiary with owner-only access and never shown again.</p></div>
+  <div class="set"><nav>${nav.map(([k, l]) => `<a href="#/settings${k ? "/" + k : ""}" class="${(section || "") === k ? "on" : ""}">${l}</a>`).join("")}</nav><div>${body}</div></div>`;
+  $("#addphone")?.addEventListener("click", () => { $("#qr").style.display = "block"; });
+  if ($("#sizes2")) C.size($("#sizes2"), () => document.querySelectorAll("#sizes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.s === document.documentElement.dataset.size)));
+  applyLayout();
+}
+
+/* ---------- mock options ---------- */
+/* ---------- boxed layout ---------- */
+// mode: "auto" boxes content only on screens wider than 1920 px (default); "full" never boxes; "boxed" forces it (mockup preview).
+const layout = { mode: "auto", box: 1600 };
+try { Object.assign(layout, JSON.parse(localStorage.getItem("mag-layout") || "{}")); } catch (e) {}
+function applyLayout() {
+  const on = layout.mode === "boxed" || (layout.mode === "auto" && innerWidth > 1920);
+  document.documentElement.style.setProperty("--box", on ? layout.box + "px" : "100vw");
+  document.querySelectorAll("[data-l]").forEach(b => b.classList.toggle("on", b.dataset.l === layout.mode));
+  document.querySelectorAll("#boxr, #boxr2").forEach(r => r.value = layout.box);
+  document.querySelectorAll("#boxv, #boxv2").forEach(v => v.textContent = layout.box + " px");
+  document.querySelectorAll("[data-lset]").forEach(b => b.classList.toggle("on", b.dataset.lset === (layout.mode === "full" ? "full" : "auto")));
+  try { localStorage.setItem("mag-layout", JSON.stringify(layout)); } catch (e) {}
+}
+document.addEventListener("click", e => {
+  const l = e.target.closest("[data-l]"); if (l) { layout.mode = l.dataset.l; applyLayout(); }
+  const ls = e.target.closest("[data-lset]"); if (ls) { layout.mode = ls.dataset.lset; applyLayout(); }
+});
+document.addEventListener("input", e => { if (e.target.id === "boxr" || e.target.id === "boxr2") { layout.box = +e.target.value; applyLayout(); } });
+addEventListener("resize", applyLayout);
+applyLayout();
+
+function syncMock() {
+  document.querySelectorAll("[data-opt]").forEach(g => g.querySelectorAll("button").forEach(b => b.classList.toggle("on", opt[g.dataset.opt] === b.dataset.v)));
+  try { localStorage.setItem("mag-c1plus", JSON.stringify(opt)); } catch (e) {}
+}
+document.querySelectorAll("[data-opt] button").forEach(b => b.onclick = () => {
+  opt[b.parentElement.dataset.opt] = b.dataset.v; syncMock(); ticker(); shelfSwitch();
+  if (opt.state === "first") { location.hash = "#/welcome"; return; }
+  if (location.hash.startsWith("#/welcome")) location.hash = "#/"; else render();
+});
+
+/* ---------- events & routing ---------- */
+C.size($("#sizes"));
+$("#paste").onclick = openPaste;
+$("#scrim").onclick = () => { if ($("#modal").classList.contains("on")) closePaste(); else history.back(); };
+$("#q").oninput = e => { query = e.target.value.trim(); if (location.hash.length > 2) location.hash = "#/"; else wall(); };
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-close]")) { history.back(); return; }
+  if (e.target.closest("[data-paste]")) { openPaste(); return; }
+  const tg = e.target.closest(".cbox, .tg"); if (tg && !e.target.closest(".seg")) { (tg.classList.contains("tg") ? tg : tg.querySelector(".tg")).classList.toggle("off"); return; }
+  const sb = e.target.closest(".seg button"); if (sb && !sb.dataset.wm) { sb.parentElement.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === sb)); }
+  const wm = e.target.closest("[data-wm]"); if (wm) { wallMode = wm.dataset.wm; wall(); return; }
+  const ws = e.target.closest("[data-wmset]"); if (ws) wallMode = ws.dataset.wmset;
+  const f = e.target.closest("[data-f]"); if (f) { filter = f.dataset.f; wall(); return; }
+  const cpt = e.target.closest("[data-capt]"); if (cpt) { const b = cpt.closest(".capb"); b.classList.toggle("open"); cpt.textContent = b.classList.contains("open") ? "Show less" : "Show the full caption"; return; }
+  const rf = e.target.closest("[data-refresh]"); if (rf) { rf.textContent = "↻ Refreshing…"; setTimeout(() => { rf.textContent = "✓ Up to date"; toast("Counts refreshed · as of just now"); }, 900); return; }
+  const md = e.target.closest("[data-mode]"); if (md) { readMode = md.dataset.mode; if (location.hash === "#/settings") { e.preventDefault(); settings(); } return; }
+  if (e.target.closest("[data-links]")) { linksF = !linksF; wall(); return; }
+  if (e.target.closest("[data-tagclear]")) { tagF = ""; wall(); return; }
+  if (e.target.closest("[data-fclear]")) { filter = srcF = tagF = ""; linksF = false; wall(); return; }
+  const tg2 = e.target.closest("[data-tag]"); if (tg2) { e.preventDefault(); tagF = tg2.dataset.tag; filter = srcF = ""; linksF = false; wallMode = "everything"; query = ""; $("#q").value = "";
+    if (location.hash === "#/" || location.hash === "") wall(); else { base = null; location.hash = "#/"; } window.scrollTo(0, 0); return; }
+  if (e.target.closest("[data-regroup]")) { toast("Regrouped on this Mac · your renames and splits kept"); wall(); return; }
+  const nr = e.target.closest("[data-nr]"); if (nr) { e.stopPropagation(); notRelated.add(nr.dataset.nr.split("-").map(Number).sort().join("-")); toast("Not related · won't be suggested together again");
+    if ($("#cardm").classList.contains("on")) fillCard(+location.hash.split("/")[2], true); else render(); return; }
+  const ct = e.target.closest("[data-ctab]"); if (ct) { cardTab = ct.dataset.ctab; fillCard(+location.hash.split("/")[2], true); return; }
+  const mv = (id, shelf, msg) => { const it = byId(id); it.shelf = shelf; if (it.shelf) delete it.trashedDays; else delete it.shelf; toast(msg); if ($("#cardm").classList.contains("on")) history.back(); else render(); shelfSwitch(); };
+  const ar = e.target.closest("[data-archive]"); if (ar) { mv(+ar.dataset.archive, "archive", "Archived · still searchable"); return; }
+  const tr = e.target.closest("[data-trash]"); if (tr) { mv(+tr.dataset.trash, "trash", "Moved to the Trash · deleted for good in 30 days"); return; }
+  const rs = e.target.closest("[data-restore]"); if (rs) { e.stopPropagation(); mv(+rs.dataset.restore, "", "Back in your library"); return; }
+  if (e.target.closest("[data-empty]")) { shelfItems("trash").forEach(i => i.shelf = "gone"); toast("Trash emptied · deleted for good"); render(); shelfSwitch(); return; }
+  // pile page: rename, merge, choose saves to split off or remove, delete
+  const pid = +(location.hash.match(/#\/pile\/(\d+)/) || [])[1];
+  if (e.target.closest("[data-prename]")) { const h = $("#pname"); h.contentEditable = "true"; h.focus(); document.getSelection().selectAllChildren(h);
+    h.onblur = () => { h.contentEditable = "false"; pileById(pid).name = h.textContent.trim().slice(0, 60) || pileById(pid).name; toast("Renamed · kept when piles are made again"); };
+    h.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); h.blur(); } }; return; }
+  if (e.target.closest("[data-pick]")) { picking = { pile: pid, ids: new Set() }; drawPile(pid); return; }
+  const tk = e.target.closest("[data-tick]"); if (tk && picking) { const id = +tk.dataset.tick; picking.ids.has(id) ? picking.ids.delete(id) : picking.ids.add(id); drawPile(pid); return; }
+  if (e.target.closest("[data-pickdone]")) { picking = null; drawPile(pid); return; }
+  if (e.target.closest("[data-split]") && picking) { const t = pileById(pid), ids = [...picking.ids]; t.ids = t.ids.filter(i => !picking.ids.has(i));
+    const name = ($("#splitname").value || "").trim() || "Part of " + t.name; const nid = Math.max(...PILES.map(p => p.id)) + 1;
+    PILES.push({ id: nid, name, sub: "Split off by you", ids, fresh: 0, type: t.type }); picking = null; toast(`Split off into “${name}”`); location.hash = "#/pile/" + nid; return; }
+  if (e.target.closest("[data-premove]") && picking) { const t = pileById(pid); t.ids = t.ids.filter(i => !picking.ids.has(i)); const n = picking.ids.size; picking = null;
+    if (!t.ids.length) { PILES.splice(PILES.indexOf(t), 1); location.hash = "#/"; } else pileView(pid); toast(`${n} removed from this pile · they stay out`); return; }
+  if (e.target.closest("[data-pdel]")) { const t = pileById(pid); PILES.splice(PILES.indexOf(t), 1); wallMode = "piles"; toast(`Deleted “${t.name}” · the saves stay, and it isn't made again`); location.hash = "#/"; return; }
+  const g = e.target.closest("[data-go]"); if (g) { e.preventDefault(); e.stopPropagation(); location.hash = g.dataset.go; }
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "srcf") { srcF = e.target.value; wall(); }
+  if (e.target.id === "mergeto" && e.target.value) { const from = pileById(+location.hash.split("/")[2]), to = pileById(+e.target.value);
+    to.ids = [...new Set([...to.ids, ...from.ids])]; PILES.splice(PILES.indexOf(from), 1); toast(`Merged into “${to.name}”`); location.hash = "#/pile/" + to.id; }
+});
+document.addEventListener("keydown", e => {
+  const typing = ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName);
+  if (e.key === "Escape") { if ($("#modal").classList.contains("on")) closePaste(); else if (location.hash.includes("/item/")) history.back(); return; }
+  if (typing) return;
+  if (e.key === "/") { e.preventDefault(); $("#q").focus(); }
+  if (location.hash.includes("/item/") && (e.key === "ArrowRight" || e.key === "ArrowLeft")) { const b = document.querySelectorAll(".it.on .rb[data-go]"); const t = [...b].find(x => x.textContent === (e.key === "ArrowRight" ? "→" : "←")); if (t) location.replace(t.dataset.go); }
+});
+let base = null;
+function render() {
+  const p = (location.hash || "#/").slice(1);
+  const b = p.startsWith("/item/") ? (base ?? "/") : p;
+  $("#t-nest").classList.toggle("on", b.startsWith("/nest")); $("#t-set").classList.toggle("on", b.startsWith("/settings")); shelfSwitch();
+  $("#t-nest").classList.toggle("busy", opt.state === "normal"); $("#t-nest").title = opt.state === "normal" ? "Nest · reading a post now" : "Nest";
+  const wel = b.startsWith("/welcome"); $("#wel").classList.toggle("on", wel); document.body.classList.toggle("lock", wel);
+  if (wel) { welcome(b.split("/")[2] || "hello"); return; }
+  if (b.startsWith("/nest")) nest(); else if (b.startsWith("/settings")) settings(b.split("/")[2]); else if (b.startsWith("/pile/")) pileView(+b.split("/")[2]);
+  else if (b.startsWith("/related/")) relatedView(+b.split("/")[2]); else wall();
+}
+function route() {
+  const p = (location.hash || "#/").slice(1);
+  if (p.startsWith("/item/")) { if (base === null) { base = "/"; render(); } openItem(+p.split("/")[2]); return; }
+  closeItem(); if (p !== base) { if (!p.startsWith("/pile/")) picking = null; base = p; ticker(); render(); window.scrollTo(0, 0); }
+}
+syncMock(); ticker(); addEventListener("hashchange", route);
+if (opt.state === "first" && !location.hash.startsWith("#/welcome")) location.replace("#/welcome");
+route();
+</script>
+<script src="vendor/gsap/gsap.min.js"></script><script src="vendor/gsap/Flip.min.js"></script><script src="c1-motion.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "urls": ["https://www.instagram.com/reel/Example0020/", "https://www.instagram.com/p/Example0020/", "https://www.instagram.com/reel/Example0021/"],
+  "short": "https://www.instagram.com/share/ExampleShare7/",
+  "transcript": {"segments": [{"start": 0, "end": 5, "text": "Fold the paper wing along the marked line."}]},
+  "meta": {"title": "Paper glider", "text": "An invented paper glider demonstration", "author": "Alex Example", "media": ["media-01.mp4"]},
+  "keys": [
+    {"id": "selected", "provider": "gemini", "tier": "free", "label": "Selected key", "secret": "fixture-only", "model": "recorded-model"},
+    {"id": "other", "provider": "gemini", "tier": "paid", "label": "Other key", "secret": "fixture-only", "model": "recorded-model"}
+  ],
+  "board": "0123456789abcdef",
+  "board_events": [{"note": "First example edit"}, {"note": "Second example edit"}, {"note": "Third example edit"}, {"note": "Fourth example edit"}],
+  "profile": {"type": "profile", "name": "Mira Example", "about": "Paper\n and making", "links": {"website": "https://example.com", "github": "@mira-example", "x": "bad handle", "unknown": "https://evil.example"}, "topics": ["Paper", "paper", "Making"], "ignored": "untrusted"},
+  "clean_profile": {"about": "Paper and making", "links": {"website": "https://example.com", "github": "mira-example"}, "topics": ["Paper", "Making"]},
+  "made_at": "2026-10-23T12:00:00+05:30",
+  "story": {"headline": "Paper models this week", "themes": [{"name": "Paper craft", "saves": [47]}], "picks": [{"do": "Fold a glider", "saves": [47]}]},
+  "chat": [{"role": "user", "text": "What should I try?"}, {"role": "assistant", "text": "Fold the paper wing."}]
+}

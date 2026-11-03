@@ -1,0 +1,5 @@
+GSAP 3.13.0 (gsap.min.js, Flip.min.js), downloaded from cdn.jsdelivr.net/npm/gsap@3.13.0/dist.
+Licence: GreenSock Standard "no charge" license, https://gsap.com/standard-license
+Free to use and redistribute, but it is not an OSI open-source licence like MIT.
+
+Lenis 1.1.13 (lenis.min.js), downloaded from unpkg.com/lenis@1.1.13/dist. Licence: MIT.

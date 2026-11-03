@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Magpiary</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<div class="sheet">
+<header>
+  <span class="brand"><svg class="mark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M207.35 77.86 L172.08 65.02 L171.85 57.5 L170.65 51.04 L169.3 46.87 L167.52 42.87 L164.08 37.26 L161.33 33.86 L158.23 30.76 L153.01 26.76 L149.22 24.56 L145.21 22.78 L138.91 20.92 L134.58 20.23 L130.2 20 L123.65 20.52 L119.37 21.43 L115.2 22.78 L111.19 24.56 L107.4 26.76 L102.18 30.76 L99.08 33.86 L96.32 37.26 L93.94 40.94 L91.95 44.84 L89.53 51.98 L98.29 52.57 L105.86 54.38 L113.05 57.36 L119.68 61.43 L123.72 64.7 L129.07 70.34 L132.12 74.54 L134.72 79.04 L136.83 83.78 L138.44 88.72 L139.51 93.79 L140.07 99.27 L172.08 110.93 L172.08 90.69Z M140.12 135.77 L140.12 164.37 L172.08 196.33 L172.08 124.14Z" fill="#ff2e93"/><path d="M132.41 236 L132.41 130.37 L167.67 117.53 L132.41 104.7 L132.35 99.36 L131.49 92.84 L130.36 88.61 L127.84 82.54 L124.41 76.94 L121.65 73.53 L116.89 69.01 L113.34 66.43 L109.54 64.24 L105.54 62.45 L101.37 61.1 L97.08 60.19 L90.53 59.67 L86.15 59.9 L81.82 60.59 L77.59 61.72 L73.5 63.29 L67.72 66.43 L62.51 70.43 L57.99 75.2 L54.26 80.61 L52.27 84.52 L50.08 90.71 L49.17 95 L48.65 101.55 L48.65 236 L90.53 194.12Z M101.69 102.79 L98.24 118.08 L94.8 102.79 L79.51 99.35 L94.8 95.9 L98.24 80.61 L101.69 95.9 L116.98 99.35Z " fill="currentColor" fill-rule="evenodd"/><path d="M101.69 102.79 L98.24 118.08 L94.8 102.79 L79.51 99.35 L94.8 95.9 L98.24 80.61 L101.69 95.9 L116.98 99.35Z " fill="#ff2e93"/></svg><b>magpiary</b></span>
+  <span id="hub" class="hubstat" title="Whether Magpiary is answering on this Mac"><i></i><span>Checking…</span></span>
+</header>
+
+<main>
+<section id="pair" hidden>
+  <h1>Pair with Magpiary</h1>
+  <p class="sub">One time, so this browser can save to your library on this Mac.</p>
+  <ol class="steps">
+    <li><span>1</span><div>In Magpiary, open <b>Settings → Phones &amp; this Mac</b>.</div></li>
+    <li><span>2</span><div>Under Chrome, press <b>Pair Chrome</b> and copy the code.</div></li>
+    <li><span>3</span><div>Paste it here.</div></li>
+  </ol>
+  <input id="code" type="text" placeholder="ABCD-EFGH-JKLM" autocomplete="off" spellcheck="false" maxlength="20" aria-label="Pairing code">
+  <button id="pairgo" class="btn dark">Pair</button>
+  <p id="pairmsg" class="note" role="status"></p>
+</section>
+
+<section id="save" hidden>
+  <div id="card" class="card">
+    <div class="pillrow"><span id="pill" class="pill"><i></i><span></span></span></div>
+    <p id="link" class="link"></p>
+  </div>
+
+  <div id="seen" class="seen" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    <div><b id="seentitle"></b><a id="seenopen" href="#" target="_blank" rel="noreferrer">Open in library</a></div>
+  </div>
+
+  <div id="nopost" class="card" hidden>
+    <h1>This page has many posts</h1>
+    <p class="sub">Choose the one you want, then save it.</p>
+  </div>
+
+  <div id="form">
+    <div class="field"><span class="flabel" id="boardlabel">Board</span>
+      <div class="picker" id="picker">
+        <input type="hidden" id="board" value="">
+        <button type="button" id="pickbtn" class="pickbtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="boardlabel picklabel"><span id="picklabel">Just my library</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <ul id="picklist" class="picklist" role="listbox" aria-labelledby="boardlabel" hidden></ul>
+      </div>
+    </div>
+    <div id="suggest" class="suggest" hidden><span class="flabel">Looks like</span>
+      <button id="sugbtn" class="sugbtn" type="button"><span id="sugname"></span><small id="sugwhy"></small></button>
+    </div>
+    <button id="addnote" class="btn ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add note</button>
+    <label id="notebox" hidden>Note
+      <textarea id="note" rows="2" maxlength="2000" placeholder="Why you're saving it"></textarea>
+    </label>
+    <button id="savego" class="btn dark">Save <kbd>↵</kbd></button>
+  </div>
+
+  <button id="pick" class="btn" hidden>Pick a post on this page <kbd id="pickkey"></kbd></button>
+  <p id="msg" class="note" role="status"></p>
+</section>
+
+<section id="welcome" hidden>
+  <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+  <h1>Chrome is paired</h1>
+  <p class="sub">From now on, this browser saves pages and posts to your library on this Mac.</p>
+  <div class="heads"><b>Don't save this page.</b> It is Magpiary itself.<br>To save something, open the page or post you want to keep, then click the Magpiary icon.</div>
+  <button id="gotit" class="btn dark">Got it</button>
+</section>
+
+<section id="done" hidden>
+  <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+  <h1 id="donetitle">Saved</h1>
+  <p id="donesub" class="sub"></p>
+</section>
+</main>
+
+<footer>
+  <div class="keys">
+    <span><kbd id="key-open">…</kbd>this panel</span>
+    <span><kbd id="key-pick">…</kbd>pick a post</span>
+  </div>
+  <div class="foot2">
+    <a id="open" href="http://localhost:8765/" target="_blank" rel="noreferrer">Open library</a>
+    <button id="keys" class="textbtn">Change shortcuts</button>
+    <button id="unpair" class="textbtn" hidden>Unpair</button>
+  </div>
+</footer>
+</div>
+<script src="clean.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

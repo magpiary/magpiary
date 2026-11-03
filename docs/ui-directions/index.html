@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magpiary UI Directions</title>
+<link rel="icon" href="example-cover.svg" type="image/svg+xml">
+<style>
+:root { --bg: #fafaf8; --fg: #18181a; --fg-2: #55555c; --fg-3: #8d8d95; --line: #e4e4e0; --card: #fff; --acc: #c2410c; }
+@media (prefers-color-scheme: dark) { :root { --bg: #121214; --fg: #ececee; --fg-2: #a8a8b0; --fg-3: #75757d; --line: #2a2a2e; --card: #1a1a1d; --acc: #fb923c; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 system-ui, -apple-system, sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 48px 20px 100px; }
+h1 { font-size: 34px; letter-spacing: -.02em; margin: 0 0 6px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--fg-3); margin: 48px 0 14px; font-weight: 600; }
+.lede { color: var(--fg-2); max-width: 64ch; margin: 0; }
+.dirs { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+.dir { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; color: inherit; text-decoration: none; transition: border-color .15s; }
+.dir:hover { border-color: var(--fg-3); }
+.sw { height: 70px; border-radius: 9px; margin-bottom: 14px; }
+.dir h3 { margin: 0 0 4px; font-size: 18px; }
+.dir p { margin: 0 0 10px; color: var(--fg-2); font-size: 14px; }
+.dir dl { margin: 0; font-size: 13px; display: grid; grid-template-columns: 74px 1fr; gap: 3px 10px; }
+.dir dt { color: var(--fg-3); } .dir dd { margin: 0; }
+.open { display: inline-block; margin-top: 12px; color: var(--acc); font-weight: 600; font-size: 14px; }
+ol.ux { padding: 0; margin: 0; list-style: none; counter-reset: u; display: grid; gap: 10px; }
+ol.ux li { counter-increment: u; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 14px 52px; position: relative; }
+ol.ux li::before { content: counter(u); position: absolute; left: 16px; top: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+ol.ux b { display: block; }
+ol.ux span { color: var(--fg-2); font-size: 14px; }
+.tag { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: var(--line); color: var(--fg-2); margin-left: 6px; vertical-align: 2px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--fg-3); font-weight: 600; font-size: 12px; }
+td:first-child { color: var(--fg-3); white-space: nowrap; }
+.wrap-t { overflow-x: auto; }
+.note { font-size: 13px; color: var(--fg-3); margin-top: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Magpiary UI directions</h1>
+  <p class="lede">Three clickable directions for the four core screens: library, item, search and activity. All three use the same entirely fictional demonstration library. The UX fixes below are built into every direction, so you can compare the look and feel without the fixes getting in the way.</p>
+
+  <h2>Round 3 · C1+ (current)</h2>
+  <div class="dirs"><a class="dir" href="c1-plus.html" style="grid-column:1/-1"><div class="sw" style="background:linear-gradient(90deg,#fff 0 30%,#111 30% 45%,#2f6bff 45% 60%,#ff2e93 60% 75%,#00a37a 75% 90%,#ffe14d 90%)"></div>
+    <h3>C1+ · Gallery with piles, time sections, Nest and settings</h3><p>C1's style, plus C3's piles (Piles / Everything) and C2's "saved today / this week" sections. Top bar, all 40 px tall, in three tiers: the one action (Add a post, by the search), where you are (Library · Archive · Trash), then tools (tile size, Nest with its egg-in-a-nest icon that wobbles while something is being read, Settings). The wall heading changes on every visit (seven of them, no counts). The "On the go" strip is a quiet dark band in both themes. The yellow "Mockup options" chip switches the library state (normal, no AI key, first run) and the layout. Matches the product as built through M4 (24 Oct).</p>
+    <dl><dt>Post opens</dt><dd>A near-full-screen card: the video gets 40% of the width at almost full height, with scene frames below it; the information gets 60%. Clicking a key moment highlights its frame and timecode. Counts sit under the title with Refresh beside them. Tabs: Summary (the caption first, short ones large and long ones folded with "Show the full caption", then the summary and key moments) · Links · Related · Details. Shows the piles it's in, Archive / Remove, shared N×, a Links panel (best and possible matches, where each came from, add / remove / find more), rich captions (links, @mentions, #hashtags that filter the wall), which key wrote it, how long each step took, and where its files live. Photo carousels and text posts with comments have their own players.</dd>
+      <dt>Piles and Related</dt><dd>Piles as the product makes them: every save is in one, a subtitle from what they share, "N new", Regroup everything. A pile page has an overview (sources, dates, what they share), rename, merge, choose saves to split off or remove, and delete. Related lives in the post card's Related tab (with the reason for each and Not related), with "See all related" for the full list.</dd>
+      <dt>Library, Archive, Trash</dt><dd>Archive means done: out of the library, still searchable. Trash keeps posts 30 days, with Restore and Empty trash. Filters: type, source, Has links, Needs you, and a #tag from any caption or tag.</dd>
+      <dt>Strip</dt><dd>Clicking "On the go" opens the Nest.</dd>
+      <dt>Nest</dt><dd>The product's Activity page: reading now (fetch, transcript, frames, summary, links), the two waiting lines, needs you with Retry now, pause switches for Transcribing, Summarising (all or the next N) and Finding links, Keep awake, a history of where each post's time went, and averages per source.</dd>
+      <dt>No AI key</dt><dd>A full-colour wall: labels in the source's colour, titles from the caption, a small "✦ Summarise" badge, and a friendly banner you can dismiss.</dd>
+      <dt>First run</dt><dd>A guided setup: a welcome with a live demo and a privacy explanation, pairing with checks that tick themselves off, Smart or Private (Smart with a live key check, or skip; Private downloads the Mac model), then the first share arriving and being read in front of you.</dd>
+      <dt>Layout</dt><dd>Boxed on screens wider than 1920 px by default, with the width set by a slider (Settings → Appearance); full width is the alternative. The Mockup options chip can force the box on any screen to preview it.</dd>
+      <dt>Motion</dt><dd>GSAP + Flip, vendored in vendor/gsap. Tiles morph when you filter, search or change size; a tile flies into the post card and back; pages enter with a short stagger; Nest bars grow and numbers count up; setup steps slide in and checks pop. Nothing moves when reduced motion is on.</dd>
+      <dt>Other states</dt><dd>Paste-a-link (shows the tracking it removes, then the post appears in Today and progresses), being read, waiting, couldn't open.</dd>
+      <dt>Settings</dt><dd>AI & summaries: pick Smart (your key reads the transcript and frames) or Private (a model on this Mac, nothing leaves), and only that choice's options show underneath. Smart: keys in order with limit states, add a key with a guide, only the next N, AI tags added automatically or only suggested, retry failed summaries. Private: the Mac model (download, standard or larger), when to read, limits and tags. Then Links (free directories, optional Brave key), Phones & this Mac (home Wi-Fi per phone, new install code, add a phone, keep awake, firewall note), Library & storage, Appearance. Other AI providers and the browser-login fallback aren't shown.</dd></dl><span class="open">Open →</span></a></div>
+
+  <h2>Round 2 · three takes on C</h2>
+  <p class="lede" style="margin-bottom:14px">All three keep C's essence: picture-first tiles, colour by type, bold Bricolage type, and the lightbox with key moments pinned on a scene-frame timeline (real frames now). Every tile is the same size, with A / A / A to pick small, medium or large. They differ in grouping, mood, tile shape and where the controls live. Tiles use your real thumbnails, copied into <code>thumbs/</code>, which git ignores.</p>
+  <div class="dirs">
+    <a class="dir" href="c1-gallery.html"><div class="sw" style="background:linear-gradient(90deg,#fff 0 40%,#2f6bff 40% 60%,#ff2e93 60% 80%,#111 80%)"></div>
+      <h3>C1 · Gallery</h3><p>Bright and playful. One flat grid of square tiles with a solid type-coloured label, like trading cards.</p>
+      <dl><dt>Grouping</dt><dd>Flat, newest first; filter chips by type</dd><dt>Tile</dt><dd>Square 1:1 with a colour label below</dd><dt>Controls</dt><dd>Top bar: search, A/A/A, paste; an "On the go" ticker for activity</dd><dt>Search</dt><dd>Filters the grid; each tile shows its matching line</dd></dl><span class="open">Open →</span></a>
+    <a class="dir" href="c2-cinema.html"><div class="sw" style="background:linear-gradient(90deg,#08080a 0 60%,#1b1b20 60% 80%,#ff2e93 80%)"></div>
+      <h3>C2 · Cinema</h3><p>Dark and cinematic. A featured "just read" hero, then rows you scroll sideways, like a streaming app.</p>
+      <dl><dt>Grouping</dt><dd>Rows: up next, saved today, then one row per type</dd><dt>Tile</dt><dd>9:16 reel poster with the title over the image</dd><dt>Controls</dt><dd>Side rail: search, activity, paste, jump to type, A/A/A at the bottom</dd><dt>Search</dt><dd>Results in rows by where the words matched ("In what was said"…)</dd></dl><span class="open">Open →</span></a>
+    <a class="dir" href="c3-studio.html"><div class="sw" style="background:linear-gradient(90deg,#f3efe6 0 50%,#e483b0 50% 65%,#6f8fe8 65% 80%,#5fb796 80%)"></div>
+      <h3>C3 · Studio</h3><p>Soft and tactile. Topic piles first: fanned stacks of cards, warm paper, pastel types, soft shadows.</p>
+      <dl><dt>Grouping</dt><dd>Topics across sources (the Topics idea in specs.md), then by kind</dd><dt>Tile</dt><dd>4:5 card in a soft frame</dd><dt>Controls</dt><dd>Floating dock: piles, everything, search, A/A/A, activity, add</dd><dt>Search</dt><dd>A pop-over from the dock with quick results</dd></dl><span class="open">Open →</span></a>
+  </div>
+  <p class="note">All post text, creators and projects are fictional. A shared illustrative cover replaces personal thumbnails.</p>
+
+  <h2>Round 1 · three directions</h2>
+  <div class="dirs">
+    <a class="dir" href="a-reading-room.html"><div class="sw" style="background:linear-gradient(90deg,#f7f4ee 0 45%,#1f1c17 45% 70%,#9a3b26 70%)"></div>
+      <h3>A · Reading Room</h3><p>Calm and editorial. Your saves become articles you can read. Summaries lead and the video sits in the margin.</p>
+      <dl><dt>Feel</dt><dd>Paper, serif, quiet</dd><dt>Library</dt><dd>Grouped by day with a summary preview</dd><dt>Item</dt><dd>An article with key points as numbered, timed lines</dd><dt>Search</dt><dd>A big, quiet question box with the matched quotes</dd><dt>Activity</dt><dd>"At the desk": what's being read now, and what's next</dd><dt>Best for</dt><dd>Reading and recall more than watching</dd></dl><span class="open">Open →</span></a>
+    <a class="dir" href="b-console.html"><div class="sw" style="background:linear-gradient(90deg,#0e0f11 0 55%,#1c1f23 55% 75%,#7c8cff 75%)"></div>
+      <h3>B · Console</h3><p>Dense and fast. Three panes with a full keyboard and one ⌘K box for search, adding a link and commands.</p>
+      <dl><dt>Feel</dt><dd>Linear or Raycast: dark, mono details</dd><dt>Library</dt><dd>Sidebar facets, a list of rows, and a preview pane</dd><dt>Item</dt><dd>The preview pane, with Summary, Transcript, Frames and Timing tabs</dd><dt>Search</dt><dd>⌘K palette; paste a link and it shows the tracking it removes</dd><dt>Activity</dt><dd>Lanes, step bars, medians and a live log</dd><dt>Best for</dt><dd>Triage, lots of items, debugging the pipeline</dd></dl><span class="open">Open →</span></a>
+    <a class="dir" href="c-wall.html"><div class="sw" style="background:linear-gradient(90deg,#2f6bff 0 25%,#ff2e93 25% 50%,#00a37a 50% 75%,#f5a300 75%)"></div>
+      <h3>C · Wall</h3><p>Visual and tactile. A masonry moodboard of your saves. Click one to watch it in a lightbox where the key moments are pinned to the timeline.</p>
+      <dl><dt>Feel</dt><dd>Pinterest or Are.na: bold type, colour by type</dd><dt>Library</dt><dd>A masonry wall; hover a tile to see its summary</dd><dt>Item</dt><dd>A lightbox with a scene-frame timeline and numbered moments</dd><dt>Search</dt><dd>Full-screen, with visual result cards</dd><dt>Activity</dt><dd>"The nest": a board where items move left to right</dd><dt>Best for</dt><dd>Design and visual saves; the most fun</dd></dl><span class="open">Open →</span></a>
+  </div>
+  <p class="note">Coloured gradients stand in for thumbnails. C depends most on real images and will look much stronger with them. Each mockup follows your Mac's light or dark setting. Press <b>/</b> to search in any of them; B also has <b>J</b>/<b>K</b> to move and <b>⌘K</b> for the palette.</p>
+
+  <h2>UX pass on the current hub</h2>
+  <ol class="ux">
+    <li><b>Lead with the summary <span class="tag">biggest</span></b><span>The summary is what Magpiary adds, but on the item page it sits under the caption in a side column, below the counts. Every direction puts the AI title and summary first. The caption, counts and timing move under "More".</span></li>
+    <li><b>Better titles until a summary arrives</b><span>"Video by examplecreator" and "Post by examplemaker" tell you nothing. Until the AI title is ready, use the caption's first line and mark it as a draft (shown in italics or grey).</span></li>
+    <li><b>"Archive" means three different things</b><span>It's a shelf (the Archive tab), a fetch status ("archived") and the folder of saved media. Rename the shelf to <b>Done</b>, which is also what you'd press when you've finished with an item. "Archived" stays internal.</span></li>
+    <li><b>One box, not two</b><span>The top bar has a search box and a paste-a-link box side by side. A single box can do both: paste a URL and it offers "Add" (and shows the tracking it strips); type words and it searches.</span></li>
+    <li><b>Browse by type, not by source</b><span>The source chips (Instagram 11, X 1…) and tag chips (#macos 1) take up two rows and are mostly noise. The AI already sorts items into How-to, Recipe, Tool, News and so on, which is how you'll actually look for things. Source becomes a small colour dot.</span></li>
+    <li><b>Search should show where it matched</b><span>Search already covers transcripts, but the results are just the same grid. Show the matched line ("Said at 0:31: …paper <mark>hinge</mark>…") and jump to that moment. This is Magpiary's killer feature, so make it visible.</span></li>
+    <li><b>One pipeline vocabulary</b><span>The strip, the card badges and the Activity page each describe progress in different words. Use four steps everywhere: <i>saved → fetched → watched → summarised</i>. Directions B and C draw them as pips or columns.</span></li>
+    <li><b>Activity: what's happening first, controls second</b><span>Today, Controls come first and "Working on now" second, and the "Average time per step" table is debug detail. Lead with now and next, plus an estimate ("about 2 minutes until clear"). Pause toggles become quiet switches, and timings move to the item or to a details view.</span></li>
+    <li><b>"Needs attention" deserves an action</b><span>It's a red chip among the source filters. Make it a note with <b>Try now</b> and the next retry time. It's the only thing in the app that asks anything of you.</span></li>
+    <li><b>Empty tiles</b><span>Items without a thumbnail show as blank dark cards. Use a typographic tile for these instead (caption or title on the source colour), as C does for text posts.</span></li>
+  </ol>
+
+  <h2>Side by side</h2>
+  <div class="wrap-t"><table>
+    <tr><th></th><th>A · Reading Room</th><th>B · Console</th><th>C · Wall</th></tr>
+    <tr><td>Items per screen</td><td>~4</td><td>~20</td><td>~10</td></tr>
+    <tr><td>Strongest at</td><td>Recall: "what did that say?"</td><td>Triage and control</td><td>Rediscovery and delight</td></tr>
+    <tr><td>Weakest at</td><td>Scanning a big backlog</td><td>Feels like a work tool</td><td>Text posts; slow to scan</td></tr>
+    <tr><td>On the phone (Tailscale later)</td><td>Excellent (one column)</td><td>Weak (needs a separate layout)</td><td>Good (two-column wall)</td></tr>
+    <tr><td>Build effort on hub.py</td><td>Low (server-rendered)</td><td>High (keyboard state, palette)</td><td>Medium (lightbox, masonry)</td></tr>
+    <tr><td>Open-source first impression</td><td>Thoughtful</td><td>Powerful</td><td>Beautiful</td></tr>
+  </table></div>
+  <p class="note">The directions can be mixed. A likely shape is C's wall and lightbox for browsing, A's item article for reading, and B's ⌘K box and pipeline pips everywhere.</p>
+</main>
+</body>
+</html>

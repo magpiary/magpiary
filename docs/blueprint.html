@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Magpiary Pipeline</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. The pipeline is drawn as stacked lanes, one per stage, each tagged with where it runs; nodes are real text so nothing shrinks. */
+:root{
+  --bg:#F1F3F2; --surface:#FFFFFF; --fg:#16201F; --muted:#5A6866; --line:#D3DBD9;
+  --accent:#0E6B66; --accent-soft:#DCEDEB;
+  --phone:#3B5BA9; --phone-soft:#E1E7F5;
+  --cloud:#B26A0B; --cloud-soft:#F6E9D5;
+  --stop:#A33A2C; --stop-soft:#F6E1DD;
+  --display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1514; --surface:#151F1E; --fg:#E2EBE9; --muted:#97A7A4; --line:#2A3836;
+  --accent:#55C4BA; --accent-soft:#16312F; --phone:#8FA9EC; --phone-soft:#1C2540;
+  --cloud:#E8A84A; --cloud-soft:#33270F; --stop:#EC8C7B; --stop-soft:#3A1E19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1514; --surface:#151F1E; --fg:#E2EBE9; --muted:#97A7A4; --line:#2A3836;
+  --accent:#55C4BA; --accent-soft:#16312F; --phone:#8FA9EC; --phone-soft:#1C2540;
+  --cloud:#E8A84A; --cloud-soft:#33270F; --stop:#EC8C7B; --stop-soft:#3A1E19; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:64px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2.1rem,5vw,3rem);font-weight:700}
+h2{font-size:1.75rem;font-weight:700}
+h3{font-size:1.2rem;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:1.1rem;color:var(--muted);max-width:64ch}
+.intro{display:flex;flex-direction:column;gap:10px;max-width:68ch}
+.intro p{color:var(--muted)}
+header,section{display:flex;flex-direction:column;gap:20px}
+code{font-family:var(--mono);font-size:.88em}
+
+/* where-it-runs chips */
+.on{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.on.phone{background:var(--phone-soft);color:var(--phone)}
+.on.mac{background:var(--accent-soft);color:var(--accent)}
+.on.cloud{background:var(--cloud-soft);color:var(--cloud)}
+.key{display:flex;flex-wrap:wrap;gap:10px 22px;font-size:.88rem;color:var(--muted);align-items:center}
+.key span{display:flex;gap:8px;align-items:center}
+
+/* system map */
+.map{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto;margin:0}
+.map svg{display:block;width:100%;min-width:820px;height:auto;color:var(--fg)}
+.map figcaption{font-size:.9rem;color:var(--muted);margin-top:14px;max-width:70ch}
+.bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.bx-phone{fill:var(--phone-soft);stroke:var(--phone);stroke-width:1.5}
+.bx-mac{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.bx-cloud{fill:var(--cloud-soft);stroke:var(--cloud);stroke-width:1.5;stroke-dasharray:6 4}
+.t{font-family:var(--body);font-size:14px;font-weight:600;fill:var(--fg)}
+.ts{font-family:var(--body);font-size:12.5px;fill:var(--muted)}
+.tl{font-family:var(--mono);font-size:11.5px;fill:var(--muted)}
+.tz{font-family:var(--mono);font-size:12px;letter-spacing:.08em;fill:var(--accent)}
+.ar{stroke:var(--muted);stroke-width:1.6;fill:none}
+.ar-c{stroke:var(--cloud);stroke-width:1.6;fill:none;stroke-dasharray:5 4}
+.ah{fill:var(--muted)} .ah-c{fill:var(--cloud)}
+
+/* pipeline lanes */
+.lanes{display:flex;flex-direction:column;gap:0}
+.lane{display:grid;grid-template-columns:56px minmax(0,1fr);gap:0 18px}
+.rail{display:flex;flex-direction:column;align-items:center}
+.num{font-family:var(--display);font-weight:700;font-size:1.1rem;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--fg);color:var(--bg);flex:none}
+.rail::after{content:"";flex:1;width:2px;background:var(--line);margin:6px 0}
+.lane:last-child .rail::after{display:none}
+.lane-body{padding-bottom:36px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.lane-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-height:44px}
+.lane-head p{flex-basis:100%;color:var(--muted);font-size:.95rem}
+
+.nodes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:22px}
+.nodes > li{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.nodes > li + li::before{content:"";position:absolute;left:28px;top:-22px;height:22px;border-left:2px solid var(--line)}
+.nodes > li + li::after{content:"";position:absolute;left:23px;top:-9px;border:6px solid transparent;border-top:7px solid var(--muted);border-bottom:0}
+.nodes b{font-weight:600;font-size:1.02rem}
+.nodes .d{color:var(--muted);font-size:.94rem}
+.decide{border-style:dashed !important}
+.decide > b{display:flex;gap:10px;align-items:baseline}
+.decide > b::before{content:"";flex:none;width:11px;height:11px;border:2px solid var(--fg);transform:rotate(45deg) translateY(-1px)}
+.store{border-width:1px 1px 4px !important;border-bottom-color:var(--accent) !important}
+.br{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:6px}
+.b{border-radius:8px;padding:10px 12px;background:var(--bg);font-size:.93rem;display:flex;flex-direction:column;gap:3px;min-width:0}
+.b i{font-style:normal;font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.b .go{font-family:var(--mono);font-size:.76rem;color:var(--accent);margin-top:2px}
+.b.end{background:var(--stop-soft)} .b.end .go{color:var(--stop)}
+.b.cl{background:var(--cloud-soft)} .b.cl .go{color:var(--cloud)}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.track{display:flex;flex-direction:column;gap:10px;min-width:0}
+.track > .on{align-self:flex-start}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chips span{font-size:.88rem;padding:5px 10px;border-radius:6px;background:var(--bg)}
+.chips span em{font-style:normal;color:var(--muted)}
+.ends{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.ends div{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface)}
+.ends b{font-family:var(--display);font-size:1.05rem;display:block}
+.ends p{font-size:.92rem;color:var(--muted)}
+
+/* onboarding */
+.onboard{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;counter-reset:s}
+.onboard li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:8px;counter-increment:s;min-width:0}
+.onboard .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.onboard .top b{font-family:var(--display);font-size:1.12rem}
+.onboard .top b::before{content:counter(s) ". ";color:var(--accent)}
+.onboard .time{font-family:var(--mono);font-size:.74rem;color:var(--muted);white-space:nowrap}
+.onboard p,.onboard ul{font-size:.93rem;margin:0}
+.onboard ul{padding-left:1.15em;display:flex;flex-direction:column;gap:3px}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:700px;font-size:.93rem}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-weight:500;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;white-space:nowrap}
+td:nth-child(2){color:var(--muted)}
+
+.list{list-style:none;padding:0;margin:0;border-top:1px solid var(--line)}
+.list li{display:grid;grid-template-columns:minmax(0,14rem) minmax(0,1fr);gap:6px 24px;padding:15px 0;border-bottom:1px solid var(--line)}
+.list strong{font-family:var(--display);font-size:1.04rem}
+.list p{color:var(--muted);font-size:.94rem}
+.list em{font-style:normal;color:var(--fg);font-weight:500}
+@media (max-width:640px){.list li{grid-template-columns:1fr}.lane{grid-template-columns:44px minmax(0,1fr);gap:0 12px}.num{width:36px;height:36px;font-size:1rem}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Open-source blueprint · v0.3 · 22 Oct 2026</span>
+    <h1>Magpiary pipeline</h1>
+    <p class="lede">An app anyone can download to their Mac. Pair an iPhone once. From then on, sharing a reel or Threads post to Magpiary turns it into an organized, searchable note on their own machine, with their own choice of AI.</p>
+    <div class="key">
+      <span><i class="on phone">iPhone</i> runs on the phone</span>
+      <span><i class="on mac">Mac</i> runs on the user's Mac</span>
+      <span><i class="on cloud">Cloud</i> leaves the Mac, only if the user opts in</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="intro">
+      <h2>Where everything runs</h2>
+      <p>There is no server of ours, and no iCloud. The phone strips the link and keeps it in a queue on the phone itself. That queue is handed straight to the Mac whenever the phone is on the same Wi-Fi. Tailscale arrives later, and only for viewing the full hub away from home. The user's Mac does all the downloading and processing. The only outside calls are to Instagram and, in Balanced or Easiest, the AI provider the user picked.</p>
+    </div>
+    <figure class="map">
+      <svg viewBox="0 0 1010 470" role="img" aria-label="System map: the iPhone keeps shared links in a queue and sends them to the Magpiary service on the user's Mac whenever both are on the same Wi-Fi. The Mac fetches posts from Instagram and Threads, optionally calls an AI provider with the user's own key, stores everything in a local library, and serves the hub back to the phone.">
+        <defs>
+          <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker>
+          <marker id="mc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah-c"/></marker>
+        </defs>
+        <!-- phone -->
+        <rect x="20" y="172" width="140" height="100" rx="14" class="bx-phone"/>
+        <text x="90" y="205" text-anchor="middle" class="t">iPhone</text>
+        <text x="90" y="228" text-anchor="middle" class="ts">clean link, then</text>
+        <text x="90" y="247" text-anchor="middle" class="ts">queue on the phone</text>
+        <!-- inbox -->
+        <rect x="200" y="132" width="150" height="58" rx="10" class="bx"/>
+        <text x="275" y="157" text-anchor="middle" class="t">Home Wi-Fi</text>
+        <text x="275" y="177" text-anchor="middle" class="ts">sent on arrival</text>
+        <rect x="200" y="252" width="150" height="58" rx="10" class="bx"/>
+        <text x="275" y="277" text-anchor="middle" class="t">Away from home</text>
+        <text x="275" y="297" text-anchor="middle" class="ts">waits in phone queue</text>
+        <line x1="160" y1="205" x2="198" y2="168" class="ar" marker-end="url(#m)"/>
+        <line x1="160" y1="240" x2="198" y2="276" class="ar" marker-end="url(#m)"/>
+        <!-- instagram -->
+        <rect x="550" y="10" width="150" height="46" rx="10" class="bx"/>
+        <text x="625" y="38" text-anchor="middle" class="t">Instagram · Threads</text>
+        <!-- mac container -->
+        <rect x="380" y="82" width="470" height="300" rx="16" class="bx-mac"/>
+        <text x="398" y="106" class="tz">YOUR MAC · MAGPIARY APP</text>
+        <rect x="400" y="124" width="120" height="58" rx="9" class="bx"/>
+        <text x="460" y="149" text-anchor="middle" class="t">Worker</text>
+        <text x="460" y="168" text-anchor="middle" class="ts">queue, retries</text>
+        <rect x="565" y="124" width="120" height="58" rx="9" class="bx"/>
+        <text x="625" y="149" text-anchor="middle" class="t">Fetch</text>
+        <text x="625" y="168" text-anchor="middle" class="ts">yt-dlp + ffmpeg</text>
+        <rect x="710" y="124" width="120" height="58" rx="9" class="bx"/>
+        <text x="770" y="149" text-anchor="middle" class="t">Senses</text>
+        <text x="770" y="168" text-anchor="middle" class="ts">transcript, frames</text>
+        <rect x="710" y="236" width="120" height="58" rx="9" class="bx"/>
+        <text x="770" y="261" text-anchor="middle" class="t">Brain</text>
+        <text x="770" y="280" text-anchor="middle" class="ts">writes the record</text>
+        <rect x="565" y="236" width="120" height="58" rx="9" class="bx"/>
+        <text x="625" y="261" text-anchor="middle" class="t">Library</text>
+        <text x="625" y="280" text-anchor="middle" class="ts">database, media</text>
+        <rect x="400" y="236" width="120" height="58" rx="9" class="bx"/>
+        <text x="460" y="261" text-anchor="middle" class="t">Hub</text>
+        <text x="460" y="280" text-anchor="middle" class="ts">local web app</text>
+        <text x="615" y="350" text-anchor="middle" class="ts">All data lives in one folder the user owns: database, media and Markdown notes</text>
+        <line x1="520" y1="153" x2="563" y2="153" class="ar" marker-end="url(#m)"/>
+        <line x1="685" y1="153" x2="708" y2="153" class="ar" marker-end="url(#m)"/>
+        <line x1="770" y1="182" x2="770" y2="234" class="ar" marker-end="url(#m)"/>
+        <line x1="710" y1="265" x2="687" y2="265" class="ar" marker-end="url(#m)"/>
+        <line x1="565" y1="265" x2="522" y2="265" class="ar" marker-end="url(#m)"/>
+        <!-- inbox to worker -->
+        <line x1="350" y1="161" x2="398" y2="150" class="ar" marker-end="url(#m)"/>
+        <line x1="275" y1="252" x2="275" y2="192" class="ar" stroke-dasharray="4 4" marker-end="url(#m)"/>
+        <text x="283" y="226" class="tl">on arrival</text>
+        <!-- instagram to fetch -->
+        <line x1="625" y1="56" x2="625" y2="122" class="ar" marker-end="url(#m)"/>
+        <text x="634" y="72" class="tl">logged out first;</text>
+        <text x="634" y="88" class="tl">user's login only if blocked</text>
+        <!-- cloud -->
+        <rect x="880" y="220" width="122" height="90" rx="10" class="bx-cloud"/>
+        <text x="941" y="246" text-anchor="middle" class="t">AI provider</text>
+        <text x="941" y="266" text-anchor="middle" class="ts">Gemini, Claude</text>
+        <text x="941" y="284" text-anchor="middle" class="ts">or OpenAI</text>
+        <text x="941" y="300" text-anchor="middle" class="tl">optional</text>
+        <line x1="830" y1="265" x2="878" y2="265" class="ar-c" marker-end="url(#mc)"/>
+        <text x="854" y="255" text-anchor="middle" class="tl">own key</text>
+        <!-- hub back to phone -->
+        <path d="M460 294 V430 H90 V274" class="ar" marker-end="url(#m)"/>
+        <text x="275" y="452" text-anchor="middle" class="tl">open the hub on the phone · same Wi-Fi, or anywhere with Tailscale</text>
+      </svg>
+      <figcaption>Senses turn a post into evidence (transcript and frames). Brain turns evidence into a record. With the Gemini preset, Gemini does both in one call. With the Private preset, both run on the Mac and nothing goes to an AI provider.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="intro">
+      <h2>The pipeline, step by step</h2>
+      <p>Each stage is labeled with where it runs. Dashed boxes are decisions. Red outcomes end the run for that item.</p>
+    </div>
+
+    <div class="lanes">
+
+      <div class="lane"><div class="rail"><span class="num">1</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Capture</h3><span class="on phone">iPhone</span></div>
+        <ol class="nodes">
+          <li><b>Share → Magpiary</b><span class="d">From Instagram or Threads, via a Shortcut in the share sheet.</span></li>
+          <li><b>Strip the link on the phone</b><span class="d">Before anything is saved, the Shortcut cuts everything after the post ID: <code>igsh</code>, <code>igshid</code>, <code>utm_*</code> and <code>xmt</code>. <code>instagram.com/reel/Example0013/?igsh=…</code> becomes <code>instagram.com/reel/Example0013/</code>. The identifier never leaves the phone.</span></li>
+          <li class="decide"><b>Add a note?</b>
+            <div class="br"><div class="b"><i>Skip</i>One tap and done. This is the default.</div><div class="b"><i>Note</i>Type or dictate a line. It's saved with the item.</div></div></li>
+          <li class="store"><b>Added to the queue on the phone</b><span class="d">A small file in On My iPhone / Shortcuts / Magpiary, holding the clean link, the time, the source app and the note. It stays on the device, uses no iCloud, and is never lost even if every send fails.</span></li>
+          <li class="decide"><b>Can the phone reach the Mac right now?</b><span class="d">It tries the Mac's address on the local network.</span>
+            <div class="br"><div class="b"><i>Yes</i>Sends everything waiting in the queue. The Mac confirms each item, and only confirmed items leave the queue.<span class="go">↓ stage 2</span></div><div class="b"><i>No</i>Stays queued. The banner reads "Saved · will send when you're home."</div></div></li>
+          <li><b>Automatic catch-up on home Wi-Fi</b><span class="d">A Shortcuts automation runs whenever the phone joins the user's home network and sends the whole queue, with no tap needed. Every new share also retries anything left over.</span></li>
+        </ol>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">2</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Wake</h3><span class="on mac">Mac</span></div>
+        <ol class="nodes">
+          <li><b>Magpiary background service receives the batch</b><span class="d">A small receiver that starts at login. It only accepts items carrying the pairing key the Shortcut got at setup, so nothing else on the network can push to it.</span></li>
+          <li class="decide"><b>Was the Mac awake when the phone tried?</b>
+            <div class="br"><div class="b"><i>Yes</i>Items are confirmed back to the phone, saved to the Mac's own queue, and processed oldest first.<span class="go">↓ stage 3</span></div><div class="b"><i>No</i>The phone keeps them. They go through at the next share or the next time the phone joins home Wi-Fi with the Mac awake.</div></div></li>
+        </ol>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">3</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Ingest</h3><span class="on mac">Mac</span></div>
+        <ol class="nodes">
+          <li><b>Clean the link again</b><span class="d">A second check on the Mac, in case an older Shortcut or a pasted link slipped through. Short links are expanded to the plain post address, so the same reel shared twice is recognized.</span></li>
+          <li class="decide"><b>Already saved?</b>
+            <div class="br"><div class="b"><i>No</i>New record, status queued.<span class="go">↓ continue</span></div><div class="b end"><i>Yes</i>Marked "saved again" with a count.<span class="go">■ ends here</span></div></div></li>
+          <li><b>Fetch the details, logged out</b><span class="d">Creator, caption, length and date, requested from the user's Mac with no Instagram account attached. Most public reels need nothing more.</span></li>
+          <li class="decide"><b>Did it work?</b>
+            <div class="br"><div class="b"><i>Yes</i>Continue.<span class="go">↓ stage 4</span></div><div class="b"><i>No</i>Update yt-dlp, then retry once, still logged out.</div></div></li>
+          <li class="decide"><b>Still blocked. Has the user connected Instagram?</b><span class="d">Instagram sometimes shows a login wall to logged-out visitors, and private accounts the user follows always need it.</span>
+            <div class="br"><div class="b"><i>Yes</i>Retry with the login from the user's browser, read locally.<span class="go">↓ stage 4 if it works</span></div><div class="b end"><i>No, or still failing</i>Needs attention: "Connect Instagram to fetch this," or private, or deleted.<span class="go">■ ends here</span></div></div></li>
+        </ol>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">4</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Fetch and archive</h3><span class="on mac">Mac</span></div>
+        <ol class="nodes">
+          <li class="decide"><b>What kind of post?</b>
+            <div class="br"><div class="b"><i>Reel or video</i>Download the video.</div><div class="b"><i>Carousel or photo</i>Download every image.</div><div class="b"><i>Threads post</i>Read the text and images in a background browser.</div></div></li>
+          <li class="store"><b>Saved to the library</b><span class="d">Media, thumbnail and caption go into the user's Magpiary folder. They're kept even if the original post is deleted later.</span></li>
+        </ol>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">5</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Route</h3><span class="on mac">Mac</span><p>The user's setup preset decides the path. Rules can override it per item.</p></div>
+        <ol class="nodes">
+          <li class="decide"><b>Is this item marked private?</b>
+            <div class="br"><div class="b"><i>Yes</i>Forced onto the Mac-only path, whatever the preset.</div><div class="b"><i>No</i>Follow the preset below.</div></div></li>
+          <li class="decide"><b>Which preset did the user pick?</b>
+            <div class="br">
+              <div class="b"><i>Balanced · default</i>The Mac makes the transcript and frames. Only that text and those frames go to the user's AI key, never the video.<span class="go">→ 6, Mac track</span></div>
+              <div class="b cl"><i>Easiest</i>Gemini watches the whole video with a free key.<span class="go">→ 6, Gemini track</span></div>
+              <div class="b"><i>Private</i>Everything on the Mac, no key at all. Needs Apple Silicon.<span class="go">→ 6, Mac track</span></div>
+            </div></li>
+          <li><b>Text and photo posts skip ahead</b><span class="d">There's nothing to transcribe, so they go straight to stage 7.</span></li>
+        </ol>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">6</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Watch</h3><p>Turn the video into evidence the brain can read.</p></div>
+        <div class="split">
+          <div class="track"><span class="on cloud">Gemini track · cloud</span>
+            <ol class="nodes">
+              <li><b>Upload the video to Gemini</b><span class="d">Uses the user's own free key.</span></li>
+              <li><b>Ask the extraction prompt</b><span class="d">Picture and sound together. It returns a structured result with timestamps.</span></li>
+              <li class="decide"><b>Valid answer in time?</b>
+                <div class="br"><div class="b"><i>Yes</i>Delete the upload.<span class="go">↓ stage 7</span></div><div class="b"><i>No or quota out</i>Fall back automatically.<span class="go">→ Mac track</span></div></div></li>
+            </ol>
+          </div>
+          <div class="track"><span class="on mac">Mac track · on device</span>
+            <ol class="nodes">
+              <li><b>Transcribe the audio</b><span class="d">Uses the post's captions if it has any, otherwise Whisper running on the Mac's chip.</span></li>
+              <li><b>Quick look at 4 sample frames</b><span class="d">Cheap, and decides how much watching this reel deserves.</span></li>
+              <li class="decide"><b>Do the visuals add information?</b>
+                <div class="br"><div class="b"><i>No</i>Talking head. Keep 3 to 5 frames for context.</div><div class="b"><i>Yes</i>On-screen text, a demo, a recipe. Keep scene-change frames, sharper.</div><div class="b"><i>No speech</i>Visuals carry it. Keep scene-change frames.</div></div></li>
+            </ol>
+          </div>
+        </div>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">7</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Understand</h3><span class="on mac">Mac model</span><span class="on cloud">or user's key</span></div>
+        <ol class="nodes">
+          <li><b>The brain writes one record</b><span class="d">Title, summary, key points with timestamps, entities, actions and tags, always in the same shape whichever model ran.</span></li>
+          <li class="decide"><b>Complete and valid?</b>
+            <div class="br"><div class="b"><i>Yes</i>Continue.<span class="go">↓ continue</span></div><div class="b"><i>No</i>Ask again once, naming what's missing. If it's still incomplete, file it flagged "check me".</div></div></li>
+          <li class="decide"><b>What type of content?</b><span class="d">The type adds its own fields to the record.</span>
+            <div class="chips">
+              <span>Recipe <em>· ingredients, steps</em></span><span>Tool or app <em>· link, price</em></span><span>Place <em>· city, why</em></span><span>Book, film, show <em>· watch list</em></span><span>How-to <em>· steps, takeaways</em></span><span>News or opinion <em>· claim, source</em></span><span>Meme <em>· tags only</em></span>
+            </div></li>
+        </ol>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">8</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Organize</h3><span class="on mac">Mac</span></div>
+        <ol class="nodes">
+          <li><b>Make a meaning vector for search</b><span class="d">A small model on the Mac, so search works in every preset, even with no key.</span></li>
+          <li class="decide"><b>Does it fit an existing collection?</b>
+            <div class="br"><div class="b"><i>Yes</i>File it there.</div><div class="b"><i>No</i>Put it in Unsorted. When 3 or more similar saves pile up, propose a new collection.</div></div></li>
+          <li class="decide"><b>Was the same tip saved before?</b>
+            <div class="br"><div class="b"><i>Yes</i>Link the two as "also said by" instead of storing it twice.</div><div class="b"><i>No</i>Continue.</div></div></li>
+          <li class="store"><b>Written to the library</b><span class="d">A database row for the hub, plus a Markdown note that opens in Obsidian or any editor.</span></li>
+        </ol>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">9</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Notify</h3><span class="on phone">iPhone · optional</span></div>
+        <ol class="nodes">
+          <li class="decide"><b>Are receipts turned on?</b>
+            <div class="br"><div class="b"><i>Yes</i>A push through ntfy: "Filed: 5 portfolio tools → Career."</div><div class="b"><i>No</i>The item shows up in the hub's Recent list.</div></div></li>
+          <li><b>Corrections become rules</b><span class="d">Every time the user moves or re-tags an item in the hub, future filing learns from it.</span></li>
+        </ol>
+      </div></div>
+
+      <div class="lane"><div class="rail"><span class="num">10</span></div><div class="lane-body">
+        <div class="lane-head"><h3>Hub</h3><span class="on mac">served by the Mac</span></div>
+        <ol class="nodes">
+          <li><b>A local web app</b><span class="d">It includes:</span>
+            <div class="chips"><span>Newest first</span><span>Search by words or meaning</span><span>Collections</span><span>Recipes · Tools · Places · Books</span><span>Ask my saves</span><span>Weekly digest</span><span>Needs attention</span></div></li>
+          <li class="decide"><b>Where is the user?</b>
+            <div class="br"><div class="b"><i>On the Mac</i>Open it in the browser.</div><div class="b"><i>Phone, same Wi-Fi</i>Tap the bookmark added during pairing.</div><div class="b"><i>Phone, away</i>Use Tailscale, an optional free private network.</div></div></li>
+        </ol>
+      </div></div>
+    </div>
+
+    <div class="ends">
+      <div><b>Filed</b><p>Searchable in the hub and saved as a Markdown note.</p></div>
+      <div><b>Saved again</b><p>Already in the hub; its count goes up.</p></div>
+      <div><b>Needs attention</b><p>Couldn't be fetched. The reason is shown, with a retry button.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="intro">
+      <h2>First-run setup for a new user</h2>
+      <p>The target is under five minutes from download to the first filed reel, with no terminal.</p>
+    </div>
+    <ol class="onboard">
+      <li><div class="top"><b>Install</b><span class="time">2 min</span></div><p>Paste one command into Terminal, from our own Homebrew tap or an install script. It sets up yt-dlp, ffmpeg and a background service, then opens the setup page in the browser. There's no .app to download, so there's no Apple signing and no Gatekeeper warning.</p></li>
+      <li><div class="top"><b>Pick a preset</b><span class="time">1–10 min</span></div><ul><li><strong>Balanced (recommended):</strong> paste a Claude, OpenAI or Gemini key.</li><li><strong>Easiest:</strong> paste a free Gemini key.</li><li><strong>Private:</strong> a one-time download of local models, roughly several GB.</li></ul></li>
+      <li><div class="top"><b>Pair the iPhone</b><span class="time">2 min</span></div><ul><li>Scan the first QR code to add the Magpiary Shortcut.</li><li>Scan the second to hand it the Mac's address and a pairing key.</li><li>Set up the "When I join home Wi-Fi" automation by following the on-screen steps.</li></ul></li>
+      <li><div class="top"><b>Connect Instagram, only if needed</b><span class="time">1 min</span></div><p>Skippable. If logged-out fetches start failing, the hub offers this. The user picks their browser, and macOS asks permission for Magpiary to read that browser's login, which the page explains first.</p></li>
+      <li><div class="top"><b>Send a test reel</b><span class="time">1 min</span></div><p>Share any reel. The app shows it moving through the stages live, and the first record appears in the hub.</p></li>
+      <li><div class="top"><b>Optional extras</b><span class="time">later</span></div><ul><li>Import past saves from an Instagram data export.</li><li>Turn on receipts.</li><li>Set up Tailscale for access away from home.</li></ul></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="intro">
+      <h2>What changes when it's for everyone</h2>
+      <p>The personal version could lean on things only you have. The open-source version can't.</p>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>Part</th><th>Just for me</th><th>Open source</th></tr></thead>
+      <tbody>
+        <tr><td>Phone to Mac</td><td>A private relay I host</td><td>A queue kept on the phone and sent directly to the Mac on the same Wi-Fi. No server, no iCloud, no email.</td></tr>
+        <tr><td>Link privacy</td><td>Raw share links</td><td>Share IDs and tracking parameters are stripped on the phone before saving, and checked again on the Mac.</td></tr>
+        <tr><td>The Shortcut</td><td>Hand-built on my phone</td><td>A shared iCloud link added by scanning a QR code.</td></tr>
+        <tr><td>Mac side</td><td>Scripts plus Claude Code</td><td>A background service installed from Terminal, with setup and the hub in the browser. It's unsigned, with no .app, and updates yt-dlp on its own.</td></tr>
+        <tr><td>AI</td><td>My Claude subscription</td><td>Bring your own key behind one interface. Balanced is the default, alongside Easiest and a no-key Private mode.</td></tr>
+        <tr><td>Transcription</td><td>WhisperX on CPU</td><td>A Whisper build tuned for Apple Silicon. WhisperX stays as an option.</td></tr>
+        <tr><td>Hub</td><td>A Claude artifact</td><td>A local web app on the Mac, with SQLite and Markdown files the user owns and can export.</td></tr>
+        <tr><td>Notifications</td><td>Push to my phone</td><td>Optional receipts through ntfy, which is open source and self-hostable.</td></tr>
+        <tr><td>Instagram access</td><td>My Chrome login</td><td>Logged out by default. The user's browser login is an opt-in fallback for blocked or private posts.</td></tr>
+        <tr><td>Scope</td><td>Mac and iPhone</td><td>Mac and iPhone first. Android and Windows can come later through relay mode.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="intro"><h2>Risks to plan for</h2></div>
+    <ul class="list">
+      <li><strong>Meta's terms</strong><p>Downloading posts breaks Instagram's terms of service. youtube-dl was hit with a DMCA takedown on GitHub in 2020, and it was reinstated. <em>Mitigation:</em> call yt-dlp rather than shipping our own scraper, use only the user's own login, rate-limit downloads, frame it as a personal archive, and host no content anywhere.</p></li>
+      <li><strong>yt-dlp breaking</strong><p>When Instagram changes something, every user breaks on the same day. <em>Mitigation:</em> the app updates yt-dlp separately from itself, and shows a clear "fetching is down, your shares are queued" state.</p></li>
+      <li><strong>No Apple signing</strong><p>An unsigned .app downloaded from the web is blocked by Gatekeeper, and Homebrew's main cask repository disables casks that fail Gatekeeper from September 2026. <em>Plan:</em> ship no .app at all. Installing from Terminal doesn't trigger Gatekeeper's download check, and every screen is a local web page. The cost is one Terminal step during setup.</p></li>
+      <li><strong>Phone and Mac must meet</strong><p>With no middleman, a link only moves when the phone can reach the awake Mac. Shares made away from home wait until you're back on the same network. <em>Mitigation:</em> the phone's queue is permanent and visible, and catch-up is automatic.</p></li>
+      <li><strong>Home network details</strong><p>The Mac's address can change, and some routers isolate devices from each other. <em>Mitigation:</em> use the Mac's <code>.local</code> name rather than its IP, and give the setup page a "test from your phone" button.</p></li>
+      <li><strong>macOS permissions</strong><p>The receiver needs the macOS firewall to allow incoming connections, and the opt-in login fallback needs Keychain access. <em>Test early</em> which prompts appear, so setup can walk users through them.</p></li>
+      <li><strong>Free tiers move</strong><p>Gemini's free limits and data terms can change. The Easiest preset should show the user's remaining quota and say plainly where their data goes.</p></li>
+      <li><strong>Support load</strong><p>Most issues will be Instagram logins and permissions. A built-in "diagnose" screen that checks each stage saves a lot of GitHub issues.</p></li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="intro"><h2>Decisions still open</h2></div>
+    <ul class="list">
+      <li><strong>Name</strong><p>Magpiary is a working name. Check it isn't taken before the repo goes public.</p></li>
+      <li><strong>License</strong><p>MIT matches /watch, so its code can be reused with attribution. AGPL would stop someone turning it into a closed hosted service.</p></li>
+      <li><strong>Install method</strong><p>Our own Homebrew tap with a formula, which gives clean updates, or a one-line install script that sets up Python with uv. Both avoid Gatekeeper.</p></li>
+      <li><strong>Anonymous fetch success rate</strong><p>How often a logged-out Mac on home internet gets each reel without hitting a login wall. Test with 20 to 30 real links before deciding how prominent "Connect Instagram" should be.</p></li>
+      <li><strong>Settled</strong><p><em>Balanced</em> is the default preset. Links queue on the phone and go straight to the Mac, with no iCloud and no server. All downloading happens on the Mac. Tracking IDs are stripped on the phone. There's no paid Apple account.</p></li>
+      <li><strong>Later, with the real hub</strong><p>Tailscale for opening the hub from the phone on any network. It isn't used to move links. Email routes are dropped.</p></li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

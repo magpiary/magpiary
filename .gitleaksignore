@@ -1,0 +1,6 @@
+# Made-up test values that look like keys (reviewed: not real secrets)
+8c16a695995ed471f59b63ee4850f398b200d4fb:tests/test_hub.py:generic-api-key:218
+# embed.py REVISION is the public Hugging Face commit the meaning model is pinned to, not a secret
+4ca8d04585e1fd698acb745b093874159290bf46:src/magpiary/embed.py:generic-api-key:21
+# Directory scan: tokenizer.json SHA-256 in embed.py FILES, verified by ensure_model; not a credential.
+src/magpiary/embed.py:generic-api-key:22

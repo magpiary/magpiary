@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magpiary · C1 · Gallery</title>
+<link rel="icon" href="example-cover.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="c-common.css">
+<style>
+:root { --bg: #ffffff; --fg: #111; --fg-2: #555; --fg-3: #9a9a9a; --line: #ececec; --chip: #f4f4f2; --tile: 220px; --gap: 18px; --tfs: 17px; }
+:root[data-size="s"] { --tile: 150px; --gap: 12px; --tfs: 14px; }
+:root[data-size="l"] { --tile: 320px; --gap: 24px; --tfs: 22px; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0f0f0f; --fg: #f5f3ee; --fg-2: #b9b6ae; --fg-3: #77746d; --line: #262626; --chip: #1c1c1c; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 "DM Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); }
+.bar { display: flex; align-items: center; gap: 14px; padding: 12px clamp(16px, 3vw, 36px); }
+.logo { font: 800 25px/1 var(--display); letter-spacing: -.03em; }
+.logo i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--t-design); margin-left: 2px; }
+.search { flex: 1; max-width: 460px; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-radius: 999px; background: var(--chip); }
+.search input { flex: 1; border: 0; background: transparent; font: inherit; color: var(--fg); outline: none; }
+.sizes { background: var(--chip); }
+.sizes button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.add { height: 40px; padding: 0 18px; border-radius: 999px; background: var(--fg); color: var(--bg); font-weight: 600; }
+.r { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.filters { display: flex; gap: 8px; padding: 0 clamp(16px, 3vw, 36px) 12px; overflow-x: auto; scrollbar-width: none; }
+.f { flex: none; height: 32px; padding: 0 13px; border-radius: 999px; font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px; background: var(--chip); }
+.f i { width: 9px; height: 9px; border-radius: 3px; }
+.f .n { color: var(--fg-3); font-weight: 500; }
+.f.on { background: var(--fg); color: var(--bg); }
+.ticker { display: flex; align-items: center; gap: 14px; padding: 10px clamp(16px, 3vw, 36px); background: var(--fg); color: var(--bg); font-size: 13.5px; overflow-x: auto; scrollbar-width: none; }
+.ticker b { font: 800 13px var(--display); letter-spacing: .02em; text-transform: uppercase; flex: none; }
+.tk { flex: none; display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 14%, transparent); cursor: pointer; }
+.tk span.th { width: 24px; height: 24px; border-radius: 50%; }
+.tk .pb { width: 46px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--bg) 25%, transparent); overflow: hidden; }
+.tk .pb i { display: block; height: 100%; background: var(--t-design); }
+.wrap { padding: 26px clamp(16px, 3vw, 36px) 80px; }
+.hero { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+.hero h1 { font: 800 clamp(40px, 6vw, 72px)/.95 var(--display); letter-spacing: -.045em; margin: 0; }
+.hero h1 em { font-style: normal; color: var(--t-design); }
+.hero p { margin: 0; color: var(--fg-2); max-width: 330px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr)); gap: var(--gap); }
+.tile { cursor: pointer; border-radius: 20px; overflow: hidden; background: var(--chip); display: flex; flex-direction: column; transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s; }
+.tile:hover { transform: translateY(-4px) rotate(-.6deg); box-shadow: 0 18px 36px -12px rgba(0,0,0,.28); }
+.tile:nth-child(even):hover { transform: translateY(-4px) rotate(.6deg); }
+.sq { aspect-ratio: 1; position: relative; }
+.sq .src { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,.4); backdrop-filter: blur(6px); padding: 3px 9px; border-radius: 999px; }
+.sq .dur { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,.4); padding: 3px 8px; border-radius: 999px; }
+.sq .typo { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; text-align: center; color: #fff; font: 800 calc(var(--tfs) * 1.25)/1.05 var(--display); letter-spacing: -.02em; }
+.sq .quote { position: absolute; inset: auto 8px 8px 8px; background: rgba(255,255,255,.94); color: #111; border-radius: 12px; padding: 8px 10px; font-size: 12.5px; line-height: 1.35; }
+.sq .quote small { display: block; font-weight: 700; font-size: 10.5px; color: #777; text-transform: uppercase; letter-spacing: .05em; }
+.sq .prog { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 6px; border-radius: 6px; background: rgba(255,255,255,.35); overflow: hidden; }
+.sq .prog i { display: block; height: 100%; background: #fff; }
+.label { padding: 12px 14px 14px; color: #fff; flex: 1; }
+.label .t { font: 700 var(--tfs)/1.15 var(--display); letter-spacing: -.015em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.label .m { font-size: 12px; opacity: .8; margin-top: 4px; }
+.label .s { font-size: 13px; opacity: .9; margin-top: 8px; display: none; }
+:root[data-size="l"] .label .s { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+:root[data-size="s"] .label .m, :root[data-size="s"] .sq .dur { display: none; }
+.tile.pend .sq { filter: grayscale(.85); }
+.tile.pend .label { background: var(--chip) !important; color: var(--fg-2); }
+.tile.attn { border: 2.5px dashed var(--t-news); background: transparent; }
+.tile.attn .sq { display: grid; place-items: center; text-align: center; padding: 16px; color: var(--fg-2); font-size: 14px; }
+.tile.attn .sq b { display: block; color: var(--fg); font: 700 17px var(--display); }
+.tile.attn button { margin-top: 10px; padding: 6px 14px; border-radius: 999px; background: var(--fg); color: var(--bg); font-weight: 600; font-size: 13px; }
+.found { margin: -8px 0 18px; color: var(--fg-2); }
+@media (max-width: 700px) { .hero p, .ticker b { display: none; } .bar { flex-wrap: wrap; } .search { order: 5; max-width: none; flex-basis: 100%; } .add { padding: 0 14px; } :root { --tile: 140px; } :root[data-size="s"] { --tile: 100px; } :root[data-size="l"] { --tile: 280px; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="logo" href="#/">magpiary<i></i></a>
+    <label class="search">⌕ <input id="q" placeholder="Search what was said, shown or written" autocomplete="off"></label>
+    <div class="r"><div class="sizes" id="sizes" role="group" aria-label="Tile size"></div><button class="add">+ Paste link</button></div>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div class="ticker" id="ticker"></div>
+</header>
+<main class="wrap"><div class="hero" id="hero"></div><div class="found" id="found"></div><div class="grid" id="grid"></div></main>
+<div class="lb" id="lb"></div>
+<script src="data.js"></script><script src="c-common.js"></script>
+<script>
+const M = window.MAG, C = window.MAGC, $ = s => document.querySelector(s);
+let filter = "", query = "";
+function filters() {
+  const types = [...new Set(M.items.filter(i => i.type).map(i => i.type))];
+  const n = t => M.items.filter(i => i.type === t).length;
+  $("#filters").innerHTML = `<button class="f ${!filter ? "on" : ""}" data-f="">Everything <span class="n">${M.items.length}</span></button>`
+    + types.map(t => `<button class="f ${filter === t ? "on" : ""}" data-f="${t}"><i style="background:${C.color(t)}"></i>${t} <span class="n">${n(t)}</span></button>`).join("")
+    + `<button class="f ${filter === "!" ? "on" : ""}" data-f="!"><i style="background:var(--t-news)"></i>Needs you <span class="n">1</span></button>`;
+  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filter = b.dataset.f; filters(); grid(); });
+}
+function ticker() {
+  const now = M.byId[17];
+  $("#ticker").innerHTML = `<b>On the go</b><span class="tk" data-go="#/item/17"><span class="th" style="background:${C.bg(now)}"></span>Reading “${C.shortTitle(now)}”<span class="pb"><i style="width:${now.pct}%"></i></span></span>`
+    + M.queue.map((id, i) => `<span class="tk" data-go="#/item/${id}"><span class="th" style="background:${C.bg(M.byId[id])}"></span>Next ${i + 1}: ${C.shortTitle(M.byId[id]).slice(0, 28)}</span>`).join("")
+    + `<span style="flex:none;opacity:.7">≈ 2 min until clear · fetched 16 · 164 MB</span>`;
+}
+function tile(it, hit) {
+  if (it.status === "attention") return `<div class="tile attn"><div class="sq"><div><b>Couldn't open this one</b>${it.reason}.<br>${it.retry}.<br><button>Try now</button></div></div></div>`;
+  const pend = it.status !== "done";
+  const typo = !C.hasThumb(it) ? `<div class="typo">“${C.esc(C.shortTitle(it))}”</div>` : "";
+  return `<div class="tile ${pend ? "pend" : ""}" data-go="#/item/${it.id}"><div class="sq" style="background:${C.bg(it)}">${typo}
+    <span class="src">${M.sources[it.source]}</span>${it.dur || it.photos ? `<span class="dur">${it.dur || it.photos + " photos"}</span>` : ""}
+    ${it.status === "summarising" ? `<div class="prog"><i style="width:${it.pct}%"></i></div>` : ""}
+    ${hit ? `<div class="quote"><small>${hit.where}${hit.at ? " at " + hit.at : ""}</small>${M.mark(hit.text.slice(0, 90), query)}</div>` : ""}</div>
+    <div class="label" style="background:${pend ? "" : C.color(it.type)}"><div class="t">${M.mark(it.title, query)}</div>
+    <div class="m">${pend ? C.status(it) : it.type + " · " + it.author}</div>${it.summary ? `<div class="s">${C.esc(it.summary)}</div>` : ""}</div></div>`;
+}
+function grid() {
+  let list;
+  if (query) list = M.search(query).map(r => [r.it, r.hits.find(h => h.where !== "Title")]);
+  else list = M.items.filter(i => !filter || (filter === "!" ? i.status === "attention" : i.type === filter)).map(i => [i, null]);
+  $("#hero").innerHTML = query ? "" : `<h1>16 things<br>you <em>loved.</em></h1><p>6 new today. Pick a tile size with the A’s above. Click any tile to watch it with the key moments marked.</p>`;
+  $("#found").textContent = query ? `${list.length} found for “${query}”, with the matching line on each tile` : "";
+  $("#grid").innerHTML = list.map(([it, h]) => tile(it, h)).join("");
+}
+$("#q").oninput = e => { query = e.target.value.trim(); grid(); };
+C.size($("#sizes"));
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) location.hash = g.dataset.go; });
+document.addEventListener("keydown", e => { if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); $("#q").focus(); } if (e.key === "Escape") location.hash = "#/"; });
+function route() { const p = (location.hash || "#/").slice(1); if (p.startsWith("/item/")) C.lightbox($("#lb"), +p.split("/")[2], () => location.hash = "#/"); else $("#lb").classList.remove("on"); }
+filters(); ticker(); grid(); addEventListener("hashchange", route); route();
+</script>
+</body>
+</html>
