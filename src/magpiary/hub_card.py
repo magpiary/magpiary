@@ -592,7 +592,7 @@ class CardPages:
                 return sum(int(p) * 60 ** i for i, p in enumerate(reversed((at or "").split(":"))))
             except ValueError:
                 return -1
-        out = [f'<p class="small muted">Made {e(ui.day((result.get("made_at") or "")[:10]))} from '
+        out = [f'<p class="small muted">Made {e(ui.day(result.get("made_at") or ""))} from '
                f'{e(result.get("text_from") or "the post")}'
                + (f', in {result["parts"]} parts' if (result.get("parts") or 1) > 1 else "") + ".</p>",
                "<h4>Overview</h4>" + "".join(f'<p class="it-sum">{e(p)}</p>' for p in (result.get("overview") or "").split("\n") if p.strip())]
