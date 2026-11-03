@@ -55,6 +55,38 @@ def json_schema(schema: dict = SCHEMA) -> dict:
     return out
 
 
+def strict_schema(schema: dict) -> dict:
+    """A standard JSON Schema in OpenAI's strict form, which Codex's --output-schema demands: every field listed as
+    required, and the ones that were optional allowed to be null instead."""
+    out = dict(schema)
+    if "properties" in schema:
+        needed = set(schema.get("required", []))
+        props = {}
+        for name, sub in schema["properties"].items():
+            sub = strict_schema(sub)
+            if name not in needed:
+                sub = dict(sub, type=[sub["type"], "null"]) if isinstance(sub.get("type"), str) else sub
+                if "enum" in sub:
+                    sub["enum"] = [*sub["enum"], None]
+            props[name] = sub
+        out.update(properties=props, required=list(schema["properties"]), additionalProperties=False)
+    if "items" in schema:
+        out["items"] = strict_schema(schema["items"])
+    return out
+
+
+def drop_nulls(text: str) -> str:
+    """A strict-schema answer with the empty optional fields left out again, as the readers expect."""
+    def clean(v):
+        if isinstance(v, dict):
+            return {k: clean(x) for k, x in v.items() if x is not None}
+        return [clean(x) for x in v] if isinstance(v, list) else v
+    try:
+        return json.dumps(clean(json.loads(text)))
+    except ValueError:
+        return text
+
+
 def _images(parts: list[dict]):
     """(kind, value) in order: ("text", str) or ("image", (mime type, base64 data))."""
     for p in parts:

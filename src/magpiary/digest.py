@@ -396,7 +396,7 @@ def write_with_codex(prompt: str, run=subprocess.run) -> dict:
 
     from magpiary import ask_codex
     from magpiary.config import data_dir
-    from magpiary.providers import json_schema
+    from magpiary.providers import drop_nulls, json_schema, strict_schema
 
     codex = ask_codex.binary()
     if not codex:
@@ -405,7 +405,7 @@ def write_with_codex(prompt: str, run=subprocess.run) -> dict:
     base.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="digest-", dir=base))
     try:
-        (work / "schema.json").write_text(json.dumps(json_schema(_schema_upper(SCHEMA))))
+        (work / "schema.json").write_text(json.dumps(strict_schema(json_schema(_schema_upper(SCHEMA)))))
         done = run([codex, "exec", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config", *ask_codex.profile_config(work),
                     "-c", 'web_search="disabled"', "-c", "model_reasoning_effort=medium", "--output-schema", str(work / "schema.json"),
                     "-o", str(work / "answer.json"), "-"],
@@ -417,7 +417,7 @@ def write_with_codex(prompt: str, run=subprocess.run) -> dict:
         shutil.rmtree(work, ignore_errors=True)
     if done.returncode != 0 or not text.strip():
         raise ValueError("Codex gave no answer (is it signed in?)")
-    return _valid(json.loads(text))
+    return _valid(json.loads(drop_nulls(text)))
 
 
 def _schema_upper(schema: dict) -> dict:

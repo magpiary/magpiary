@@ -410,7 +410,7 @@ def codex_asker(model: str = "", effort: str = "", run=subprocess.run) -> Ask:
     """Codex on the owner's plan, headless and confined: the frames are attached as images; it reads nothing else."""
     from magpiary import ask_codex
     from magpiary.config import data_dir
-    from magpiary.providers import json_schema
+    from magpiary.providers import drop_nulls, json_schema, strict_schema
 
     def ask(system: str, schema: dict, parts: list[dict], images: list[Path]) -> str:
         codex = ask_codex.binary()
@@ -422,7 +422,7 @@ def codex_asker(model: str = "", effort: str = "", run=subprocess.run) -> Ask:
         base.mkdir(parents=True, exist_ok=True)
         work = Path(tempfile.mkdtemp(prefix="deep-", dir=base))
         try:
-            (work / "schema.json").write_text(json.dumps(json_schema(schema)))
+            (work / "schema.json").write_text(json.dumps(strict_schema(json_schema(schema))))
             command = [codex, "exec", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config",
                        *ask_codex.profile_config(work), "-c", 'web_search="disabled"',
                        *(["-m", model] if model else []), "-c", f"model_reasoning_effort={effort or DEFAULT_EFFORT}", "--output-schema", str(work / "schema.json"),
@@ -436,7 +436,7 @@ def codex_asker(model: str = "", effort: str = "", run=subprocess.run) -> Ask:
             shutil.rmtree(work, ignore_errors=True)
         if done.returncode != 0 or not text.strip():
             raise BrainFailed("unknown", "Codex gave no answer (is it signed in?)")
-        return text
+        return drop_nulls(text)
     return ask
 
 

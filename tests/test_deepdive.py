@@ -225,3 +225,19 @@ def test_the_count_in_settings_opens_the_library_filtered_to_those_videos(mac, t
     ids = {mac.store.id_for(long_url), mac.store.id_for(short_url)}
     shown = {int(x) for x in __import__("re").findall(r'data-id="(\d+)"', body)} & ids
     assert shown == {mac.store.id_for(long_url)}
+
+
+def test_codex_gets_a_strict_schema_and_its_empty_fields_are_dropped():
+    """OpenAI's strict mode refuses a schema that leaves a field optional (live run on 4 Nov 2026: 'takeaways')."""
+    from magpiary.providers import drop_nulls, json_schema, strict_schema
+
+    for schema in (deepdive.SECTION_SCHEMA, deepdive.OVERVIEW_SCHEMA, deepdive.WHOLE_SCHEMA):
+        def check(node):
+            if "properties" in node:
+                assert sorted(node["required"]) == sorted(node["properties"]) and node["additionalProperties"] is False
+                for sub in node["properties"].values():
+                    check(sub)
+            if "items" in node:
+                check(node["items"])
+        check(strict_schema(json_schema(schema)))
+    assert json.loads(drop_nulls('{"a": 1, "b": null, "c": [{"d": null, "e": 2}]}')) == {"a": 1, "c": [{"e": 2}]}
