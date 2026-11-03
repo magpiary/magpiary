@@ -30,6 +30,7 @@ AUTO_DAYS = 30                 # the weekly automatic refresh covers posts saved
 AUTO_EVERY_DAYS = 7
 STOP_REASONS = {"login_wall", "rate_limited"}   # reasons that stop a whole site, not just one post
 KEYS = ("like_count", "comment_count", "view_count")
+EXTRA_KEYS = ("repost_count", "share_count")  # kept with the post (meta.json), not in the stats table; Threads has them
 
 STATS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS stats (
@@ -286,7 +287,7 @@ def write_meta(store, url: str, fresh: dict) -> None:
         meta = json.loads(path.read_text())
     except (OSError, ValueError):
         return
-    for key in KEYS:
+    for key in KEYS + EXTRA_KEYS:
         if fresh.get(key) is not None:
             meta[key] = fresh[key]
     meta["stats_at"] = _stamp()

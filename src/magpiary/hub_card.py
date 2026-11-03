@@ -385,6 +385,7 @@ class CardPages:
             as_of = ui.day(meta.get("stats_at") or meta.get("fetched_at"))
             stats = [f'<span class="cn cn-{icon}" title="{meta[key]:,} {label}, as of {e(as_of)}">{ui.icon(icon)}<b>{_short(meta[key])}</b></span>'
                      for key, icon, label in (("like_count", "heart", "likes"), ("comment_count", "comment", "comments"),
+                                              ("repost_count", "repost", "reposts"), ("share_count", "share", "shares"),
                                               ("view_count", "eye", "views")) if isinstance(meta.get(key), int)]
             if stats:
                 refresh = ("" if item.get("login_only") else

@@ -3201,7 +3201,7 @@ dialog.lkd .lkerr { min-height: 0; } dialog.lkd .lkerr:empty { display: none; }
 .cardm .vid .capb.pvcapb { flex: none; margin: 0; background: color-mix(in srgb, #fff 7%, #0c0c0c); scrollbar-width: thin; }
 .cardm .vid .capb.pvcapb .cap2, .cardm .vid .capb.pvcapb .pvwho b { color: #e9e9e9; }
 .cardm .vid .capb.pvcapb .pvwho small, .cardm .vid .capb.pvcapb .pvwhere { color: #9a9a9a; }
-.cn-heart { --cc: #e6849b; } .cn-comment { --cc: #7fb0ea; } .cn-eye { --cc: #78c9a4; }
+.cn-heart { --cc: #e6849b; } .cn-comment { --cc: #7fb0ea; } .cn-eye { --cc: #78c9a4; } .cn-repost { --cc: #b6a3ee; } .cn-share { --cc: #e8c06a; }
 .pvcounts .cn .ico { color: var(--cc); }
 .pvcounts .cn b { color: color-mix(in srgb, var(--cc) 62%, var(--fg)); }
 .chips.pvment a { --mc: #e6849b; color: color-mix(in srgb, var(--mc) 60%, var(--fg)); }

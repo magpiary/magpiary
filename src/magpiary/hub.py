@@ -582,7 +582,7 @@ class Hub(
             fresh = describe(item["source"], item["canonical_url"]).meta
         except (OSError, ValueError, FetchFailed):
             return
-        for key in ("like_count", "comment_count", "view_count"):
+        for key in ("like_count", "comment_count", "view_count", "repost_count", "share_count"):
             if fresh.get(key) is not None:
                 meta[key] = fresh[key]
         meta["stats_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
