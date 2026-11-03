@@ -471,7 +471,7 @@ def test_settings_redesign_privacy_page_and_the_limit_in_the_nest(mac):
 
 
 def test_settings_sections_and_the_health_check(mac):
-    for path, text in (("/settings", "Your phones"), ("/settings/ai", "How summaries are made"), ("/settings/ai", "Brave Search key"),
+    for path, text in (("/settings", "Your phones"), ("/settings/ai", "Enable Smart Summaries"), ("/settings/ai", "Brave Search key"),
                        ("/settings/phones", "Your phones"), ("/settings/storage", "Your library"),
                        ("/settings/appearance", "Theme")):
         status, _, body = page(mac, path)

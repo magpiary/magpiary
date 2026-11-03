@@ -4294,3 +4294,10 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .keyrow .draghandle:disabled { cursor: default; opacity: .3; }
 .keyrow .draghandle:disabled:hover { background: none; color: var(--fg-3); }
 .keyrow.offrow .srl b { color: var(--fg-2); }
+
+/* Summaries: the mode's name sits before its switch, Smart in green, Private with a lock (owner, 4 Nov 2026) */
+.modectl { display: inline-flex; align-items: center; gap: 12px; }
+.modestat { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 650; white-space: nowrap; }
+.modestat.smart { color: var(--ok); }
+.modestat.private { color: var(--fg-2); }
+.modestat svg { width: 14px; height: 14px; }

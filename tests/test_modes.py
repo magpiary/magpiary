@@ -58,12 +58,21 @@ def test_private_sends_nothing_to_any_ai(store, tmp_path):
     assert used == []
 
 
-def test_settings_shows_two_modes_and_saves_the_choice(mac):
+def test_settings_shows_two_modes_and_saves_the_choice(mac, monkeypatch):
+    from magpiary import engines
+    from magpiary import keys as keyring
+    from magpiary.keys import Key
+
     body = page(mac, "/settings/ai")[2]
-    assert "How summaries are made" in body and "Smart" in body and "No AI at all" in body
-    assert "Balanced" not in body and "local model" not in body.lower()
+    assert "Enable Smart Summaries" in body and "Balanced" not in body and "local model" not in body.lower()
+    assert "modestat private" in body and "Add a key" in body  # no key: reads Private, and the switch says why
+    status, headers, _ = post(mac, "/hub/settings/mode", mode="smart", next="/settings/ai")
+    assert "#keys" in headers["Location"]
+    monkeypatch.setattr(keyring, "load", lambda: [Key("g1", "gemini", "free", "s", "", "m", "")])
+    body = page(mac, "/settings/ai")[2]
+    assert "modestat smart" in body and "Switch to Private" in body  # a key: Smart by itself
     post(mac, "/hub/settings/mode", mode="private")
     assert mac.store.get_setting(modes.SETTING) == "private"
     post(mac, "/hub/settings/mode", mode="balanced")
     assert mac.store.get_setting(modes.SETTING) == "private"
-    assert "Every save is still downloaded" in page(mac, "/settings/ai")[2]  # the note sits inside the chosen card
+    assert "modestat private" in page(mac, "/settings/ai")[2] and modes.effective(mac.store) == "private"

@@ -67,7 +67,7 @@ def test_the_list_is_grouped_in_the_agreed_order_and_opens_where_a_look_is_neede
     assert "Your phones" in page(mac, "/settings")[2]  # no phone yet: Settings opens there
     mac.store.add_phone("Work iPhone")
     mac.store.set_setting("ai_mode", "private")
-    assert "How summaries are made" in page(mac, "/settings")[2]  # nothing needs a look: AI & digest
+    assert "Enable Smart Summaries" in page(mac, "/settings")[2]  # nothing needs a look: AI & digest
 
 
 def test_goals_live_in_the_profile_marked_private_and_every_ai_can_read_them(mac, monkeypatch):

@@ -35,7 +35,7 @@ SECTION_ICONS = {"profile": ("people", "var(--t-place)"), "ai": ("sparkle", "var
                  "privacy": ("lock", "#3d3d3d")}
 SECTION_BLURBS = {"profile": "What friends see on a board, and what your AI knows about your goals.",
                   "phones": "How posts reach this Mac: your phones, Chrome, and the optional Instagram login.",
-                  "ai": "How summaries are made, the AI keys that write them, your digest, and finding links.",
+                  "ai": "Your AI keys, Smart or Private summaries, the digest, Ask, Deeper dive and finding links.",
                   "ask": "Turn Ask on or off, choose who answers and how much it says.",
                   "agents": "Let an AI such as Claude Code or Codex search your saves, save links and leave notes, from Terminal.",
                   "boards": "Your boards, where they sync, and invites.",
@@ -80,7 +80,7 @@ SEARCH_INDEX = [
     ("Home Wi-Fi and any Wi-Fi", "wifi network where it sends wait failed try", "phones", "phones"),
     ("Chrome extension", "browser pair extension code", "phones", "phones"),
     ("Instagram login", "chrome blocked private", "phones", "instagram"),
-    ("How summaries are made", "smart private mode ai", "ai", "mode"),
+    ("Smart summaries", "smart private mode ai summaries", "ai", "mode"),
     ("AI keys", "gemini openrouter claude openai api key model", "ai", "keys"),
     ("Digest", "weekly monthly off wrapped summary schedule", "ai", "digest"),
     ("Claude Code and Codex on this Mac", "claude code codex allow local plan permission test order drag", "ai", "keys"),
@@ -369,36 +369,48 @@ class SettingsPages:
     # ---- AI & digest ------------------------------------------------------------------
 
     def _ai_section(self, q: dict) -> str:
-        mode = modes.current(self.store)
-        cards = []
-        why = modes.waiting_reason(self.store, keyring)
-        for m, (name, _text) in modes.MODES.items():
-            line, leaves = MODE_PICS[m]
-            on = m == mode
-            note = ("Every save is still downloaded, transcribed on this Mac, grouped into piles, related to the others and "
-                    "searchable. You give up summaries, key points and AI tags. Your keys stay saved, unused, in case you switch back."
-                    if on and m == "private" else why if on and m == "smart" and why else "")
-            confirm = ("" if on else f"Switch to {name}? Posts already read stay as they are; new ones follow {name}."
-                       + (" Nothing will be sent to any AI." if m == "private" else ""))
-            cards.append(
-                f'<form method="post" action="/hub/settings/mode"{f" data-confirm={chr(34)}{e(confirm)}{chr(34)}" if confirm else ""}>'
-                f'{ui.hidden(self.csrf, mode=m, next="/settings/ai")}<button type="submit" class="modecard{" on" if on else ""}" '
-                f'aria-pressed="{str(on).lower()}">{settings_art.mode(m)}<span class="mtitle"><b>{e(name)}</b>'
-                + ('<em class="cur">' + ui.icon("check") + "In use</em>" if on else '<em>Switch</em>') + "</span>"
-                f'<span class="mline">{e(line)}</span><span class="mleaves">{ui.icon("lock")}Leaves this Mac: {e(leaves)}</span>'
-                + (f'<span class="mnote{" bad" if m == "smart" else ""}">{e(note)}</span>' if note else "") + "</button></form>")
-        out = [_group("How summaries are made", f'<div class="modes">{"".join(cards)}</div>', gid="mode", cls="wide plain",
+        """AI keys first, then Summaries: the Smart or Private switch, and the Digest, Ask and Deeper dive that need Smart."""
+        return "".join([self._keys_group(q), self._summaries_group(), self._digest_group(q), self._deep_group(),
+                        self._finding_group(),
+                        _adv(_group("Pause summaries", _row("Pause or limit them", "The switches for summaries and transcribing are in the Nest, where you can see the work.",
+                                                            '<a class="btn sm" href="/nest">Open the Nest</a>', lead=ui.icon("clock")), gid="pause")
+                             + self._keys_danger(), "Pausing summaries, removing keys")])
+
+    def _summaries_group(self) -> str:
+        """One switch: Smart (on) or Private (off). With nothing that can write a summary it reads Private and the switch
+        explains that a key is needed first (owner, 4 Nov 2026)."""
+        from magpiary import askconfig
+        from magpiary import engines as eng
+
+        smart = modes.effective(self.store) == "smart"
+        has_engine = bool(eng.options(self.store))
+        back = "/settings/ai#mode"
+        if smart:
+            confirm, ok = ("Switch to Private? Posts already read stay as they are; new ones get no summary. "
+                           "Nothing will be sent to any AI. Your keys stay saved."), "Switch to Private"
+        elif not has_engine:
+            confirm, ok = "Smart summaries need an AI key, or Claude Code or Codex allowed. Add one in AI keys.", "Add a key"
+        else:
+            confirm, ok = "", ""
+        status = (f'<span class="modestat smart">Smart</span>' if smart else
+                  f'<span class="modestat private">{ui.icon("lock")}Private</span>')
+        switch = self._switch("/hub/settings/mode", smart, {"mode": "private", "next": back}, {"mode": "smart", "next": back},
+                              "Smart summaries", confirm=confirm, ok=ok)
+        why = modes.waiting_reason(self.store, keyring) if smart else ""
+        desc = (MODE_PICS["smart"][0] + " Only the caption, the transcript and a few frames are sent." if smart else
+                "No AI at all. Saves are still downloaded, transcribed on this Mac, grouped into piles and searchable, "
+                "without summaries." + (" Your keys stay saved, unused." if has_engine else ""))
+        rows = _row("Enable Smart Summaries", desc, f'<span class="modectl">{status}{switch}</span>', lead=ui.icon("sparkle"),
+                    sid="smart", more=f'<p class="small bad">{e(why)}</p>' if why else "")
+        ask_on = askconfig.enabled(self.store)
+        rows += _row("Ask Magpiary", "Ask questions about your saves and get answers with the posts they came from.",
+                     f'<span class="modectl">{_stat("On" if ask_on else "Off", "ok" if ask_on else "")}'
+                     f'<a class="btn sm" href="/settings/ask">Open</a></span>', lead=ui.icon("book"), sid="summaries-ask")
+        return _group("Summaries", rows, gid="mode",
                       more=_more("<p>In both modes the transcript and the frames are made on this Mac, and the video itself "
                                  "is never sent anywhere. You can switch any time; posts already read stay as they are.</p>"
                                  "<p>Summaries are written in English, whatever language a post is in. Names and quotes stay "
-                                 "as said. Tags from the AI are added to each post; change them on the post.</p>")),
-               self._keys_group(q),
-               self._digest_group(q),
-               self._finding_group(),
-               _adv(self._deep_group() + _group("Pause summaries", _row("Pause or limit them", "The switches for summaries and transcribing are in the Nest, where you can see the work.",
-                                                   '<a class="btn sm" href="/nest">Open the Nest</a>', lead=ui.icon("clock")), gid="pause")
-                    + self._keys_danger(), "Deeper dive, pausing summaries, removing keys")]
-        return "".join(out)
+                                 "as said. Tags from the AI are added to each post; change them on the post.</p>"))
 
     # ---- Claude Code ---------------------------------------------------------------------
 
@@ -1657,6 +1669,11 @@ class SettingsPages:
             self.wake()
             return Response(303, b"", headers={"Location": "/settings/ai?saved=model"})
         if path == "/hub/settings/mode":
+            if form.get("mode") == "smart" and not form.get("next", "").startswith("/welcome/"):
+                from magpiary import engines as eng
+
+                if not eng.options(self.store):  # nothing could write a summary: add a key first
+                    return Response(303, b"", headers={"Location": "/settings/ai?note=" + quote("Add an AI key first; Smart turns on by itself once it works.") + "#keys"})
             if form.get("mode") in modes.MODES:
                 self.store.set_setting(modes.SETTING, form["mode"])
                 self.wake()
