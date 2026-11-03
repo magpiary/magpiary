@@ -106,6 +106,7 @@ SEARCH_INDEX = [
     ("Glass", "glass blur dark surfaces depth", "appearance", "glass"),
     ("Glass strength", "glass blur glow edge slider percent", "appearance", "glassstrength"),
     ("Page width", "wide full boxed", "appearance", "width"),
+    ("Connections map (beta)", "beta map graph connections try early", "appearance", "betamap"),
     ("Interface size", "scale zoom smaller bigger laptop 14 inch size text", "appearance", "scale"),
     ("Your library folders", "storage media notes models size finder", "storage", "library"),
     ("Back up now", "backup copy export database", "storage", "backup"),
@@ -1248,7 +1249,20 @@ class SettingsPages:
                               + _row("Page width", "How wide the hub can grow on a large screen.",
                                      bar("width", [(str(w), f"{w:,} px") for w in ui.BOX_PRESETS] + [("full", "Full")], width),
                                      info="A width only shows when the window is wider than it. Full stretches edge to edge.", sid="width"),
-                              gid="tuning"))
+                              gid="tuning")
+                + self._beta_group())
+
+    def _beta_group(self) -> str:
+        """Features still being tried: off unless the owner turns them on."""
+        from magpiary.hub_map import map_on
+
+        on = map_on(self.store)
+        back = "/settings/appearance#betamap"
+        return _group("Beta", _row("Connections map", "A Map button in the top bar and a small map on each post's Related "
+                                   "tab, showing how your saves connect. Still being tried.",
+                                   self._switch("/hub/beta/map", on, {"enabled": "0", "next": back}, {"enabled": "1", "next": back},
+                                                "Show the Connections map"), lead=ui.icon("sparkle"), sid="betamap"),
+                      gid="beta", desc="Early features. They may change or go away.")
 
     def _privacy_section(self, q: dict) -> str:
         mode = modes.current(self.store)
@@ -1359,6 +1373,11 @@ class SettingsPages:
             from magpiary import agent_log
 
             agent_log.clear()
+            return True
+        if path == "/hub/beta/map":
+            from magpiary.hub_map import BETA_SETTING
+
+            self.store.set_setting(BETA_SETTING, "1" if form.get("enabled") == "1" else "0")
             return True
         if path == "/hub/versioncheck":
             from magpiary import update

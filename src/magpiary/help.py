@@ -502,7 +502,7 @@ CHANGES = [
                "Each post shows its shape and topic (List · product design), and suggested tags reuse yours.",
                "Videos over 20 minutes wait for Read it now; a video's own chapters become its key moments.",
                "Threads videos are saved and play again, and a busy AI key hands the post to your next key.",
-               "Search understands what you ask for, and a map shows how your saves connect."]),
+               "Search understands what you ask for."]),
     ("0.1.3", ["Each Mac account now has its own Magpiary and its own library, so two accounts on one Mac no longer meet.",
                "The steps for getting an AI key are bigger and clearer, with the link first."]),
     ("0.1.2", ["The library opens only after setup has finished; clicking the Dock icon during setup shows the download again.",

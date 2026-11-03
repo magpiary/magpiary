@@ -1,6 +1,8 @@
 """The connections map, mixed into Hub: /map (every save as a dot, joined to the saves related to it), /graph.json (what
 map.js draws), the Map button for the top bar, and the small "Connected to" map for a post's Related tab. The scores
-come from Related (graph.py); nothing here uses an AI or leaves this Mac."""
+come from Related (graph.py); nothing here uses an AI or leaves this Mac.
+
+The map is a beta: everything here stays hidden until the owner turns it on in Settings > Appearance > Beta."""
 
 import json
 
@@ -13,17 +15,27 @@ MAP_ICON = ('<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentCol
             '<circle cx="12" cy="17.5" r="2.2"/><path d="M8 7.4l8-.9M7.2 9l3.6 6.4M16.9 8l-3.8 7.6"/></svg>')
 
 
+BETA_SETTING = "beta_map"
+
+
+def map_on(store) -> bool:
+    """The Connections map is a beta, off unless the owner turned it on."""
+    return store.get_setting(BETA_SETTING, "0") == "1"
+
+
 class MapPages:
     """Needs Hub's store, shell and related_library."""
 
     def map_button(self, active: str = "") -> str:
         """The way into the map, shown once there are two saves to join."""
-        if len(self.related_library().rows) < 2:
+        if not map_on(self.store) or len(self.related_library().rows) < 2:
             return ""
         return (f'<a class="ubtn mapbtn{" on" if active == "map" else ""}" href="/map" id="t-map" aria-label="Map" '
                 f'title="Map: how your saves connect">{MAP_ICON}<span class="lbl">Map</span></a>')
 
     def map_page(self, q: dict) -> Response:
+        if not map_on(self.store):
+            return Response(303, b"", headers={"Location": "/"})
         lib = self.related_library()
         if len(lib.rows) < 2:
             return self.shell("Map", empty_state("Nothing to connect yet", "Once you have a few saves, the map shows how "
@@ -41,6 +53,8 @@ class MapPages:
         return self.shell("Map", body, "map", active="map")
 
     def graph_json(self, q: dict) -> Response:
+        if not map_on(self.store):
+            return Response(404, b"{}", "application/json")
         lib = self.related_library()
         if q.get("scope") == "item" and q.get("id", "").isdigit():
             data = graph.item_graph(lib, self.store, int(q["id"]))
@@ -54,6 +68,8 @@ def local_map_html(store, item_id: int, lib=None) -> str:
     Pass `lib` (Hub.related_library()) to skip loading the scores again."""
     from magpiary import related as rel
 
+    if not map_on(store):
+        return ""
     lib = lib or rel.load(store)
     row = next((r for r in lib.rows if r["id"] == item_id), None)
     if row is None or not rel.related(lib, row["canonical_url"]):

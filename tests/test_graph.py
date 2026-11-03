@@ -4,7 +4,7 @@ import json
 
 from magpiary import graph
 from magpiary import related as rel
-from magpiary.hub_map import local_map_html
+from magpiary.hub_map import BETA_SETTING, local_map_html
 from test_hub import page
 from test_related import add, fake_embedder, library  # noqa: F401  (the fixture)
 
@@ -81,6 +81,7 @@ def test_the_map_around_one_post_is_small_and_centred(library):
 
 def test_the_local_map_fragment_and_its_empty_message(library):
     store, urls = library
+    store.set_setting(BETA_SETTING, "1")
     lib = rel.load(store)
     html = local_map_html(store, store.id_for(urls["p1"]), lib)
     assert 'data-map-src="/graph.json?scope=item&amp;id=' in html and "Open the full map" in html
@@ -91,6 +92,7 @@ def test_the_map_page_and_its_data_over_http(mac, tmp_path):
     for code, title, things in (("A1", "Pasta carbonara", ["Guanciale"]), ("A2", "Pasta amatriciana", ["Guanciale"]),
                                 ("A3", "Rust ownership", ["Cargo"])):
         add(mac.store, tmp_path, code, title, things, ["cooking" if "Pasta" in title else "coding"])
+    mac.store.set_setting(BETA_SETTING, "1")
     rel.refresh_vectors(mac.store, fake_embedder())
     status, headers, body = page(mac, "/map")
     assert status == 200 and 'data-map-src="/graph.json?scope=all"' in body and "/static/map.js" in body
@@ -104,5 +106,19 @@ def test_the_map_page_and_its_data_over_http(mac, tmp_path):
 
 
 def test_the_map_page_waits_for_two_saves(mac):
+    mac.store.set_setting(BETA_SETTING, "1")
     status, _, body = page(mac, "/map")
     assert status == 200 and "Nothing to connect yet" in body
+
+
+def test_the_map_is_a_beta_hidden_until_turned_on(mac, tmp_path):
+    for code, title in (("B1", "Pasta carbonara"), ("B2", "Pasta amatriciana")):
+        add(mac.store, tmp_path, code, title, ["Guanciale"], ["cooking"])
+    rel.refresh_vectors(mac.store, fake_embedder())
+    status, headers, _ = page(mac, "/map")
+    assert status == 303 and headers["Location"] == "/"  # off by default: back to the library
+    assert page(mac, "/graph.json")[0] == 404
+    assert 'id="t-map"' not in page(mac, "/")[2]
+    assert local_map_html(mac.store, mac.store.id_for("https://www.instagram.com/reel/B1/")) == ""
+    mac.store.set_setting(BETA_SETTING, "1")
+    assert page(mac, "/map")[0] == 200 and 'id="t-map"' in page(mac, "/")[2]
