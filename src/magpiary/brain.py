@@ -223,6 +223,9 @@ def build_evidence(meta: dict, transcript: list[dict] | None, frames: list[dict]
         starts = ", ".join(f"slide {n} at {_clock(s['start'])}" for n, s in enumerate(slides, 1))
         text.append(f"THIS IS A CAROUSEL of {len(slides)} video slides, played back to back on one timeline ({starts}). "
                     "Times in the transcript and on the frames are on that timeline. Cover every slide, not just the first.")
+    if meta.get("chapters"):
+        text.append("CHAPTERS (the creator's own): " + "; ".join(f"{_clock(c['start'])} {c['title']}" for c in meta["chapters"])
+                    + ". Give one key point per chapter, at its start time.")
     if transcript:
         lines, used = [], 0
         for seg in transcript:

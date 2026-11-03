@@ -167,3 +167,41 @@ def test_known_words_lists_tags_by_use_and_topics_from_records(tmp_path):
         store.brain_succeeded(url, record, "", apply_tags=True)
     known = store.known_words()
     assert known["tags"][0] == "figma" and set(known["topics"]) == {"product design", "baking"}
+
+
+# ---- long videos wait for the owner -------------------------------------------------------
+
+def test_a_long_video_waits_until_the_owner_asks(tmp_path):
+    import json
+
+    from magpiary.store import Store
+    from magpiary.worker import brain_due
+
+    store = Store(tmp_path / "m.db")
+    folders = {}
+    for code, seconds in (("short", 90), ("long", 3600)):
+        url = f"https://www.youtube.com/watch?v={code:_<11}"
+        folder = tmp_path / code
+        folder.mkdir()
+        (folder / "meta.json").write_text(json.dumps({"url": url, "duration": seconds, "media": []}))
+        store.add_link(url)
+        store.fetch_succeeded(url, str(folder))
+        folders[code] = url
+    read = []
+
+    prepared = []
+    brain_due(store, tmp_path, prepare=lambda item, progress: prepared.append(item["canonical_url"]),
+              process=lambda item, key, progress: read.append(item["canonical_url"]), pause=lambda tier: None)
+    assert prepared == [folders["short"]]  # the hour-long one was not transcribed
+    long_item = next(i for i in store.hub_items() if i["canonical_url"] == folders["long"])
+    assert long_item["ai_status"] == "long"
+    store.summarise_again(long_item["id"])
+    brain_due(store, tmp_path, prepare=lambda item, progress: prepared.append(item["canonical_url"]),
+              process=lambda item, key, progress: read.append(item["canonical_url"]), pause=lambda tier: None)
+    assert prepared[-1] == folders["long"]  # "Read it now": transcribed even though it is long
+
+
+def test_the_creators_chapters_shape_the_key_points(tmp_path):
+    parts = build_evidence({"source": "youtube", "chapters": [{"start": 0, "title": "Intro"}, {"start": 125, "title": "Grids"}]},
+                           None, [], [], tmp_path, None, "")
+    assert "CHAPTERS (the creator's own): 0:00 Intro; 2:05 Grids" in parts[0]["text"]

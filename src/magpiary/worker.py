@@ -151,9 +151,13 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
     prepare = prepare or (lambda item, progress: senses(Path(item["archive_dir"]), _meta(item), progress=progress))
     apply_tags = store.get_setting("auto_tags", "apply") == "apply"
     done = asked = 0
+    long_after = float(store.get_setting("long_video_minutes", str(LONG_VIDEO_MINUTES)) or 0) * 60
     for item in store.due_for_brain():
         forced = bool(item.get("ai_force"))
         url = item["canonical_url"]
+        if not forced and long_after and (_meta(item).get("duration") or 0) > long_after:
+            store.wait_long(url)  # a long video is read only when the owner asks: the Mac stays free for the rest
+            continue
         if not item.get("senses_status"):
             if store.paused("transcribe") and not forced:
                 continue
@@ -209,6 +213,9 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
         store.brain_succeeded(url, record, transcript_text(Path(item["archive_dir"])), apply_tags)
         done += 1
     return done
+
+
+LONG_VIDEO_MINUTES = 20  # longer videos wait for the owner's "Read it" (0 in Settings: read everything)
 
 
 def _meta(item: dict) -> dict:

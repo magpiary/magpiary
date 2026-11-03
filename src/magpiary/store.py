@@ -1535,6 +1535,12 @@ class Store(ChatStore, StatsStore):
                 "UPDATE items SET ai_status='needs_attention', ai_reason=?, ai_detail=?, ai_attempts=?, ai_next_at=?, "
                 "ai_force=0 WHERE canonical_url=?", (reason, detail[:200], attempts, retry_at, url))
 
+    def wait_long(self, url: str) -> None:
+        """A long video: saved and searchable by its details, read (transcript, frames, summary) only when the owner
+        asks. "Read it" goes through summarise_again, like Try again."""
+        with self._lock:
+            self._db.execute("UPDATE items SET ai_status='long', ai_force=0 WHERE canonical_url=?", (url,))
+
     def summarise_again(self, item_id: int | None = None) -> int:
         """Queue one item (or all with a problem, when item_id is None) to be summarised again."""
         with self._lock:

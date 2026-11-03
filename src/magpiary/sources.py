@@ -124,7 +124,9 @@ def _from_info(info: dict) -> dict:
             "published_at": _iso(published) if published else (pick("upload_date") or ""),
             "duration": pick("duration"), "like_count": pick("like_count"),
             "comment_count": pick("comment_count"), "view_count": pick("view_count"),
-            "parts": len(info.get("entries") or []) or 1}
+            "parts": len(info.get("entries") or []) or 1,
+            "chapters": [{"start": c.get("start_time") or 0, "title": str(c.get("title") or "")[:120]}
+                         for c in (pick("chapters") or [])[:60] if isinstance(c, dict) and c.get("title")]}
 
 
 def _handle(uploader_id, channel) -> str:
