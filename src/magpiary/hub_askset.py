@@ -41,12 +41,12 @@ class AskSettings:
         why = ""
         if not on and free:
             why = (f'<p class="small">{e(engines.warning("ask"))}</p><div class="row">'
-                   '<a class="btn sm dark" href="/settings/ai#local">Allow Claude Code or Codex</a>'
+                   '<a class="btn sm dark" href="/settings/ai#keys">Allow Claude Code or Codex</a>'
                    + self._askset_form({"on": "1"}, "Use my free key anyway", "btn sm").replace(
                        "<form", f'<form data-confirm="{e(engines.warning("ask"))} Turn it on anyway?"', 1) + "</div>")
         elif not on and not engines.options(self.store):
             why = ('<p class="small">Ask needs Claude Code or Codex allowed in AI keys, or an AI key.</p>'
-                   '<a class="btn sm dark" href="/settings/ai#local">Open AI keys</a>')
+                   '<a class="btn sm dark" href="/settings/ai#keys">Open AI keys</a>')
         out = [_group("", _row("Use Ask Magpiary", "Ask about a post, a pile, a board or your whole library, and the web. "
                                            "It is on by itself once Claude Code or Codex is allowed or a paid key is saved.", switch,
                                more=why), gid="onoff", cls="feat")]
@@ -137,7 +137,7 @@ class AskSettings:
                 return _row(title, setup_note, ctl(switch=self._engine_switch(False, f"Set up {title}", {"setup": eid}, {}, confirm)), lead=logo)
             if not engines.is_allowed(self.store, "claude_code" if eid == "claude" else "codex"):
                 return _row(title, "On this Mac, but not allowed. Magpiary never uses it until you allow it in AI keys.",
-                            ctl(remove='<a class="btn sm" href="/settings/ai#local">Allow it</a>'), lead=logo)
+                            ctl(remove='<a class="btn sm" href="/settings/ai#keys">Allow it</a>'), lead=logo)
             on = active == eid
             controls = ctl(green if on else "", self._askset_form({"remove": eid}, "Remove", "btn sm ghost"),
                            self._engine_switch(on, f"Use {title}", {"engine": eid}, {"deactivate": eid}))

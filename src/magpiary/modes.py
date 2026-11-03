@@ -33,6 +33,12 @@ def summarisers(store, key_source) -> list:
     A local model would be added here, later."""
     if current(store) == "private":
         return []
+    from magpiary import keys as keyring
+
+    if key_source is keyring:  # the real keys: the owner's one order, with Claude Code and Codex where they were dragged
+        from magpiary import engines
+
+        return engines.summarisers(store)
     return list(key_source.usable())
 
 

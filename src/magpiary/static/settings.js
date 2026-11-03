@@ -348,9 +348,9 @@
     if (!list) return;
     const csrf = $('meta[name="csrf"]')?.content || "";
     const rows = () => $$(".keyrow", list);
-    const renumber = () => rows().forEach((r, n) => { const o = $(".ord", r); if (o) o.textContent = n + 1; });
+    const renumber = () => {};
     const save = () => fetch("/hub/keys/order", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ csrf, ids: rows().map((r) => r.id.replace("key-", "")).join(","), next: "/settings/ai" }) });
+      body: new URLSearchParams({ csrf, ids: rows().map((r) => r.id.startsWith("key-") ? "key:" + r.id.slice(4) : r.id.replace("local-", "")).join(","), next: "/settings/ai" }) });
     let drag = null;
     list.addEventListener("pointerdown", (ev) => {
       const handle = ev.target.closest("[data-keyhandle]");

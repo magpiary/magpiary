@@ -83,7 +83,7 @@ SEARCH_INDEX = [
     ("How summaries are made", "smart private mode ai", "ai", "mode"),
     ("AI keys", "gemini openrouter claude openai api key model", "ai", "keys"),
     ("Digest", "weekly monthly off wrapped summary schedule", "ai", "digest"),
-    ("Claude Code and Codex on this Mac", "claude code codex allow local plan permission test", "ai", "local"),
+    ("Claude Code and Codex on this Mac", "claude code codex allow local plan permission test order drag", "ai", "keys"),
     ("Web search key", "tavily brave search links finding directories wikidata limit", "ai", "search"),
     ("Pause summaries", "pause stop limit transcribing nest budget", "ai", "pause"),
     ("Remove all keys", "delete keys", "ai", "advanced"),
@@ -159,6 +159,12 @@ def _more(body: str, label: str = "More about this") -> str:
 
 def _lock(key: str) -> str:
     return f'<div class="plock"><p>{e(LOCKS[key])}</p></div>'
+
+
+def _handle(name: str) -> str:
+    """The grip on a row of the AI list: drag it, or focus it and use the arrow keys."""
+    return (f'<button type="button" class="draghandle" data-keyhandle aria-label="Reorder {e(name)}: drag, or use the arrow keys" '
+            f'title="Drag to change the order">{ui.icon("grip")}</button>')
 
 
 def _row(label: str, desc: str = "", control: str = "", *, info: str = "", more: str = "", lead: str = "",
@@ -432,9 +438,6 @@ class SettingsPages:
             state, tone = self._key_state(k, all_keys, today)
             provider = keyring.PROVIDERS[k.provider]["name"].split(" (")[0]
             items = ""
-            if kind == "ai":
-                items += (self._form("/hub/keys/up", {"key_id": k.id, "next": back}, "Move up", "") if n else "")
-                items += (self._form("/hub/keys/down", {"key_id": k.id, "next": back}, "Move down", "") if n < len(mine) - 1 else "")
             if k.provider in SUGGESTED_MODELS:
                 items += (f'<div class="mi chmodel"><b>Change model</b><form method="post" action="/hub/keys/model">'
                           f'{ui.hidden(self.csrf, key_id=k.id)}<input type="text" name="model" value="{e(k.model)}" '
@@ -445,50 +448,61 @@ class SettingsPages:
                 confirm=f"Remove {k.name}? It is deleted from this Mac.")
             desc = (f'{e(provider)} · {e(keyring.TIERS[k.tier])}' + (f' · <span class="mono">{e(k.model)}</span>' if k.model else "")
                     + f' · added {e(k.added)}')
-            handle = (f'<button type="button" class="draghandle" data-keyhandle aria-label="Reorder {e(k.name)}: drag, or use the '
-                      f'arrow keys" title="Drag to change the order">{ui.icon("grip")}</button>') if kind == "ai" and len(mine) > 1 else ""
-            rows.append(_row(e(k.name), desc, _stat(state, tone) + _menu(f"More for {k.name}", items),
-                             lead=handle + f'<span class="ord">{n + 1}</span>' if kind == "ai" else ui.icon("search"),
-                             sid=f"key-{k.id}", cls="keyrow" if kind == "ai" else ""))
-        return "".join(rows)
+            if kind == "ai":
+                from magpiary.hub_ask import ENGINE_LOGO
 
-    def _local_rows(self) -> str:
-        """Claude Code and Codex on this Mac: off until allowed here, the only place they are allowed or stopped. Allowing asks
-        first (a dialog), then a tiny test run; only a passing test allows it."""
+                logo = ENGINE_LOGO.get(k.provider, ui.icon("links"))
+                rows.append((f"key:{k.id}", _row(e(k.name), desc, _stat(state, tone) + _menu(f"More for {k.name}", items),
+                                                 lead=_handle(k.name) + logo, sid=f"key-{k.id}", cls="keyrow")))
+            else:
+                rows.append(("", _row(e(k.name), desc, _stat(state, tone) + _menu(f"More for {k.name}", items), lead=ui.icon("search"))))
+        if kind == "ai":
+            return dict(rows)  # type: ignore[return-value]  (the AI keys are placed in the owner's one order by _keys_group)
+        return "".join(r for _, r in rows)
+
+    def _local_rows(self) -> dict:
+        """Claude Code and Codex on this Mac, as rows of the one AI list: off until allowed here, the only place they are allowed
+        or stopped. Allowing asks first (a dialog), then a tiny test run; only a passing test allows it."""
         from magpiary import engines as eng
         from magpiary.hub_ask import ENGINE_LOGO
 
-        rows = []
+        rows = {}
         for kind in eng.LOCAL:
             on = eng.is_allowed(self.store, kind)
             here = eng.installed(kind)
             logo = ENGINE_LOGO.get("claude" if kind == "claude_code" else "codex", "")
-            confirm = (f"Allow {eng.SHORT[kind]} on this Mac? Magpiary will use {eng.PLAN[kind]} for the Digest, Ask Magpiary "
-                       f"and Deeper dive. It sends the text and frames of the posts involved; your keys and other files stay on "
-                       f"this Mac. A tiny test runs first (a few tokens). The Digest, Ask and Deeper dive then turn on and use it.")
+            confirm = (f"Allow {eng.SHORT[kind]} on this Mac? Magpiary will use {eng.PLAN[kind]} for the Digest, Ask Magpiary and "
+                       f"Deeper dive, and for summaries too if you drag it above your keys. It sends the text and frames of the posts "
+                       f"involved; your keys and other files stay on this Mac. A tiny test runs first (a few tokens).")
             if on:
-                desc = f"Allowed. The Digest, Ask and Deeper dive may use {eng.PLAN[kind]}."
+                desc = f"Allowed · {eng.PLAN[kind]}. Writes summaries when it is the first in this list that can."
             elif here:
-                desc = f"Found on this Mac, not allowed. Magpiary never uses {eng.PLAN[kind]} until you allow it here."
+                desc = f"On this Mac, not allowed. Magpiary never uses {eng.PLAN[kind]} until you switch it on."
             else:
-                desc = f"Not on this Mac. Set it up from Ask Magpiary's settings, then allow it here."
-            control = (self._switch("/hub/engine/allow", on, {"kind": kind, "enabled": "0", "next": "/settings/ai#local"},
-                                    {"kind": kind, "enabled": "1", "next": "/settings/ai#local"}, f"Allow {eng.SHORT[kind]}",
+                desc = "Not on this Mac. Set it up from Ask Magpiary's settings, then switch it on here."
+            control = (self._switch("/hub/engine/allow", on, {"kind": kind, "enabled": "0", "next": "/settings/ai#keys"},
+                                    {"kind": kind, "enabled": "1", "next": "/settings/ai#keys"}, f"Allow {eng.SHORT[kind]}",
                                     confirm="" if on else confirm)
                        if on or here else '<a class="btn sm" href="/settings/ask#engine">Set it up</a>')
-            rows.append(_row(eng.LOCAL[kind], desc, control, lead=logo, sid=f"local-{kind}"))
-        return f'<div class="srow addrow" id="local"><small class="muted">On this Mac</small></div>' + "".join(rows)
+            rows[kind] = _row(eng.LOCAL[kind], desc, control, lead=_handle(eng.SHORT[kind]) + logo, sid=f"local-{kind}",
+                              cls="keyrow" + ("" if on else " offrow"))
+        return rows
 
     def _keys_group(self, q: dict) -> str:
-        rows = self._key_rows("ai")
+        from magpiary import engines as eng
+
+        keyed = {**self._key_rows("ai"), **self._local_rows()}
+        rows = "".join(keyed[i] for i in eng.order(self.store) if i in keyed)
+        have_keys = any(i.startswith("key:") for i in keyed)
         lists = "".join(f'<datalist id="models-{prov}">' + "".join(f'<option value="{e(m)}">' for m in models)
                         + "</datalist>" for prov, models in SUGGESTED_MODELS.items())
         empty = _row("No key yet", "Summaries are waiting. A free Gemini or OpenRouter key takes about two minutes.",
-                     cls="emptyrow") if not rows else ""
-        add = (f'<details class="addk"{"" if rows else " open"}><summary class="btn sm">{ui.icon("plus")}Add a key</summary>'
+                     cls="emptyrow") if not have_keys else ""
+        add = (f'<details class="addk"{"" if have_keys else " open"}><summary class="btn sm">{ui.icon("plus")}Add a key</summary>'
                f'{self._add_key_form("ai")}</details>')
-        return _group("AI keys", f'<div class="keylist" data-keylist>{rows}</div>' + empty + f'<div class="srow addrow">{add}</div>' + lists + self._local_rows(), gid="keys", cls="feat hero pink",
-                      desc="Used in this order: the first key that works writes the summary. Drag a key by its handle to change the order.", lock="ai",
+        return _group("AI keys", f'<div class="keylist" data-keylist>{rows}</div>' + empty + f'<div class="srow addrow">{add}</div>' + lists, gid="keys", cls="feat hero pink",
+                      desc="Used in this order: the first one that works writes each summary. Drag by the handle to change it. "
+                           "The Digest, Ask and Deeper dive use the first Claude Code, Codex or paid key in this order.", lock="ai",
                       more=_more("<p>When a key reaches its daily limit or is refused, Magpiary moves to the next, and goes "
                                  "back to the first the next day. Each post records which key wrote it. Free keys are paced "
                                  "to stay within their limits.</p>"))
@@ -557,7 +571,7 @@ class SettingsPages:
                 "linked pages, with sections, takeaways and quotes. The normal summary stays as it is.")
         if not usable:
             rows = _row("Deeper dive", what + " It needs Claude Code or Codex allowed in AI keys, or a paid key: a free key "
-                        "would run out.", '<a class="btn sm" href="/settings/ai#local">Allow Claude Code or Codex</a>',
+                        "would run out.", '<a class="btn sm" href="/settings/ai#keys">Allow Claude Code or Codex</a>',
                         lead=ui.icon("sparkle"), sid="deepdive")
             return _group("Deeper dive", rows, gid="deep", desc="Off: no engine that can carry it.")
         rows = _row("Deeper dive", what,
@@ -1009,7 +1023,7 @@ class SettingsPages:
         more = ""
         if not on and free:
             more = (f'<p class="small">{e(engines.warning("digest"))}</p>'
-                    '<a class="btn sm dark" href="/settings/ai#local">Allow Claude Code or Codex</a>')
+                    '<a class="btn sm dark" href="/settings/ai#keys">Allow Claude Code or Codex</a>')
         elif not on and not engines.options(self.store):
             more = '<p class="small">It needs Claude Code or Codex allowed in AI keys, or an AI key.</p>'
         rows = _row("Digest", "What your saves were about and what's worth acting on, written for you each week or month. "
@@ -1479,7 +1493,9 @@ class SettingsPages:
                 self.store.set_setting("stay_awake", "1" if enabled else "0")
             return True
         if path == "/hub/keys/order":
-            keyring.reorder([i for i in form.get("ids", "").split(",") if re.fullmatch(r"[0-9a-f]{8}", i)])
+            from magpiary import engines as eng
+
+            eng.set_order(self.store, [i for i in form.get("ids", "").split(",") if re.fullmatch(r"key:[0-9a-f]{8}|claude_code|codex", i)])
             return True
         if path in ("/hub/keys/up", "/hub/keys/down"):
             keyring.move(form.get("key_id", ""), -1 if path.endswith("up") else 1)
@@ -1503,10 +1519,10 @@ class SettingsPages:
                 if form.get("enabled") == "1":
                     ok, why = eng.allow(self.store, kind)
                     if not ok:
-                        return Response(303, b"", headers={"Location": "/settings/ai?error=" + quote(why) + "#local"})
-                    return Response(303, b"", headers={"Location": "/settings/ai?saved=allowed#local"})
+                        return Response(303, b"", headers={"Location": "/settings/ai?error=" + quote(why) + "#keys"})
+                    return Response(303, b"", headers={"Location": "/settings/ai?saved=allowed#keys"})
                 eng.disallow(self.store, kind)
-            return Response(303, b"", headers={"Location": "/settings/ai?saved=stopped#local"})
+            return Response(303, b"", headers={"Location": "/settings/ai?saved=stopped#keys"})
         if path == "/hub/askset":
             return self.askset_post(form)
         if path == "/hub/versioncheck/now":

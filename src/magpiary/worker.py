@@ -172,7 +172,8 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
             continue
         record, busy, repicked, last_busy = None, set(), set(), None
         while record is None:
-            # Smart: the keys; Private: nobody. A key that was busy for this item is skipped for it, not for the next one.
+            # Smart: the keys and the allowed Claude Code or Codex, in the owner's order; Private: nobody. One that was busy or
+            # failed for this item is skipped for it, not for the next one.
             usable = [k for k in modes.summarisers(store, key_source) if k.id not in busy]
             if not usable:
                 if last_busy:  # every key was busy: wait for the next try
@@ -186,6 +187,11 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
             try:
                 record = process(item, key, progress)
             except BrainFailed as err:
+                if getattr(key, "tier", "") == "local" and err.reason != "busy":
+                    busy.add(key.id)  # Claude Code or Codex could not write it: the next in the owner's order tries it now
+                    last_busy = err
+                    log(f"{key.name} could not write a summary; trying the next")
+                    continue
                 if err.reason == "bad_key":
                     key_source.mark(key.id, refused=True)
                     log(f"key '{key.name}' was refused; trying the next key")

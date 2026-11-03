@@ -1,5 +1,8 @@
-"""Who may do the AI work beyond a post's normal summary (the Digest, Ask Magpiary and Deeper dive), and in what order
-(owner decisions 4 Nov 2026, docs/specs.md "Local engines need permission").
+"""Who may do the AI work, and in what order (owner decisions 4 Nov 2026, docs/specs.md "Local engines need permission").
+
+One list in Settings > AI & digest holds the AI keys and Claude Code and Codex on this Mac, in the order the owner drags
+them into. Summaries are written by the first one in that order that can (an engine not allowed is skipped). The Digest,
+Ask and Deeper dive use the first allowed engine or paid key in that order.
 
 Claude Code and Codex on this Mac are used only once the owner allows them in Settings > AI & digest > AI keys, after a
 dialog and a test run. They start off for everyone. The order of preference: the allowed local engines (the first one
@@ -10,9 +13,11 @@ never uses a free-tier key). Each feature remembers the owner's own on, off and 
 
 import json
 import subprocess
+from dataclasses import dataclass
 from datetime import datetime
 
 ALLOWED = "local_allowed"  # JSON list of the allowed local engines, in the order they were allowed
+ORDER = "engine_order"  # JSON list of ids ("key:<id>", "claude_code", "codex"): the order the owner dragged them into
 LOCAL = {"claude_code": "Claude Code on this Mac", "codex": "Codex on this Mac"}
 SHORT = {"claude_code": "Claude Code", "codex": "Codex"}
 PLAN = {"claude_code": "your Claude plan", "codex": "your ChatGPT plan"}
@@ -116,16 +121,46 @@ def is_free(key) -> bool:
     return getattr(key, "tier", "free") == "free"
 
 
-def options(store, keys=None, free: bool = True) -> list[dict]:
-    """Every engine that can do the work, best first: {"id", "kind" (claude_code, codex or key), "key", "label", "free"}.
-    Local engines only when allowed and installed; free-tier keys last, and only when `free`."""
+def order(store, keys=None) -> list[str]:
+    """Every AI key and both local engines, in the owner's order: the saved order first, then keys not in it (in the keys'
+    own order), then the local engines not in it."""
     from magpiary import keys as keyring
 
-    out = [{"id": k, "kind": k, "key": None, "label": LOCAL[k], "free": False} for k in allowed(store) if installed(k)]
-    ai = [k for k in _keys(keys) if keyring.PROVIDERS.get(k.provider, {}).get("kind") == "ai" and not k.refused]
-    out += [{"id": f"key:{k.id}", "kind": "key", "key": k, "label": k.name, "free": False} for k in ai if not is_free(k)]
-    if free:
-        out += [{"id": f"key:{k.id}", "kind": "key", "key": k, "label": k.name, "free": True} for k in ai if is_free(k)]
+    ids = [f"key:{k.id}" for k in _keys(keys) if keyring.PROVIDERS.get(k.provider, {}).get("kind") == "ai"] + list(LOCAL)
+    try:
+        saved = json.loads(store.get_setting(ORDER, "[]") or "[]")
+    except ValueError:
+        saved = []
+    saved = [i for i in saved if i in ids] if isinstance(saved, list) else []
+    return saved + [i for i in ids if i not in saved]
+
+
+def set_order(store, ids: list[str], keys=None) -> bool:
+    """The owner dragged the list into this order. The keys' own file follows, so every reader sees the same order."""
+    from magpiary import keys as keyring
+
+    known = order(store, keys)
+    if sorted(ids) != sorted(known) or len(set(ids)) != len(ids):
+        return False
+    store.set_setting(ORDER, json.dumps(ids))
+    keyring.reorder([i[4:] for i in ids if i.startswith("key:")])
+    return True
+
+
+def options(store, keys=None, free: bool = True) -> list[dict]:
+    """Every engine that can do the work, in the owner's order: {"id", "kind" (claude_code, codex or key), "key", "label",
+    "free"}. Local engines only when allowed and installed; free-tier keys only when `free`."""
+    from magpiary import keys as keyring
+
+    by_id = {f"key:{k.id}": k for k in _keys(keys) if keyring.PROVIDERS.get(k.provider, {}).get("kind") == "ai" and not k.refused}
+    ok = set(allowed(store))
+    out = []
+    for i in order(store, keys):
+        if i in LOCAL:
+            if i in ok and installed(i):
+                out.append({"id": i, "kind": i, "key": None, "label": LOCAL[i], "free": False})
+        elif i in by_id and (free or not is_free(by_id[i])):
+            out.append({"id": i, "kind": "key", "key": by_id[i], "label": by_id[i].name, "free": is_free(by_id[i])})
     return out
 
 
@@ -157,10 +192,48 @@ def set_on(store, feature: str, on: bool) -> None:
 
 
 def choice(store, feature: str, keys=None) -> dict | None:
-    """The engine the feature uses: the owner's pick when it is still usable, else the first in order."""
+    """The engine the feature uses: the owner's pick when it is still usable, else the first local engine or paid key in
+    the owner's order, else (Digest and Ask only) the first free key."""
     usable = options(store, keys, free=feature not in NO_FREE)
     wanted = store.get_setting(_choice_key(feature), "")
-    return next((o for o in usable if o["id"] == wanted), usable[0] if usable else None)
+    return next((o for o in usable if o["id"] == wanted), next((o for o in usable if not o["free"]), usable[0] if usable else None))
+
+
+# ---- summaries ----------------------------------------------------------------------------------
+
+@dataclass
+class LocalEngine:
+    """Claude Code or Codex standing where a key stands in the summary queue (brain.summarise knows how to ask it)."""
+    id: str
+    provider: str
+    model: str
+    tier: str = "local"
+    secret: str = "local"
+    refused: str = ""
+
+    @property
+    def name(self) -> str:
+        return SHORT[self.id]
+
+
+SUMMARY_MODELS = {"claude_code": "haiku", "codex": "gpt-6-luna"}  # light and quick: a summary is short work
+
+
+def summarisers(store, keys=None, today: str | None = None) -> list:
+    """Who can write the next summary, in the owner's order: usable AI keys and allowed local engines."""
+    from datetime import date
+
+    today = today or date.today().isoformat()
+    usable = {f"key:{k.id}": k for k in _keys(keys) if k.usable(today)}
+    ok = set(allowed(store))
+    out = []
+    for i in order(store, keys):
+        if i in LOCAL:
+            if i in ok and installed(i):
+                out.append(LocalEngine(i, i, SUMMARY_MODELS[i]))
+        elif i in usable:
+            out.append(usable[i])
+    return out
 
 
 def choose(store, feature: str, engine_id: str, keys=None) -> bool:

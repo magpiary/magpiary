@@ -408,6 +408,8 @@ def summarise(parts: list[dict], key: str, model: str, call: Call = http_call, w
 
 
 def _asker(provider: str, key: str, model: str, call: Call, wait):
+    if provider in ("claude_code", "codex"):
+        return local_asker(provider, model)
     if provider == "gemini":
         return lambda parts, history: ask_gemini(parts, history, key, model, call, wait)
     from magpiary import providers
@@ -415,6 +417,35 @@ def _asker(provider: str, key: str, model: str, call: Call, wait):
     if provider == "claude":
         return lambda parts, history: providers.ask_claude(parts, history, key, model)
     return lambda parts, history: providers.ask_chat(provider, parts, history, key, model)
+
+
+def local_asker(provider: str, model: str):
+    """Claude Code or Codex writing a summary: the evidence's pictures become files for it to read; the instructions and
+    answer format are the summary's own."""
+    def ask(parts: list[dict], history: list[tuple[str, str]]) -> str:
+        import shutil
+        import tempfile
+
+        from magpiary import deepdive
+
+        work = Path(tempfile.mkdtemp(prefix="magpiary-summary-"))
+        try:
+            texts, images, n = [], [], 0
+            for p in parts:
+                if "text" in p:
+                    texts.append(p)
+                elif "inline_data" in p:
+                    n += 1
+                    ext = {"image/png": ".png", "image/webp": ".webp"}.get(p["inline_data"].get("mime_type"), ".jpg")
+                    path = work / f"{n:03d}{ext}"
+                    path.write_bytes(base64.b64decode(p["inline_data"]["data"]))
+                    images.append(path)
+            texts += [{"text": f"{'YOUR EARLIER ANSWER' if r == 'model' else 'NOTE'}: {t}"} for r, t in history]
+            asker = deepdive.claude_code_asker(model, "low") if provider == "claude_code" else deepdive.codex_asker(model, "low")
+            return asker(PROMPT, SCHEMA, texts, images)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+    return ask
 
 
 def ask_gemini(parts: list[dict], history: list[tuple[str, str]], key: str, model: str, call: Call = http_call,
