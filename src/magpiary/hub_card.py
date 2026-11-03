@@ -423,7 +423,7 @@ class CardPages:
         named.sort(key=lambda l: 0 if tool and l["name"].lower() == tool.lower() else 1)  # the post's own tool first; the rest keep their order
 
         def row(href: str, title: str, small: str, kind_: str = "link") -> str:
-            return (f'<a class="pvprimary" href="{e(href)}" target="_blank" rel="noopener noreferrer">{self._site_icon(href) if kind_ == "link" else ui.icon("ext")}'
+            return (f'<a class="pvprimary" href="{e(href)}" target="_blank" rel="noopener noreferrer" title="{title}">{self._site_icon(href) if kind_ == "link" else ui.icon("ext")}'
                     f'<span><b>{title}</b><small>{e(small)}</small></span><i aria-hidden="true">↗</i></a>')
 
         out: list[str] = ([f'<button type="button" class="pvask" data-askpost="{item["id"]}"><span class="askmark" aria-hidden="true">✦</span> Ask Magpiary</button>']

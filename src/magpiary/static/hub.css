@@ -3486,6 +3486,12 @@ body[data-page="card"] .wrap { padding-inline: max(var(--pad), 24px); }  /* foll
 .pvactions .pvprimary, .cardm.pagemode .pvactions .pvprimary, .pvactions .pvprimary.find, .pvactions .pvprimary.wait { flex: 0 0 auto; width: auto; background: none; box-shadow: none; padding: 9px 12px; gap: 0; }
 .pvactions .pvprimary:hover, .cardm.pagemode .pvactions .pvprimary:hover { background: var(--chip); }
 .pvactions .pvprimary > span:not(.fav) { flex: 0 1 auto; } .pvactions .pvprimary i { margin-left: 10px; }
+/* One row, always: actions shrink and long names end in an ellipsis instead of wrapping to a second row */
+.pvactions { flex-wrap: nowrap; }
+.pvactions .pvask { flex: none; }
+.pvactions .pvprimary, .cardm.pagemode .pvactions .pvprimary, .pvactions .pvprimary.find, .pvactions .pvprimary.wait { flex: 0 1 auto; min-width: 0; max-width: 320px; }
+.pvactions .pvprimary > span:not(.fav) { min-width: 0; }
+.pvactions .pvprimary b, .pvactions .pvprimary small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .pvactions .pvprimary .fav { margin-right: 10px; width: 20px; height: 20px; }
 
 
