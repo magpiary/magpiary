@@ -142,8 +142,8 @@ def is_on(store, feature: str, keys=None) -> bool:
     state = store.get_setting(_state_key(feature), "")
     if state == "off":
         return False
-    if state == "on":
-        return bool(options(store, keys, free=feature not in NO_FREE))
+    if state == "on":  # the owner's own choice; the feature itself says when nobody can answer (Deeper dive: never a free key)
+        return bool(options(store, keys, free=False)) if feature in NO_FREE else True
     return strong(store, keys)
 
 

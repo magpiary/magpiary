@@ -66,7 +66,7 @@ def test_all_items_transcribe_without_a_summariser(store, tmp_path, recorded, mo
 @pytest.mark.parametrize("chosen,wanted", [("key", "selected"), ("key", ""), ("claude", "selected"), ("codex", "selected")])
 def test_ask_never_substitutes_an_unselected_key(store, recorded, monkeypatch, chosen, wanted):
     hub = Hub(store)
-    store.set_setting(askconfig.ON, "1")
+    store.set_setting("ask_state", "on")
     store.set_setting(askconfig.ENGINE, chosen)
     store.set_setting(askconfig.KEY, wanted)
     selected, other = [SimpleNamespace(**k) for k in recorded["keys"]]

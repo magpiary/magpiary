@@ -111,14 +111,21 @@ class AskPages:
         None when Ask is off or the chosen one cannot answer."""
         if not self.ask_enabled() or modes.current(self.store) != "smart":
             return None
-        usable = keyring.usable()
-        claude = asking.claude_available() and not askconfig.removed(self.store, "claude")
-        chosen = self.store.get_setting(ENGINE, "claude" if claude else "key")
+        from magpiary import ask_codex
+        from magpiary import engines
+
+        usable = [k for k in keyring.usable() if not engines.is_free(k) or not engines.strong(self.store)
+                  or self.store.get_setting(ENGINE, "") == "key"]
+        claude = asking.claude_available() and engines.is_allowed(self.store, "claude_code") and not askconfig.removed(self.store, "claude")
+        codex = ask_codex.available() and engines.is_allowed(self.store, "codex") and not askconfig.removed(self.store, "codex")
+        first = (engines.choice(self.store, "ask") or {}).get("id", "")
+        default = {"claude_code": "claude", "codex": "codex"}.get(first, "key")
+        chosen = self.store.get_setting(ENGINE, "") or default
         if chosen == "none":
             return None
-        from magpiary import ask_codex
-
-        if chosen == "codex" and ask_codex.available() and not askconfig.removed(self.store, "codex"):
+        if chosen == "key" and not self.store.get_setting(askconfig.KEY, "") and first.startswith("key:"):
+            self.store.set_setting(askconfig.KEY, first[4:])
+        if chosen == "codex" and codex:
             model = askconfig.codex_model(self.store)
             return {"id": "codex", "name": "Codex (your ChatGPT plan)", "short": "Codex", "key": None, "write": None, "other": "",
                     "model": askconfig.CODEX_NAME.get(model, model), "alias": model}
@@ -211,11 +218,16 @@ class AskPages:
         if page == "help":  # the Help page is Help
             return ""
         ask = self.ask_enabled() and page != "ask"  # the full Ask page keeps only Help: Ask is the page
-        return ('<div class="askdockwrap' + ("" if ask else " helponly") + '"><div class="askdockrow">'
+        # Ask off in Smart mode: the button stays and opens Ask's settings, which say why and offer the two ways to turn it on
+        off = not ask and page not in ("ask", "settings") and modes.current(self.store) == "smart"
+        return ('<div class="askdockwrap' + ("" if ask or off else " helponly") + '"><div class="askdockrow">'
                 f'<a class="askhelp" href="/help" id="t-help" title="Help for this page">{ui.icon("book")}<span class="lbl">Help</span></a>'
                 + ('<button type="button" class="askdock" data-askdock aria-label="Open Ask Magpiary" title="Ask Magpiary">'
                    '<span class="askmark" aria-hidden="true">✦</span><span class="askdocklab">Ask Magpiary</span><small class="askdockstate" data-askdockstate></small>'
-                   f'{ui.icon("chevup")}</button>' if ask else "") + '</div></div>')
+                   f'{ui.icon("chevup")}</button>' if ask else "")
+                + ('<a class="askdock askoff" href="/settings/ask#onoff" title="Ask Magpiary is off: see why and turn it on">'
+                   '<span class="askmark" aria-hidden="true">✦</span><span class="askdocklab">Ask Magpiary</span>'
+                   '<small class="askdockstate">Off</small></a>' if off else "") + '</div></div>')
 
     def ask_button(self, scope: str, label: str = "Ask Magpiary", cls: str = "btn sm askbtn2") -> str:
         """No button any more: a quiet marker telling the Ask bar which place this page is (a pile, a board, a tab)."""

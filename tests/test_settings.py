@@ -171,7 +171,7 @@ def test_the_privacy_page_shows_the_journey_and_everything_else_that_can_leave(m
 def test_the_search_index_covers_every_page_and_every_anchor_exists(mac):
     from magpiary.hub_settings import SEARCH_INDEX
     pages = {}
-    mac.store.set_setting("ask_on", "1")  # the Ask page shows all its groups only when Ask is on
+    mac.store.set_setting("ask_state", "on")  # the Ask page shows all its groups only when Ask is on
     for _, _, p, a in SEARCH_INDEX:
         body = pages.setdefault(p, page(mac, f"/settings/{p}")[2])
         assert f'id="{a}"' in body, (p, a)

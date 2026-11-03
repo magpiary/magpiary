@@ -12,7 +12,8 @@ import pytest  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def ask_is_on(mac):
-    mac.store.set_setting("ask_on", "1")  # new installs start with Ask off; these tests are about using it
+    mac.store.set_setting("ask_state", "on")  # new installs start with Ask off; these tests are about using it
+    mac.store.set_setting("local_allowed", '["claude_code", "codex"]')  # and with Claude Code and Codex not allowed
 
 
 def test_the_prompt_holds_only_the_saves_text_and_marks_each_post(mac, lib):
@@ -80,6 +81,7 @@ def test_the_empty_chat_has_a_calm_hello_and_three_plain_starters(mac, lib):
 
 def test_without_a_key_the_panel_says_so_and_nothing_is_sent(mac, lib, monkeypatch):
     monkeypatch.setattr(asking, "claude_available", lambda: False)
+    monkeypatch.setattr("magpiary.ask_codex.available", lambda: False)
     panel = page(mac, f"/ask/panel?scope=post:{lib['ig']}")[2]
     assert "Ask Magpiary needs an AI" in panel
     assert post(mac, "/hub/ask/send", scope=f"post:{lib['ig']}", q="hello")[0] == 400
@@ -224,7 +226,7 @@ def test_an_open_question_runs_as_a_job_that_shows_steps_and_ends_in_a_saved_mes
 # ---- Settings → Ask Magpiary ------------------------------------------------------------------------------------
 
 def test_with_ask_off_no_ask_button_tab_or_panel_shows_anywhere(mac, lib):
-    mac.store.set_setting("ask_on", "0")
+    mac.store.set_setting("ask_state", "off")
     urls = [mac.store.item_by_id(lib[k])["canonical_url"] for k in ("ig", "yt")]
     pid = mac.store.save_auto_pile(None, urls, "Pasta", keep_name=True)
     folder = Path(mac.store.item_by_id(lib["ig"])["archive_dir"])
@@ -304,17 +306,17 @@ def done_id(mac, scope):
 
 def test_turning_ask_on_needs_examplecreator_to_answer_and_turning_it_off_stops_running_answers(mac, lib, monkeypatch):
     hub = mac.server.hub
-    mac.store.set_setting("ask_on", "0")
+    mac.store.set_setting("ask_state", "off")
     monkeypatch.setattr(asking, "claude_available", lambda: False)
     monkeypatch.setattr("magpiary.keys.usable", lambda *a, **k: [])
     monkeypatch.setattr("magpiary.ask_codex.available", lambda: False)
     status, headers, _ = post(mac, "/hub/askset", on="1", next="/settings/ask")
-    assert status == 303 and "error=" in headers["Location"] and mac.store.get_setting("ask_on", "0") == "0"
+    assert status == 303 and "error=" in headers["Location"] and mac.store.get_setting("ask_state", "") != "on"
     assert "needs an AI" in page(mac, headers["Location"])[2]
     monkeypatch.setattr(asking, "claude_available", lambda: True)
     monkeypatch.setattr(type(hub), "_claude_state", lambda self: {"installed": True, "signed_in": True})
     assert post(mac, "/hub/askset", on="1", next="/settings/ask")[1]["Location"] == "/settings/ask"
-    assert mac.store.get_setting("ask_on", "0") == "1" and json.loads(page(mac, "/activity.json")[2])["ask"] is True
+    assert mac.store.get_setting("ask_state", "") == "on" and json.loads(page(mac, "/activity.json")[2])["ask"] is True
     # an answer being written is stopped when Ask is switched off, and the off switch asks first
     assert 'data-confirm="Turn off Ask Magpiary?' in page(mac, "/settings/ask")[2]
     hub.__dict__["_ask_jobs"] = {"j1": {"events": [], "done": False, "html": "", "at": 0, "stop": False}}
@@ -337,7 +339,7 @@ def test_a_spoken_question_is_turned_into_text_on_this_mac(mac, lib, monkeypatch
     assert json.loads(post(mac, "/hub/ask/voice", audio=audio)[2]) == {"text": "How is Example Finch different?"}
     assert "error" in json.loads(post(mac, "/hub/ask/voice", audio="")[2])
     assert "error" in json.loads(post(mac, "/hub/ask/voice", audio=base64.b64encode(b"x" * 515_000).decode())[2])
-    mac.store.set_setting("ask_on", "0")
+    mac.store.set_setting("ask_state", "off")
     assert post(mac, "/hub/ask/voice", audio=audio)[0] == 404
 
 
@@ -505,7 +507,7 @@ def test_ask_has_a_page_of_its_own_with_chats_on_the_left_and_a_place_picker(mac
     assert "Opus 5.5." in plain and "askplain" in plain and "<textarea" not in plain
     panel = page(mac, "/ask/panel?scope=library:all")[2]
     assert "data-askmin" in panel and 'href="/ask?scope=library:all"' in panel
-    mac.store.set_setting("ask_on", "0")
+    mac.store.set_setting("ask_state", "off")
     assert page(mac, "/ask")[0] == 303
 
 
