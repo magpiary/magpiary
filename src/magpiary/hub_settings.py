@@ -44,7 +44,7 @@ SECTION_BLURBS = {"profile": "What friends see on a board, and what your AI know
                   "privacy": "The hub lock, what leaves this Mac, where your data lives, and how to delete it."}
 SAVED = {"key": "Key checked and saved.", "login": "Instagram connected.", "model": "Model changed.",
          "mode": "Saved. New summaries follow this mode.", "budget": "Saved.", "look": "Saved.", "phone": "Phone removed.",
-         "awake": "Saved.", "limit": "Search limit saved.", "keys": "Keys removed.", "profile": "Profile saved.",
+         "awake": "Saved.", "limit": "Search limit saved.", "longvideo": "Long video length saved.", "keys": "Keys removed.", "profile": "Profile saved.",
          "photo": "Photo saved.", "nophoto": "Photo removed.", "bucket": "Bucket connected and checked.",
          "nobucket": "Bucket removed from this Mac.", "claude": "Claude Code settings saved.",
          "claudetest": "Test finished.", "claudeoff": "Claude Code disconnected. Your AI key writes the digest now.", "via": "New boards will sync there.", "joined": "You joined the board. It fills in as it syncs."}
@@ -106,6 +106,7 @@ SEARCH_INDEX = [
     ("Glass", "glass blur dark surfaces depth", "appearance", "glass"),
     ("Glass strength", "glass blur glow edge slider percent", "appearance", "glassstrength"),
     ("Page width", "wide full boxed", "appearance", "width"),
+    ("Long videos", "long video podcast minutes wait read it now transcribe length", "ai", "longvideo"),
     ("Connections map (beta)", "beta map graph connections try early", "appearance", "betamap"),
     ("Interface size", "scale zoom smaller bigger laptop 14 inch size text", "appearance", "scale"),
     ("Your library folders", "storage media notes models size finder", "storage", "library"),
@@ -384,6 +385,7 @@ class SettingsPages:
                self._keys_group(q),
                self._digest_group(q),
                self._finding_group(),
+               self._long_video_group(),
                _adv(_group("Pause summaries", _row("Pause or limit them", "The switches for summaries and transcribing are in the Nest, where you can see the work.",
                                                    '<a class="btn sm" href="/nest">Open the Nest</a>', lead=ui.icon("clock")), gid="pause")
                     + self._keys_danger(), "Pausing summaries, removing keys")]
@@ -582,6 +584,18 @@ class SettingsPages:
                 f'</span></div></form>')
 
     # ---- Finding links, the Instagram login -----------------------------------------------------
+
+    def _long_video_group(self) -> str:
+        """Videos longer than this wait for the owner's Read it now, so a two-hour podcast never holds up the queue."""
+        from magpiary.worker import LONG_VIDEO_MINUTES
+
+        minutes = self.store.get_setting("long_video_minutes", str(LONG_VIDEO_MINUTES)) or str(LONG_VIDEO_MINUTES)
+        return _group("Long videos", _row(
+            "Wait for me after", "Minutes. A longer video is saved but only transcribed and summarised when you press "
+            "Read it now on the post. 0 reads every video straight away.",
+            f'<form method="post" action="/hub/settings/long-video" class="iform">{ui.hidden(self.csrf)}'
+            f'<input type="number" min="0" max="600" name="minutes" value="{e(minutes)}" aria-label="Minutes">'
+            f'<button class="btn sm" type="submit">Save</button></form>', lead=ui.icon("clock"), sid="longvideo"), gid="longvideo")
 
     def _finding_group(self) -> str:
         """Links work with no setup; a web search key only finds what the free directories miss."""
@@ -1560,6 +1574,11 @@ class SettingsPages:
             identity.remove_photo()
             self._send_profile()
             return Response(303, b"", headers={"Location": "/settings/profile?saved=nophoto"})
+        if path == "/hub/settings/long-video":
+            minutes = form.get("minutes", "").strip()
+            if minutes.isdigit() and int(minutes) <= 600:
+                self.store.set_setting("long_video_minutes", str(int(minutes)))
+            return Response(303, b"", headers={"Location": "/settings/ai?saved=longvideo#longvideo"})
         if path == "/hub/settings/search-limit":
             limit = form.get("limit", "").strip()
             if limit.isdigit() and int(limit) <= 10000:

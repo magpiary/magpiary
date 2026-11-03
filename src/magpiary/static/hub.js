@@ -1501,7 +1501,7 @@
     const cur = new Map($$(".tile[data-id]", view).map((t) => [t.dataset.id, t]));
     const neu = $$(".tile[data-id]", fresh);
     const neuIds = new Set(neu.map((t) => t.dataset.id));
-    const complete = !$("[data-more]", fresh);
+    const complete = !$("a[data-more]", fresh);
     const state = Fl ? Fl.getState([...cur.values(), ...$$(".secblock > .sec", view)]) : null;
     let moved = false;
     neu.forEach((t, i) => {
@@ -2410,7 +2410,7 @@
   let moreObs = null;
   function initMore() {
     moreObs?.disconnect();
-    const more = $("#view [data-more]"); if (!more) return;
+    const more = $("#view a[data-more]"); if (!more) return;  // the library's Show more link, not a post's "+N more" button
     moreObs = new IntersectionObserver(async (entries) => {
       if (!entries[0].isIntersecting) return;
       moreObs.disconnect();

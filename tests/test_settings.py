@@ -390,3 +390,14 @@ def test_restore_refuses_anything_that_is_not_a_sound_backup(mac):
     for bad in ("../magpiary.db", "/etc/passwd", "nope.db", ""):
         assert "error=" in post(mac, "/hub/restore", file=bad)[1]["Location"]
     assert mac.store.get_item("https://example.com/stays")
+
+
+def test_long_videos_wait_after_the_minutes_set_in_settings(mac):
+    assert 'action="/hub/settings/long-video"' in page(mac, "/settings/ai")[2]
+    post(mac, "/hub/settings/long-video", minutes="45")
+    assert mac.store.get_setting("long_video_minutes") == "45"
+    post(mac, "/hub/settings/long-video", minutes="0")  # 0 reads every video straight away
+    assert mac.store.get_setting("long_video_minutes") == "0"
+    post(mac, "/hub/settings/long-video", minutes="-5")
+    post(mac, "/hub/settings/long-video", minutes="9999")
+    assert mac.store.get_setting("long_video_minutes") == "0"  # nonsense is ignored
