@@ -89,3 +89,40 @@ def test_a_new_summary_finds_links_again(tmp_path):
     record = {**tidy(RECORD), "engine": {}}
     store.brain_succeeded(url, record, "", False)
     assert any(i["canonical_url"] == url for i in store.due_for_links())  # queued for the link search with the new record's names
+
+
+# ---- pages that hide what they hold -------------------------------------------------------
+
+from magpiary.sources import FetchFailed, other, readable  # noqa: E402
+
+ARTICLE = (b'<html><head><title>Grids</title><meta property="og:image" content="https://cdn.example.com/cover.jpg">'
+           b'<meta name="description" content="Short."></head><body><nav><p>Home</p><p>About</p></nav>'
+           b'<article><h1>Why Grids Feel Calm</h1><p>Rows and columns give the eye a place to rest.</p>'
+           b'<img src="/img/grid-1.jpg"><img src="https://cdn.example.com/avatar.png"><img src="x.jpg" width="16">'
+           b'<script>alert(1)</script><p>Rows and columns give the eye a place to rest.</p></article>'
+           b'<footer><p>Copyright</p></footer></body></html>')
+
+
+def test_a_page_gives_its_reading_text_and_pictures_without_menus():
+    text, images = readable(ARTICLE, "https://pebblenotes.example.com/p/grids")
+    assert text == "Why Grids Feel Calm\nRows and columns give the eye a place to rest."
+    assert images == ["https://pebblenotes.example.com/img/grid-1.jpg"]
+
+
+def test_a_thin_page_is_drawn_once_by_a_browser_and_a_refusing_page_is_not():
+    shell = b'<html><head><title>Board</title></head><body><div id="root"></div></body></html>'
+    drawn = []
+
+    def render(url):
+        drawn.append(url)
+        return ARTICLE
+    got = other("https://gallery.example.com/p/1", lambda u: (200, shell), None, render)
+    assert drawn == ["https://gallery.example.com/p/1"] and "eye a place to rest" in got.meta["text"]
+    assert got.fetched_with.startswith("page (drawn") and got.images[0] == "https://cdn.example.com/cover.jpg"
+    full = other("https://pebblenotes.example.com/p/grids", lambda u: (200, ARTICLE.replace(b"</article>", b"<p>" + b"x" * 500 + b"</p></article>")), None, render)
+    assert len(drawn) == 1 and full.fetched_with == "page"  # enough text already: no browser
+    try:
+        other("https://www.behance.example/gallery/1", lambda u: (403, b""), None, render)
+    except FetchFailed as err:
+        assert err.reason == "login_wall"
+    assert len(drawn) == 1  # a refusal is respected, never drawn another way

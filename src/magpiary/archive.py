@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from magpiary.activity import NO_PROGRESS, Progress
-from magpiary.sources import FetchFailed, Get, describe, http_get
+from magpiary.sources import FetchFailed, Get, Render, chrome_render, describe, http_get
 from magpiary.tools import Run, YtDlp, YtDlpError, default_run, video_seconds
 
 MAX_IMAGE_BYTES = 25_000_000
@@ -72,12 +72,15 @@ def _save_images(urls: list[str], folder: Path, get: Get, start: int) -> list[st
 
 
 def fetch_item(item: dict, library: Path, get: Get = http_get, ytdlp: YtDlp | None = None,
-               run: Run = default_run, progress: Progress = NO_PROGRESS) -> Path:
-    """Fetch and archive one item. Returns its folder. Raises FetchFailed."""
+               run: Run = default_run, progress: Progress = NO_PROGRESS, render: Render | None = None) -> Path:
+    """Fetch and archive one item. Returns its folder. Raises FetchFailed. A real fetch may draw a script-made page
+    in a browser on the Mac; recorded fetches (an injected `get`) never do unless given `render`."""
     ytdlp = ytdlp or YtDlp(run)
+    if render is None and get is http_get:
+        render = chrome_render
     url, source = item["canonical_url"], item["source"]
     progress.step("fetch")
-    fetched = describe(source, url, get, ytdlp)
+    fetched = describe(source, url, get, ytdlp, render)
     progress.step("download")
     final = _archive_folder(item, library)
     work = library / f".tmp-{final.name}"

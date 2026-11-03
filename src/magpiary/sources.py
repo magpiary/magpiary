@@ -14,7 +14,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from xml.etree import ElementTree
 
 from magpiary import __version__
@@ -280,15 +280,133 @@ def linkedin(url: str, get: Get, ytdlp: YtDlp) -> Fetched:
     return fetched
 
 
-def other(url: str, get: Get, ytdlp: YtDlp) -> Fetched:
-    tags = page_tags(_page(get, url))
-    return Fetched(_from_tags(tags), images=[tags["og:image"]] if tags.get("og:image") else [],
-                   fetched_with="page")
+THIN_PAGE = 400  # characters of readable text below which a page is probably drawn by scripts
+MAX_PAGE_TEXT = 20_000
+MAX_PAGE_IMAGES = 10
+SKIP_IMAGE = re.compile(r"(?i)\.svg(\?|$)|^data:|avatar|icon|logo|sprite|emoji|badge|pixel|tracking|1x1|placeholder")
+SKIP_TAGS = {"script", "style", "noscript", "nav", "header", "footer", "aside", "form", "svg", "button", "template"}
+TEXT_TAGS = {"p", "h1", "h2", "h3", "h4", "li", "blockquote", "figcaption", "pre", "td"}
+
+
+class _Readable(HTMLParser):
+    """The words and pictures of a page's body, leaving out menus, footers and scripts. Text inside <article> or
+    <main> is kept apart: when a page has one, that is the reading part."""
+
+    def __init__(self, base: str):
+        super().__init__(convert_charrefs=True)
+        self.base, self.skip, self.inside, self.block = base, 0, 0, None
+        self.parts: dict[bool, list[str]] = {True: [], False: []}
+        self.images: dict[bool, list[str]] = {True: [], False: []}
+
+    def handle_starttag(self, tag, attrs):
+        if tag in SKIP_TAGS:
+            self.skip += 1
+        elif tag in ("article", "main"):
+            self.inside += 1
+        elif tag in TEXT_TAGS and not self.skip:
+            self.block = []
+        elif tag == "img" and not self.skip:
+            a = dict(attrs)
+            src = a.get("data-src") or a.get("src") or ""
+            srcset = a.get("srcset") or a.get("data-srcset") or ""
+            if srcset:  # the largest picture of a srcset
+                src = srcset.split(",")[-1].strip().split(" ")[0] or src
+            width = a.get("width") or ""
+            small = width.isdigit() and int(width) < 80  # icons and avatars
+            if src and not SKIP_IMAGE.search(src) and not small:
+                full = urljoin(self.base, src)
+                if full.startswith("https://") and full not in self.images[self.inside > 0]:
+                    self.images[self.inside > 0].append(full)
+
+    def handle_endtag(self, tag):
+        if tag in SKIP_TAGS:
+            self.skip = max(0, self.skip - 1)
+        elif tag in ("article", "main"):
+            self.inside = max(0, self.inside - 1)
+        elif tag in TEXT_TAGS and self.block is not None:
+            line = re.sub(r"\s+", " ", "".join(self.block)).strip()
+            if len(line) > 1:
+                self.parts[self.inside > 0].append(line)
+            self.block = None
+
+    def handle_data(self, data):
+        if self.block is not None and not self.skip:
+            self.block.append(data)
+
+
+def readable(body: bytes, url: str) -> tuple[str, list[str]]:
+    """A page's reading text and its content pictures (the article or main part when there is one)."""
+    parser = _Readable(url)
+    try:
+        parser.feed(body.decode("utf-8", "replace"))
+    except (AssertionError, ValueError):  # broken markup: keep what was read
+        pass
+    main = bool(parser.parts[True])
+    lines = parser.parts[main]
+    text = "\n".join(dict.fromkeys(lines))[:MAX_PAGE_TEXT]
+    images = (parser.images[True] if main else []) or parser.images[False]
+    return text, images[:MAX_PAGE_IMAGES]
+
+
+# A browser render: url -> the page's HTML after its scripts ran, or b"" when no browser is there or it failed.
+Render = Callable[[str], bytes]
+BROWSERS = ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge", "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser")
+
+
+def chrome_render(url: str) -> bytes:
+    """The page as a browser draws it, for pages made by scripts. Headless Chrome (or Chromium, Edge, Brave) with a fresh
+    empty profile, so logged out, and its own honest headless identity. Only used on a page that already loaded (never on
+    one that refused Magpiary), and nothing it runs is kept."""
+    import shutil
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    binary = next((b for b in BROWSERS if Path(b).exists()), None)
+    if not binary:
+        return b""
+    profile = tempfile.mkdtemp(prefix="magpiary-render-")
+    try:
+        result = subprocess.run([binary, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
+                                 "--disable-extensions", "--mute-audio", f"--user-data-dir={profile}",
+                                 "--virtual-time-budget=10000", "--dump-dom", url],
+                                capture_output=True, timeout=60)
+        return result.stdout[:MAX_PAGE_BYTES] if result.returncode == 0 else b""
+    except (OSError, subprocess.SubprocessError):
+        return b""
+    finally:
+        shutil.rmtree(profile, ignore_errors=True)
+
+
+def other(url: str, get: Get, ytdlp: YtDlp, render: Render | None = None) -> Fetched:
+    """Any other page: its preview tags, then its reading text and pictures. A page that loads but is nearly empty is
+    drawn by scripts: a browser on the Mac draws it once (when one is installed). A page that refuses Magpiary
+    (401/403/429) is not retried another way here: the owner's own browser (the Chrome extension) can send it."""
+    body = _page(get, url)
+    tags = page_tags(body)
+    text, pictures = readable(body, url)
+    how = "page"
+    if len(text) < THIN_PAGE and render:
+        drawn = render(url)
+        if drawn:
+            drawn_text, drawn_pictures = readable(drawn, url)
+            if len(drawn_text) > len(text) or len(drawn_pictures) > len(pictures):
+                text, pictures, how = drawn_text, drawn_pictures, "page (drawn by a browser on this Mac)"
+                tags = {**page_tags(drawn), **{k: v for k, v in tags.items() if v}}
+    meta = _from_tags(tags)
+    if len(text) > len(meta["text"]):
+        meta["text"] = (meta["text"] + "\n\n" + text).strip() if meta["text"] and meta["text"] not in text else text
+    images = list(dict.fromkeys(([tags["og:image"]] if tags.get("og:image") else []) + pictures))[:MAX_PAGE_IMAGES]
+    return Fetched(meta, images=images, fetched_with=how)
 
 
 ADAPTERS = {"instagram": video_site, "youtube": video_site, "threads": threads, "reddit": reddit,
             "x": x, "linkedin": linkedin, "other": other}
 
 
-def describe(source: str, url: str, get: Get = http_get, ytdlp: YtDlp | None = None) -> Fetched:
-    return ADAPTERS.get(source, other)(url, get, ytdlp or YtDlp())
+def describe(source: str, url: str, get: Get = http_get, ytdlp: YtDlp | None = None, render: Render | None = None) -> Fetched:
+    adapter = ADAPTERS.get(source, other)
+    if adapter is other:
+        return other(url, get, ytdlp or YtDlp(), render)
+    return adapter(url, get, ytdlp or YtDlp())
