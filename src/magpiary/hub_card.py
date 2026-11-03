@@ -363,6 +363,9 @@ class CardPages:
         colour = ui.deep(ui.type_colour(kind)) if done else ui.deep(ui.source_colour(item["source"]))
         badge = (f'<b style="background:{colour}">{e(ui.type_name(kind) if done else ui.source_name(item["source"]))}</b>')
         where = ui.source_badge(item["source"]) if done else ""
+        from magpiary.brain import FORMAT_NAMES
+        shape = " · ".join(x for x in (FORMAT_NAMES.get((record or {}).get("format") or "", ""), (record or {}).get("topic") or "") if x)
+        badge += f'<em class="itfmt">{e(shape)}</em>' if shape else ""
         return (f'<div class="it-type">{where}{badge}<span>{"From a friend’s board" if item.get("media_only") else "Saved"} '
                 f'{e(ui.day(item.get("first_shared_at") or item.get("created_at")))}'
                 + (f' · {item["saved_count"]}×' if item["saved_count"] > 1 else "") + "</span></div>")
@@ -424,7 +427,7 @@ class CardPages:
         named.sort(key=lambda l: 0 if tool and l["name"].lower() == tool.lower() else 1)  # the post's own tool first; the rest keep their order
 
         def row(href: str, title: str, small: str, kind_: str = "link") -> str:
-            return (f'<a class="pvprimary" href="{e(href)}" target="_blank" rel="noopener noreferrer">{self._site_icon(href) if kind_ == "link" else ui.icon("ext")}'
+            return (f'<a class="pvprimary" href="{e(href)}" target="_blank" rel="noopener noreferrer" title="{title}">{self._site_icon(href) if kind_ == "link" else ui.icon("ext")}'
                     f'<span><b>{title}</b><small>{e(small)}</small></span><i aria-hidden="true">↗</i></a>')
 
         out: list[str] = ([f'<button type="button" class="pvask" data-askpost="{item["id"]}"><span class="askmark" aria-hidden="true">✦</span> Ask Magpiary</button>']
@@ -443,6 +446,11 @@ class CardPages:
                                       f'Find the link{" for " + e(tool) if tool else ""}', "pvprimary find"))
             out.append('<a class="pvprimary find" href="#links" data-tabto="links"><span><b>Add a link yourself</b></span></a>')
         return f'<div class="pvactions">{"".join(out)}</div>' if out else ""
+
+    @staticmethod
+    def _duration(item: dict) -> float | None:
+        meta = _read_json(Path(item["archive_dir"]) / "meta.json") if item.get("archive_dir") else None
+        return (meta or {}).get("duration")
 
     def _state(self, item: dict, record: dict | None, here: str) -> str:
         """Why this post is not finished yet, in plain words, with what to do about it."""
@@ -470,6 +478,12 @@ class CardPages:
             pct = f' {int(lane["percent"])}%' if lane.get("percent") is not None else ""
             return (f'<div class="pstate"><b>{e(STEPS.get(lane["step"], "Working"))}{pct}</b><p>Being read on this Mac '
                     'now. This card fills in by itself.</p></div>')
+        if item.get("ai_status") == "long":
+            minutes = round((self._duration(item) or 0) / 60)
+            return (f'<div class="pstate"><b>Long video{f" · {minutes} min" if minutes else ""}</b><p>Saved, but not read yet: '
+                    'long videos wait for you, so your Mac stays free for everything else. Reading makes the transcript and '
+                    'frames on this Mac, then one summary with your AI key.</p>'
+                    + self._form("/hub/again", {"id": item["id"], "next": here}, "Read it now", "btn sm dark") + "</div>")
         if item.get("ai_status") == "needs_attention":
             why = AI_REASONS.get(item.get("ai_reason") or "", "something went wrong")
             return (f'<div class="pstate bad"><b>No summary yet</b><p>Not made: {e(why)}.</p>'
@@ -579,6 +593,30 @@ class CardPages:
                              + f'>{v}</section>'
                              for k, _, _, v in tabs)
 
+    def _list_block(self, item: dict, record: dict | None) -> str:
+        """A list post's items (a round-up, "10 tools"): each with who made it, the poster's note and its link once found."""
+        items = (record or {}).get("list_items") or []
+        if not items:
+            return ""
+        found = {}
+        for link in self.store.links_for(item["canonical_url"]):
+            if link.get("role", "main") == "main":
+                found.setdefault(link["name"].lower(), link)
+        kinds = {"video": "Video", "article": "Article", "book": "Book", "show": "Show", "film": "Film", "podcast": "Podcast",
+                 "music": "Music", "course": "Course", "tool": "Tool", "product": "Product", "place": "Place"}
+        rows = []
+        for n, it in enumerate(items, 1):
+            link = found.get(it["name"].lower())
+            name = (f'<a href="{e(link["url"])}" target="_blank" rel="noopener noreferrer">{e(it["name"])} ↗</a>'
+                    if link else f'<b>{e(it["name"])}</b>')
+            meta = " · ".join(x for x in (kinds.get(it.get("kind"), ""), it.get("by") or "",
+                                          f'slide {it["slide"]}' if it.get("slide") else "") if x)
+            flag = ('<span class="bd p">possible match</span>' if link and link.get("rank") == "possible"
+                    else "" if link or not links_done(item) else '<span class="bd">No link found</span>')
+            rows.append(f'<li class="pvli"><div>{name}{flag}</div><small>{e(meta)}</small>'
+                        + (f'<p>{e(it["note"])}</p>' if it.get("note") else "") + "</li>")
+        return f'<h4>The list <span>· {len(items)} things</span></h4><ol class="pvlist">{"".join(rows)}</ol>'
+
     def _note_block(self, item: dict, here: str) -> str:
         """Your note, right under the summary: a button until you write one, then plain text with an Edit button."""
         out: list[str] = []
@@ -630,6 +668,7 @@ class CardPages:
 
     def _summary_pane(self, item: dict, record: dict | None, caption: str, here: str) -> str:
         out = [self._summary_blocks(item, record)]  # the summary itself sits under the title (_lead), the caption after it
+        out.append(self._list_block(item, record))
         if record:
             extras = record.get("extras") or {}
             for label, key in (("Ingredients", "ingredients"), ("Steps", "steps"), ("Takeaways", "takeaways")):

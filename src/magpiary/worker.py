@@ -139,8 +139,8 @@ def transcript_text(folder: Path) -> str:
 def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brain_pause, process=None,
               log: Callable[[str], None] = lambda m: None, key_source=None, activity=None, prepare=None) -> int:
     """For each archived item: first the transcript and frames (on the Mac, saved right away), then the summary
-    with the first usable key (moving to the next key on a limit or refusal). Each part can be paused; an
-    item the owner asked to "Try again" goes even while paused. Returns how many summaries were made."""
+    with the first usable key (moving to the next key on a limit, a refusal or a busy service). Each part can be
+    paused; an item the owner asked to "Try again" goes even while paused. Returns how many summaries were made."""
     from magpiary import keys as keyring
     from magpiary import modes
     from magpiary.brain import BrainFailed
@@ -151,9 +151,13 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
     prepare = prepare or (lambda item, progress: senses(Path(item["archive_dir"]), _meta(item), progress=progress))
     apply_tags = store.get_setting("auto_tags", "apply") == "apply"
     done = asked = 0
+    long_after = float(store.get_setting("long_video_minutes", str(LONG_VIDEO_MINUTES)) or 0) * 60
     for item in store.due_for_brain():
         forced = bool(item.get("ai_force"))
         url = item["canonical_url"]
+        if not forced and long_after and (_meta(item).get("duration") or 0) > long_after:
+            store.wait_long(url)  # a long video is read only when the owner asks: the Mac stays free for the rest
+            continue
         if not item.get("senses_status"):
             if store.paused("transcribe") and not forced:
                 continue
@@ -170,10 +174,13 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
             continue
         if not forced and (store.paused("summary") or not store.take_summary_turn()):
             continue
-        record, repicked = None, False
+        record, busy, repicked, last_busy = None, set(), set(), None
         while record is None:
-            usable = modes.summarisers(store, key_source)  # Smart: the keys; Private: nobody
+            # Smart: the keys; Private: nobody. A key that was busy for this item is skipped for it, not for the next one.
+            usable = [k for k in modes.summarisers(store, key_source) if k.id not in busy]
             if not usable:
+                if last_busy:  # every key was busy: wait for the next try
+                    store.brain_failed(url, last_busy.reason, last_busy.detail, retry=True)
                 break  # no summary now; later items still need their local transcript
             key = usable[0]
             if asked:
@@ -191,11 +198,18 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
                     key_source.mark(key.id, limit=True)
                     log(f"key '{key.name}' reached its limit for today; trying the next key")
                     continue
-                if err.reason == "busy" and not repicked and hasattr(key_source, "repick"):
-                    repicked = True
-                    if key_source.repick(key):  # that model is slow or overloaded: pick another, try once more
-                        log(f"switched key '{key.name}' to a less busy model")
-                        continue
+                if err.reason == "busy":
+                    last_busy = err
+                    if key.id not in repicked and hasattr(key_source, "repick"):
+                        repicked.add(key.id)
+                        if key_source.repick(key):  # that model is slow or overloaded: pick another for later
+                            log(f"switched key '{key.name}' to a less busy model")
+                            if len(usable) == 1:
+                                continue  # no other key: try this one once more on its new model
+                    busy.add(key.id)
+                    if len(usable) > 1:
+                        log(f"key '{key.name}' is busy; trying the next key")
+                    continue
                 store.brain_failed(url, err.reason, err.detail, retry=err.reason in BRAIN_RETRYABLE)
                 break
             except Exception as err:
@@ -211,6 +225,9 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
     return done
 
 
+LONG_VIDEO_MINUTES = 20  # longer videos wait for the owner's "Read it" (0 in Settings: read everything)
+
+
 def _meta(item: dict) -> dict:
     try:
         return json.loads((Path(item["archive_dir"]) / "meta.json").read_text())
@@ -222,7 +239,7 @@ def link_pause(source: str) -> None:
     """GitHub allows about 10 searches a minute without a login; OpenStreetMap and Wikidata ask for one request
     a second."""
     time.sleep({"github": 6.5, "github_guess": 1.0, "catalog_skill": 1.0, "places": 1.1, "wikidata": 1.1,
-                "search": 1.1, "crossref": 0.5, "alternativeto": 2.0}.get(source, 0.3))
+                "search": 1.1, "youtube": 1.0, "crossref": 0.5, "alternativeto": 2.0}.get(source, 0.3))
 
 
 SEARCH_LIMIT = 500  # web searches a month, whatever the provider allows (Settings can change it)
@@ -252,7 +269,7 @@ def links_due(store: Store, activity=None, get=None, pause: Callable[[str], None
     """Find links for summarised items with the free directories and, if the owner added one, a web search key
     (Tavily or Brave). Never uses the AI key. Returns how many items were done."""
     from magpiary import keys as keyring
-    from magpiary.links import find_links, http_get
+    from magpiary.links import find_links, http_get, youtube_search
 
     key_source = key_source or keyring
     get = get or http_get
@@ -280,7 +297,8 @@ def links_due(store: Store, activity=None, get=None, pause: Callable[[str], None
             meta = _meta(item)
             found = find_links(record, meta.get("text") or "", item.get("transcript_text") or "", comments,
                                get=get, search=search, skip=store.removed_links(item["canonical_url"]),
-                               author=meta.get("author") or "", pause=pause)
+                               author=meta.get("author") or "", pause=pause,
+                               videos=youtube_search() if record.get("list_items") else None)
         except Exception as err:  # one bad page must not stop the rest
             log(f"link search failed: {type(err).__name__}")
             found = []

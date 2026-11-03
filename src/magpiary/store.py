@@ -1326,6 +1326,28 @@ class Store(ChatStore, StatsStore):
                 "SELECT COUNT(*) FROM items WHERE shelf='inbox' AND status='needs_attention' AND login_only!=2").fetchone()[0]
         return {"shelves": shelves, "sources": sources, "tags": tags, "attention": attention}
 
+    def known_words(self, limit: int = 60) -> dict:
+        """The owner's most used tags and the topics of their posts, for the summary to reuse."""
+        with self._lock:
+            tags = [r[0] for r in self._db.execute(
+                "SELECT t.tag FROM tags t JOIN items i ON i.canonical_url=t.canonical_url WHERE i.shelf != 'trash' "
+                "GROUP BY t.tag ORDER BY COUNT(*) DESC, t.tag LIMIT ?", (limit,)).fetchall()]
+        topics: dict[str, int] = {}
+        for folder in self._recent_folders(200):
+            try:
+                topic = json.loads((Path(folder) / "record.json").read_text()).get("topic")
+            except (OSError, ValueError):
+                continue
+            if topic:
+                topics[topic] = topics.get(topic, 0) + 1
+        return {"tags": tags, "topics": sorted(topics, key=lambda t: -topics[t])[:30]}
+
+    def _recent_folders(self, limit: int) -> list[str]:
+        with self._lock:
+            return [r[0] for r in self._db.execute(
+                "SELECT archive_dir FROM items WHERE ai_status='done' AND archive_dir IS NOT NULL AND shelf != 'trash' "
+                "ORDER BY processed_at DESC LIMIT ?", (limit,)).fetchall()]
+
     def tags_for(self, url: str) -> list[str]:
         with self._lock:
             return [r["tag"] for r in self._db.execute(
@@ -1501,6 +1523,7 @@ class Store(ChatStore, StatsStore):
         with self._lock:
             self._db.execute(
                 "UPDATE items SET ai_status='done', ai_reason=NULL, ai_detail=NULL, ai_attempts=0, ai_next_at=NULL, ai_force=0, "
+                "links_status=NULL, "  # a new record names new things: find their links again
                 "ai_title=?, summary=?, ai_type=?, suggested_tags=?, entities_text=?, transcript_text=?, processed_at=? "
                 "WHERE canonical_url=?",
                 (record["title"], record["summary"], record["type"], json.dumps(record["suggested_tags"]),
@@ -1612,6 +1635,12 @@ class Store(ChatStore, StatsStore):
             self._db.execute(
                 "UPDATE items SET ai_status='needs_attention', ai_reason=?, ai_detail=?, ai_attempts=?, ai_next_at=?, "
                 "ai_force=0 WHERE canonical_url=?", (reason, detail[:200], attempts, retry_at, url))
+
+    def wait_long(self, url: str) -> None:
+        """A long video: saved and searchable by its details, read (transcript, frames, summary) only when the owner
+        asks. "Read it" goes through summarise_again, like Try again."""
+        with self._lock:
+            self._db.execute("UPDATE items SET ai_status='long', ai_force=0 WHERE canonical_url=?", (url,))
 
     def summarise_again(self, item_id: int | None = None) -> int:
         """Queue one item (or all with a problem, when item_id is None) to be summarised again."""

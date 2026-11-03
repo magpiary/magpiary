@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from magpiary.activity import NO_PROGRESS, Progress
-from magpiary.brain import Call, build_evidence, http_call, summarise
+from magpiary.brain import Call, build_evidence, http_call, reuse_tags, summarise
 from magpiary.frames import extract
 from magpiary.tools import video_seconds
 from magpiary.transcribe import TranscribeFailed, has_speech, transcribe
@@ -117,9 +117,13 @@ def process_item(item: dict, key, notes_dir: Path, call: Call = http_call,
     images = [folder / m for m in meta.get("media") or [] if not m.endswith(VIDEO)][:MAX_IMAGES]
     comments = _load(folder / "discussion.json", None)
     transcript, frames, problem = senses(folder, meta, transcriber, framer, progress)
-    parts = build_evidence(meta, transcript, frames, images, folder, comments, item.get("note") or "")
+    screen = _load(folder / "ocr.json", None)  # text read on the Mac, when it has been read (a re-read, or a photo post)
+    known = store.known_words() if store is not None and hasattr(store, "known_words") else None
+    parts = build_evidence(meta, transcript, frames, images, folder, comments, item.get("note") or "", screen, known)
     progress.step("summary")
     record = summarise(parts, key.secret, key.model, call, provider=key.provider)
+    if known:
+        record["suggested_tags"] = reuse_tags(record["suggested_tags"], known.get("tags") or [])[:5]
     senses_used = "local (whisper.cpp small, ffmpeg frames)"
     from magpiary.modes import current
 

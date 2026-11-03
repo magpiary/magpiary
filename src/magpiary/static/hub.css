@@ -390,6 +390,14 @@ button.kp:hover, .kp.on { background: var(--chip); }
 .kp b { width: 26px; height: 26px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; display: grid; place-items: center; }
 .kp.on b { background: var(--t-design); color: #fff; }
 .kp small { color: var(--fg-3); font-weight: 600; font-size: 12.5px; padding-top: 2px; font-variant-numeric: tabular-nums; }
+.pvlist { list-style: none; counter-reset: pvli; margin: 4px 0 0; padding: 0; }
+.pvli { counter-increment: pvli; display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; padding: 9px 12px; border-radius: 14px; line-height: 1.45; font-size: 15px; }
+.pvli::before { content: counter(pvli); grid-row: span 3; width: 26px; height: 26px; border-radius: 50%; background: var(--chip); color: var(--fg-2); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.pvli:hover { background: var(--chip); }
+.pvli a { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.pvli b { font-weight: 600; }
+.pvli small { display: block; color: var(--fg-3); font-size: 12.5px; font-weight: 600; }
+.pvli p { margin: 3px 0 0; color: var(--fg-2); font-size: 14px; }
 .tline { display: grid; grid-template-columns: 52px 1fr; gap: 8px; padding: 5px 8px; border-radius: 10px; font-size: 14px; line-height: 1.5; text-align: left; width: 100%; }
 .tline:hover { background: var(--chip); }
 .tline small { color: var(--fg-3); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -3478,6 +3486,12 @@ body[data-page="card"] .wrap { padding-inline: max(var(--pad), 24px); }  /* foll
 .pvactions .pvprimary, .cardm.pagemode .pvactions .pvprimary, .pvactions .pvprimary.find, .pvactions .pvprimary.wait { flex: 0 0 auto; width: auto; background: none; box-shadow: none; padding: 9px 12px; gap: 0; }
 .pvactions .pvprimary:hover, .cardm.pagemode .pvactions .pvprimary:hover { background: var(--chip); }
 .pvactions .pvprimary > span:not(.fav) { flex: 0 1 auto; } .pvactions .pvprimary i { margin-left: 10px; }
+/* One row, always: actions shrink and long names end in an ellipsis instead of wrapping to a second row */
+.pvactions { flex-wrap: nowrap; }
+.pvactions .pvask { flex: none; }
+.pvactions .pvprimary, .cardm.pagemode .pvactions .pvprimary, .pvactions .pvprimary.find, .pvactions .pvprimary.wait { flex: 0 1 auto; min-width: 0; max-width: 320px; }
+.pvactions .pvprimary > span:not(.fav) { min-width: 0; }
+.pvactions .pvprimary b, .pvactions .pvprimary small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .pvactions .pvprimary .fav { margin-right: 10px; width: 20px; height: 20px; }
 
 
@@ -4233,6 +4247,9 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .wel .w-body.al { grid-template-areas: "head ." "main side"; align-items: start; row-gap: 0; }
 .wel .w-body.al > .head { grid-area: head; } .wel .w-body.al > .main { grid-area: main; } .wel .w-body.al > .side { grid-area: side; }
 @media (max-width: 860px) { .wel .w-body.al { grid-template-areas: "head" "main" "side"; row-gap: 20px; } }
+
+/* A post's shape and topic beside its type: "List · product design" */
+.it-type .itfmt { font-style: normal; font-size: 12px; font-weight: 650; color: var(--fg-2); background: var(--chip); padding: 2px 9px; border-radius: 999px; margin-left: 6px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
 /* facets: what a post looks like, and what the search understood */
 .facets { display: grid; gap: 8px; margin-top: 6px; }

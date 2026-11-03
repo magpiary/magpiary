@@ -23,6 +23,12 @@ TYPES = ["howto", "news_opinion", "tool", "design", "explainer", "discussion", "
 TYPE_NAMES = {"howto": "How-to", "news_opinion": "News & opinion", "tool": "Tool", "design": "Design",
               "explainer": "Explainer", "discussion": "Discussion", "recipe": "Recipe", "place": "Place", "other": "Other"}
 TARGET_KINDS = ["tool", "code", "product", "book_media", "place", "person", "source"]
+LIST_KINDS = ["video", "article", "book", "show", "film", "podcast", "music", "course", "tool", "product", "place", "other"]
+MAX_LIST_ITEMS = 40
+FORMATS = ["list", "tutorial", "review", "showcase", "story", "news", "opinion", "explainer", "thread", "reference", "other"]
+FORMAT_NAMES = {"list": "List", "tutorial": "Tutorial", "review": "Review", "showcase": "Showcase", "story": "Story",
+                "news": "News", "opinion": "Opinion", "explainer": "Explainer", "thread": "Thread", "reference": "Reference",
+                "other": ""}
 LEGACY_TYPES = ("media", "entertainment")  # before 24 Oct; mapped without AI by `type_of`
 MAX_TRANSCRIPT_CHARS = 60_000
 MAX_COMMENTS = 80
@@ -66,11 +72,27 @@ Produce one JSON object that follows the schema. Rules:
   post's own author; people named only in credits or whose identity the post does not make clear.
 - alternatives_to: a product name only when the post asks what could replace that product and does not itself
   name the replacements; otherwise "".
-- suggested_tags: 2 to 5 short lower-case topic tags someone would use to find this again.
+- list_items: only when the post is a list, round-up or set of recommendations ("media I consumed", "10 tools",
+  "books I read this year"), usually spread over several images or slides. One entry per recommended thing, in
+  order, from every slide, image and frame, not just the first: name (the exact title as shown, for a video its
+  full video title), kind (video, article, book, show, film, podcast, music, course, tool, product, place, other),
+  by (the channel, author, publication or maker as shown, else ""), note (the poster's own words about it, as
+  written, else ""), slide (the image or slide number it is on, else 0). Here YouTube videos and Substack posts
+  are kept: the rule about big platforms does not apply to list_items. Leave it empty for any other post. The
+  summary of a list post is one or two sentences on what the list is; the list itself carries the items.
+- format: the shape of the post, one of: list (a round-up or set of recommendations), tutorial (step by step),
+  review (a verdict on one thing), showcase (work shown off: a design, a build, a portfolio), story (personal
+  experience), news, opinion, explainer, thread (a discussion), reference (a cheat sheet or resource to keep), other.
+- topic: what it is about in 1 to 3 lower-case words ("product design", "ai tools", "baking"). If the owner's
+  existing topics are given and one fits, use it exactly.
+- type: the subject's category, not the shape: a list of design videos is design, not other.
+- suggested_tags: 2 to 5 short lower-case topic tags someone would use to find this again. If the owner's existing
+  tags are given, reuse those that fit, spelled exactly the same, before making new ones.
 - look: one or two plain sentences describing what the post looks like, as someone would remember it (the
   setting, what is shown and done, captions or colours that stand out). From the frames only; never name a person
   from how they look.
-- facets: short lower-case values, left empty when unclear. format (one of: talking head, screen recording, b-roll
+- facets: a separate object from the post's own `format` above; short lower-case values, left empty when
+  unclear. Its format key says how the video is filmed (one of: talking head, screen recording, b-roll
   montage, slideshow, text on screen, interview, tutorial demo, voiceover, animation, photo, thread), setting
   (where it happens), look (visual style: warm, high contrast, neon, minimal, handheld), mood (tone: calm, funny,
   urgent, hype, educational), on_screen (objects, products or visible text worth remembering), people (described
@@ -98,6 +120,10 @@ SCHEMA = {
             "name": _STR, "kind": {"type": "STRING", "enum": TARGET_KINDS}, "role": {"type": "STRING", "enum": ["central", "passing"]},
             "what": _STR, "domain": _STR, "open_source": {"type": "BOOLEAN"}, "maker": _STR},
             "required": ["name", "kind", "role"]}},
+        "list_items": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+            "name": _STR, "kind": {"type": "STRING", "enum": LIST_KINDS}, "by": _STR, "note": _STR,
+            "slide": {"type": "INTEGER"}}, "required": ["name", "kind"]}},
+        "format": {"type": "STRING", "enum": FORMATS}, "topic": _STR,
         "alternatives_to": _STR,
         "suggested_tags": _LIST, "discussion_summary": _STR, "language": _STR,
         "look": _STR,
@@ -196,8 +222,10 @@ def _load_slides(folder: Path) -> list[dict]:
 
 
 def build_evidence(meta: dict, transcript: list[dict] | None, frames: list[dict], images: list[Path],
-                   folder: Path, comments: list[dict] | None, note: str) -> list[dict]:
-    """The request's parts: a text block, then each frame or image labelled with its time."""
+                   folder: Path, comments: list[dict] | None, note: str, screen: list[dict] | None = None,
+                   known: dict | None = None) -> list[dict]:
+    """The request's parts: a text block, then each frame or image labelled with its time. `screen` is the text read
+    on the Mac from the frames and images (ocr.json), when it has been read: it helps with small print on slides."""
     details = {k: meta.get(k) for k in ("source", "kind", "url", "title", "author", "author_handle", "published_at",
                                          "duration", "like_count", "comment_count", "view_count", "community") if meta.get(k)}
     slides = _load_slides(folder)
@@ -207,6 +235,9 @@ def build_evidence(meta: dict, transcript: list[dict] | None, frames: list[dict]
         starts = ", ".join(f"slide {n} at {_clock(s['start'])}" for n, s in enumerate(slides, 1))
         text.append(f"THIS IS A CAROUSEL of {len(slides)} video slides, played back to back on one timeline ({starts}). "
                     "Times in the transcript and on the frames are on that timeline. Cover every slide, not just the first.")
+    if meta.get("chapters"):
+        text.append("CHAPTERS (the creator's own): " + "; ".join(f"{_clock(c['start'])} {c['title']}" for c in meta["chapters"])
+                    + ". Give one key point per chapter, at its start time.")
     if transcript:
         lines, used = [], 0
         for seg in transcript:
@@ -219,11 +250,18 @@ def build_evidence(meta: dict, transcript: list[dict] | None, frames: list[dict]
         text.append("TRANSCRIPT:\n" + "\n".join(lines))
     else:
         text.append("TRANSCRIPT: (none; no speech or not a video)")
+    if screen:
+        lines = [f"[{'image ' + str(l['image']) if l.get('image') else _clock(l['at']) if l.get('at') is not None else '-'}] {l['text']}"
+                 for l in screen if isinstance(l, dict) and l.get("text")]
+        text.append("TEXT READ FROM THE IMAGES AND FRAMES ON THE MAC (may have reading mistakes):\n" + "\n".join(lines)[:20_000])
     if comments:
         text.append("COMMENTS:\n" + "\n".join(f"- {c.get('author', '')}: {c.get('text', '')[:600]}"
                                               for c in comments[:MAX_COMMENTS]))
     if note:
         text.append(f"OWNER'S NOTE: {note}")
+    if known and (known.get("tags") or known.get("topics")):  # the owner's own words for things, to reuse
+        text.append(f"THE OWNER'S EXISTING TAGS: {', '.join(known.get('tags') or []) or '(none)'}\n"
+                    f"THE OWNER'S EXISTING TOPICS: {', '.join(known.get('topics') or []) or '(none)'}")
     parts = [{"text": "\n\n".join(text)}]
     for f in frames:
         parts += [{"text": f"FRAME at {_clock(f['at'])}"}, _image_part(folder / f["path"])]
@@ -285,6 +323,9 @@ def tidy(record: dict) -> dict:
                            for p in record["key_points"][:20]],
             "type": type_of(record), "entities": entities, "extras": extras, "suggested_tags": tags[:5],
             "link_targets": tidy_targets(record.get("link_targets")),
+            "list_items": tidy_list(record.get("list_items")),
+            "format": record.get("format") if record.get("format") in FORMATS else "",
+            "topic": re.sub(r"\s+", " ", str(record.get("topic") or "")).strip().lower()[:40],
             "alternatives_to": str(record.get("alternatives_to") or "").strip()[:100],
             "discussion_summary": str(record.get("discussion_summary") or "")[:3000],
             "language": str(record.get("language") or "")[:20],
@@ -304,6 +345,38 @@ def tidy_targets(targets) -> list[dict]:
                     "what": str(t.get("what") or "").strip()[:120], "domain": str(t.get("domain") or "").strip()[:200],
                     "open_source": t.get("open_source") is True, "maker": str(t.get("maker") or "").strip()[:100]})
     return out[:40]
+
+
+def _tag_key(tag: str) -> str:
+    """ui-design, UI Design and ui designs are one tag."""
+    words = re.sub(r"[^a-z0-9]+", " ", tag.lower()).split()
+    return " ".join(w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w for w in words)
+
+
+def reuse_tags(tags: list[str], known: list[str]) -> list[str]:
+    """Suggested tags spelled the way the owner already spells them, each once."""
+    mine = {_tag_key(k): k for k in known}
+    out = []
+    for t in tags:
+        t = mine.get(_tag_key(t), t)
+        if t not in out:
+            out.append(t)
+    return out
+
+
+def tidy_list(items) -> list[dict]:
+    """A list post's items in expected shapes: unknown kinds become other, repeats dropped; at most MAX_LIST_ITEMS."""
+    out, seen = [], set()
+    for t in items if isinstance(items, list) else []:
+        name = re.sub(r"\s+", " ", str(t.get("name") or "")).strip()[:200] if isinstance(t, dict) else ""
+        if not name or name.lower() in seen:
+            continue
+        seen.add(name.lower())
+        slide = t.get("slide")
+        out.append({"name": name, "kind": t.get("kind") if t.get("kind") in LIST_KINDS else "other",
+                    "by": str(t.get("by") or "").strip()[:100], "note": str(t.get("note") or "").strip()[:300],
+                    "slide": slide if isinstance(slide, int) and 0 < slide < 100 else 0})
+    return out[:MAX_LIST_ITEMS]
 
 
 BUSY_WAITS = (5, 15)  # free keys share Google's capacity: a 503 often clears within seconds
