@@ -12,6 +12,7 @@ import re
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from datetime import datetime
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
@@ -194,20 +195,48 @@ def threads(url: str, get: Get, ytdlp: YtDlp) -> Fetched:
     if match:
         meta["author"], meta["author_handle"] = match.group(1), match.group(2)
     image = [tags["og:image"]] if tags.get("og:image") else []
-    videos = threads_videos(url, get)
-    if videos:  # the page's picture is then the video's cover
-        return Fetched(meta, videos=videos, poster=image[0] if image else "", fetched_with="page + embed page")
-    return Fetched(meta, images=image, fetched_with="page")
+    embed = threads_embed(url, get)
+    meta.update(embed["meta"])
+    if embed["videos"]:  # the page's picture is then the video's cover
+        return Fetched(meta, videos=embed["videos"], poster=image[0] if image else "", fetched_with="page + embed page")
+    return Fetched(meta, images=image, fetched_with="page + embed page" if embed["meta"] else "page")
 
 
-def threads_videos(url: str, get: Get) -> list[str]:
-    """A post's video files, from Threads' own embed page (logged out). The post page itself only has the cover."""
+_THREADS_COUNTS = ("like_count", "comment_count", "repost_count", "share_count")  # the embed's action bar, in its order
+
+
+def _short_number(text: str) -> int | None:
+    """51, 1,234, 1.2K, 3M -> a number."""
+    match = re.fullmatch(r"([\d.,]+)\s*([KkMm]?)", text.strip())
+    if not match:
+        return None
+    try:
+        number = float(match.group(1).replace(",", "")) if match.group(2) else int(match.group(1).replace(",", "").replace(".", ""))
+    except ValueError:
+        return None
+    return int(round(number * {"": 1, "k": 1_000, "m": 1_000_000}[match.group(2).lower()]))
+
+
+def threads_embed(url: str, get: Get) -> dict:
+    """What Threads' own embed page (logged out) adds to the post page: the video files, the four counts (likes,
+    comments, reposts, shares) and the day it was posted. The post page itself only has the cover. {} when it has none."""
+    empty = {"videos": [], "meta": {}}
     try:
         body = _page(get, url.rstrip("/") + "/embed").decode("utf-8", "replace")
     except FetchFailed:
-        return []
-    found = [html.unescape(src) for src in re.findall(r'<video[^>]*>\s*<source[^>]*\bsrc="(https://[^"]+)"', body)]
-    return list(dict.fromkeys(found))[:20]
+        return empty
+    videos = [html.unescape(src) for src in re.findall(r'<video[^>]*>\s*<source[^>]*\bsrc="(https://[^"]+)"', body)]
+    meta: dict = {}
+    counts = [_short_number(c) for c in re.findall(r'class="ActionBarCount"[^>]*>([^<]*)<', body)]
+    if len(counts) == len(_THREADS_COUNTS) and all(c is not None for c in counts):  # a changed layout is skipped, not guessed
+        meta.update(zip(_THREADS_COUNTS, counts, strict=True))
+    posted = re.search(r'class="Timestamp"[^>]*>[^<]*?([A-Z][a-z]{2} \d{1,2}, \d{4})', body)
+    if posted:
+        try:
+            meta["published_at"] = datetime.strptime(posted.group(1), "%b %d, %Y").date().isoformat()
+        except ValueError:
+            pass
+    return {"videos": list(dict.fromkeys(videos))[:20], "meta": meta}
 
 
 # ---- Reddit: the post's RSS feed (post first, then comments) -----------------------------

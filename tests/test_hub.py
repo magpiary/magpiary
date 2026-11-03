@@ -60,7 +60,7 @@ def archive(mac, tmp_path, url, source, meta, files=None):
 def lib(mac, tmp_path):
     ig_id, _ = archive(mac, tmp_path, IG, "instagram",
                        {"text": "Pasta carbonara recipe", "author": "Chef Alex Example", "author_handle": "chef.example",
-                        "like_count": 1200, "duration": 31.0, "media": ["media-01.mp4"], "thumbnail": "thumbnail.jpg"},
+                        "like_count": 1200, "repost_count": 5, "share_count": 34, "duration": 31.0, "media": ["media-01.mp4"], "thumbnail": "thumbnail.jpg"},
                        {"media-01.mp4": bytes(range(256)) * 40, "thumbnail.jpg": b"\xff\xd8\xff" + b"0" * 20})
     yt_id, _ = archive(mac, tmp_path, YT, "youtube", {"title": "Rust tutorial", "text": "Learn ownership", "author": "Dev"})
     return {"ig": ig_id, "yt": yt_id}
@@ -105,6 +105,7 @@ def test_the_item_page_plays_the_video_and_shows_the_details(mac, lib):
     status, _, body = page(mac, f"/item/{lib['ig']}")
     assert status == 200 and f'src="/media/{lib["ig"]}/media-01.mp4"' in body and "<video" in body
     assert 'title="1,200 likes, as of' in body and "<b>1.2K</b>" in body and "0:31" in body and "@chef.example" in body and "Open original" in body
+    assert 'title="5 reposts, as of' in body and 'title="34 shares, as of' in body and "cn-repost" in body
     assert 'rel="noopener noreferrer"' in body
 
 

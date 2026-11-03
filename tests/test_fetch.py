@@ -28,7 +28,12 @@ Line two.">
 THREADS_EMBED_HTML = b"""<html><body><div class="SoloMediaContainer" id="u_0_2_he">
 <div class="SingleInnerMediaContainerVideo SingleInnerMediaContainer"><video controls="1" loop="1" class="">
 <source src="https://video.cdn.example/o1/v/t16/clip.mp4?_nc_cat=104&amp;_nc_sid=1d576d" /></video>
-<div class="VideoPlayOverlay"><div class="VideoPlayButton"></div></div></div></div></body></html>"""
+<div class="VideoPlayOverlay"><div class="VideoPlayButton"></div></div></div></div>
+<div class="PostDateContainer"><span class="Timestamp">8:44 AM &middot; Nov 2, 2026</span></div>
+<div class="ActionBarContainer"><span class="ActionBarIcon"><svg></svg><span class="ActionBarCount">51</span></span>
+<span class="ActionBarIcon"><svg></svg><span class="ActionBarCount">1</span></span>
+<span class="ActionBarIcon"><svg></svg><span class="ActionBarCount">5</span></span>
+<span class="ActionBarIcon"><svg></svg><span class="ActionBarCount">1.2K</span></span></div></body></html>"""
 MP4 = b"\x00\x00\x00\x18ftypmp42" + b"0" * 100
 
 REDDIT_RSS = b"""<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
@@ -114,6 +119,27 @@ def test_threads_video_comes_from_the_embed_page_and_the_page_picture_is_its_cov
     assert got.images == [] and got.poster == "https://cdn.example/threads.jpg"
 
 
+def test_threads_counts_and_day_come_from_the_embed_page_in_the_action_bars_order():
+    url = "https://www.threads.com/@alex.example/post/Example0015/"
+    got = describe("threads", url, pages({url: THREADS_HTML, url.rstrip("/") + "/embed": THREADS_EMBED_HTML}), FakeYtDlp())
+    assert (got.meta["like_count"], got.meta["comment_count"], got.meta["repost_count"], got.meta["share_count"]) == (51, 1, 5, 1200)
+    assert got.meta["published_at"] == "2026-11-02"
+
+
+def test_threads_post_without_a_video_still_gets_its_counts():
+    url = "https://www.threads.com/@alex.example/post/Example0015/"
+    embed = THREADS_EMBED_HTML.replace(b"<video", b"<div").replace(b"</video>", b"</div>")
+    got = describe("threads", url, pages({url: THREADS_HTML, url.rstrip("/") + "/embed": embed}), FakeYtDlp())
+    assert got.videos == [] and got.images == ["https://cdn.example/threads.jpg"] and got.meta["like_count"] == 51
+
+
+def test_threads_counts_are_skipped_when_the_embed_layout_changes():
+    url = "https://www.threads.com/@alex.example/post/Example0015/"
+    embed = THREADS_EMBED_HTML.replace(b'<span class="ActionBarCount">1.2K</span>', b"")  # three numbers, not four
+    got = describe("threads", url, pages({url: THREADS_HTML, url.rstrip("/") + "/embed": embed}), FakeYtDlp())
+    assert "like_count" not in got.meta and got.meta["published_at"] == "2026-11-02"
+
+
 def test_threads_video_post_archives_the_video_file(tmp_path):
     url = "https://www.threads.com/@alex.example/post/Example0015/"
     get = pages({url: THREADS_HTML, url.rstrip("/") + "/embed": THREADS_EMBED_HTML,
@@ -122,6 +148,7 @@ def test_threads_video_post_archives_the_video_file(tmp_path):
     folder = fetch_item(item(url, "threads"), tmp_path, get, FakeYtDlp(),
                         run=lambda cmd, timeout: subprocess.CompletedProcess(cmd, 0, "12.5\n", ""))
     meta = json.loads((folder / "meta.json").read_text())
+    assert meta["like_count"] == 51 and meta["share_count"] == 1200
     assert meta["media"] == ["media-01.mp4"] and meta["fetched_with"] == "page + embed page" and (folder / "media-01.mp4").read_bytes() == MP4
     assert meta["thumbnail"] == "thumbnail.jpg" and (folder / "thumbnail.jpg").read_bytes() == JPEG
 
