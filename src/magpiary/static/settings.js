@@ -344,6 +344,8 @@
 (() => { if (document.querySelector("[data-askwait]")) setTimeout(() => location.reload(), 3000); 
   // ---- AI keys: drag a key by its handle (or use the arrow keys on it) to change the order they are tried in ----------
   (() => {
+    const $ = (q, r = document) => r.querySelector(q), $$ = (q, r = document) => [...r.querySelectorAll(q)];
+    const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const list = $("[data-keylist]");
     if (!list) return;
     const csrf = $('meta[name="csrf"]')?.content || "";
@@ -365,8 +367,6 @@
       if (!drag) return;
       const { row } = drag;
       row.style.transform = `translateY(${ev.clientY - drag.start}px)`;
-      const mid = row.getBoundingClientRect().top + row.offsetHeight / 2;
-      const prev = row.previousElementSibling, next = row.nextElementSibling;
       const swap = (other, before) => {
         const shift = other.getBoundingClientRect().top;
         list.insertBefore(row, before ? other : other.nextSibling);
@@ -376,8 +376,13 @@
                                  { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)" });
         drag.moved = true; renumber();
       };
-      if (prev?.classList.contains("keyrow") && mid < prev.getBoundingClientRect().top + prev.offsetHeight / 2) swap(prev, true);
-      else if (next?.classList.contains("keyrow") && mid > next.getBoundingClientRect().top + next.offsetHeight / 2) swap(next, false);
+      for (let guard = 0; guard < 20; guard++) {  // a quick drag can pass several rows at once
+        const at = row.getBoundingClientRect().top + row.offsetHeight / 2;
+        const up = row.previousElementSibling, down = row.nextElementSibling;
+        if (up?.classList.contains("keyrow") && at < up.getBoundingClientRect().top + up.offsetHeight / 2) swap(up, true);
+        else if (down?.classList.contains("keyrow") && at > down.getBoundingClientRect().top + down.offsetHeight / 2) swap(down, false);
+        else break;
+      }
     });
     const drop = () => {
       if (!drag) return;
