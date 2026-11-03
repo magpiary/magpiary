@@ -70,6 +70,7 @@ $("picklist").addEventListener("keydown", (e) => {
 let hubPort = 8765;   // this Mac account's hub, found when the extension was paired
 
 async function init() {
+  send({ type: "hello" }).catch(() => {});   // lets the Mac know the extension is here and whether it is pinned
   hubPort = (await chrome.storage.local.get("port")).port || 8765;
   $("open").href = `http://localhost:${hubPort}/`;
   shortcuts();

@@ -156,6 +156,7 @@ class Setup:
                               "and signed in to iCloud (System Settings, your name at the top), wait a moment and try again.", f'<a class="get calm" href="/install?t={quote(token)}">Try again</a>', 503)
         record.downloads_left -= 1
         record.downloaded = True
+        self.store.set_setting("shortcut_fetched_at", self.store.now())
         return Response(200, data, "application/vnd.apple.shortcut", {
             "Content-Disposition": f'attachment; filename="{SHORTCUT_FILENAME}"', "Cache-Control": "no-store"})
 

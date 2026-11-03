@@ -1,13 +1,14 @@
-"""The first run (M7a, C1+), mixed into Hub: a full-screen guide from a fresh install to the first share arriving,
-in four steps that keep everything learned on a real iPhone (docs/onboarding-notes.md):
+"""The first run (M7a, C1+, reworked for 0.1.4), mixed into Hub: a full-screen guide from a fresh install to the first save,
+every screen skippable:
 
-1. Pair your iPhone: Safari downloads on the phone, the QR code and the Share shortcut, the "allow" prompts.
-2. Make it automatic: the "join home Wi-Fi" automation and keeping this Mac ready.
-3. Choose Smart (your AI key) or Private (no AI).
-4. Share something: checked live; a pasted link works too.
+0. Hello.
+1. How posts are read: Smart (your AI key) or Private (no AI).
+2. Save from this Mac: the Chrome extension (hand-install guide until it is in the Chrome Web Store).
+3. Add your iPhone (optional): one card, QR code, Shortcut, "allow everything once"; says plainly when iCloud is off.
+4. First save: from Chrome, the phone or a pasted link, checked live.
 
-The library sends the owner here until a phone is paired (or the guide is finished). Steps tick themselves where
-Magpiary can see them. The guide can be opened again from Settings.
+Steps tick themselves where Magpiary can see them (the open page polls /welcome.json and reloads when a step ticks).
+"Send when I get home" and "Keep this Mac awake" live in Settings. The guide can be opened again from Settings.
 """
 
 import json
@@ -17,15 +18,15 @@ from magpiary import modes, ui
 from magpiary.web import Response, e
 
 DONE_SETTING = "setup_done"
-STEPS = (("phone", "Pair your iPhone"), ("automatic", "Make it automatic"), ("reading", "How posts are read"),
-         ("share", "First share"))
+STEPS = (("reading", "Reading"), ("browser", "Browser"), ("phone", "iPhone"), ("share", "First save"))
 
 
 class WelcomePages:
     """Needs Hub's store, csrf, shell, _form and setup; `keep_awake` is set by the service when it has one."""
 
     def needs_welcome(self) -> bool:
-        return self.store.get_setting(DONE_SETTING) != "1" and not self._phones()
+        return (self.store.get_setting(DONE_SETTING) != "1" and not self._phones()
+                and not self.store.extension_status()["paired"])
 
     def _phones(self) -> list[dict]:
         return [p for p in self.store.list_phones() if not p["revoked_at"] and p.get("kind") not in ("browser", "agent")]
@@ -33,29 +34,41 @@ class WelcomePages:
     def _welcome_state(self) -> dict:
         mode = self.store.get_setting(modes.SETTING, "")
         has_key = any(keyring.PROVIDERS[k.provider]["kind"] == "ai" for k in keyring.load())
-        return {"phones": self._phones(), "delivered": bool(self.store.last_delivery()),
-                "awake": getattr(getattr(self, "keep_awake", None), "running", False),
+        phones = self._phones()
+        kinds = self.store.delivered_kinds()
+        ext = self.store.extension_status()
+        ext["pinned"] = ext["pinned"] or self.store.get_setting("ext_pinned_manual") == "1"
+        return {"phones": phones, "delivered": bool(self.store.last_delivery()), "ext": ext,
+                "fetched": bool(self.store.get_setting("shortcut_fetched_at")),
+                "contact": any(p.get("first_seen_at") for p in phones), "phone_saved": "phone" in kinds,
+                "chrome_saved": "browser" in kinds,
                 "chosen": mode == "private" or (mode in ("smart", "") and has_key), "mode": modes.current(self.store),
                 "has_key": has_key}
 
+    @staticmethod
+    def _sig(s: dict) -> str:
+        """Changes whenever a step ticks, so the open page can reload itself (see hub.js, data-wsig)."""
+        e_ = s["ext"]
+        return "".join("1" if x else "0" for x in (s["chosen"], e_["added"], e_["pinned"], e_["paired"], s["chrome_saved"],
+                                                   bool(s["phones"]), s["fetched"], s["contact"], s["phone_saved"], s["delivered"]))
+
     def welcome_json(self) -> Response:
         s = self._welcome_state()
-        data = {"phones": len(s["phones"]), "delivered": s["delivered"]}
+        data = {"phones": len(s["phones"]), "delivered": s["delivered"], "sig": self._sig(s)}
         return Response(200, json.dumps(data).encode(), "application/json", {"Cache-Control": "no-store"})
 
     def _wtop(self, cur: str, s: dict) -> str:
-        done = {"phone": bool(s["phones"]), "automatic": s["delivered"] or s["awake"], "reading": s["chosen"],
+        done = {"reading": s["chosen"], "browser": s["ext"]["paired"], "phone": s["phone_saved"] or s["contact"],
                 "share": s["delivered"]}
         prog = "".join(f'<a href="/welcome/{k}" class="{"on" if k == cur else "done" if done[k] else ""}"'
                        f'{" aria-current=step" if k == cur else ""}><i>{"✓" if done[k] and k != cur else n}</i><b>{e(label)}</b></a>'
                        for n, (k, label) in enumerate(STEPS, 1))
-        skip = (self._form("/hub/welcome/done", {"next": "/"}, "Go to my library →", "w-skip") if not s["phones"]
-                else '<a class="w-skip" href="/">Go to my library →</a>')
+        skip = self._form("/hub/welcome/done", {"next": "/"}, "Go to my library →", "w-skip")
         return f'<div class="w-top"><a class="logo" href="/welcome">{ui.logo_mark()}magpiary</a><nav class="w-prog" aria-label="Setup steps">{prog}</nav>{skip}</div>'
 
     def welcome_page(self, step: str, q: dict) -> Response:
         s = self._welcome_state()
-        pages = {"": self._hello, "phone": self._w_phone, "automatic": self._w_auto, "reading": self._w_reading,
+        pages = {"": self._hello, "reading": self._w_reading, "browser": self._w_browser, "phone": self._w_phone,
                  "share": self._w_share}
         if step not in pages:
             step = ""
@@ -64,27 +77,28 @@ class WelcomePages:
         inner = pages[step](s, q, flash)
         top = (self._wtop(step, s) if step else
                '<div class="w-top"><span class="logo">' + ui.logo_mark() + 'magpiary</span></div>')
-        return self.shell("Welcome", f'<div class="wel">{top}{inner}</div>', "welcome", bare=True)
+        return self.shell("Welcome", f'<div class="wel" data-wsig="{self._sig(s)}">{top}{inner}</div>', "welcome", bare=True)
 
     def _ws(self, n, state: str, title: str, body: str, badge: str = "", ident: str = "") -> str:
         mark = "✓" if state == "ok" else n
         tid = f' id="{ident}"' if ident else ""
-        return (f'<div class="ws {state}"{tid}><span class="n">{mark}</span><div><b>{title}</b>{body}</div>'
+        return (f'<div class="ws {state}"{tid}><span class="n">{mark}</span><div><b class="t">{title}</b>{body}</div>'
                 + (f'<span class="st">{badge}</span>' if badge else "<span></span>") + "</div>")
 
     def _hello(self, s: dict, q: dict, flash: str) -> str:
         return ('<div class="w-body"><div><div class="w-kick">Welcome</div>'
                 '<h1 class="w-h">Everything you save, <em>finally useful.</em></h1>'
-                '<p class="w-p">Share a reel or post from your iPhone. Your Mac downloads it, listens to it, and files it '
+                '<p class="w-p">Save from your Mac\'s browser or your iPhone. Your Mac downloads it, listens to it, and files it '
                 'where you can search it by what was said, shown or written.</p><div class="priv">'
                 '<div><span style="background:color-mix(in srgb,var(--t-howto) 15%,transparent)">🖥</span><div><b>Runs on this '
                 'Mac</b><small>No Magpiary account, no Magpiary server. Your library is one folder you own.</small></div></div>'
-                '<div><span style="background:color-mix(in srgb,var(--t-design) 15%,transparent)">📶</span><div><b>Your phone '
-                'only talks to this Mac</b><small>Shares wait on the phone and arrive when it\'s on Wi-Fi with this Mac.</small>'
+                '<div><span style="background:color-mix(in srgb,var(--t-design) 15%,transparent)">➜</span><div><b>Saves only travel '
+                'to this Mac</b><small>From Chrome or your iPhone, straight to your own Mac.</small>'
                 '</div></div><div><span style="background:color-mix(in srgb,var(--t-explainer) 15%,transparent)">🔑</span><div>'
                 '<b>Videos never leave</b><small>Only the caption, transcript and a few frames go to your own AI key, or '
                 'nothing at all in Private.</small></div></div></div>'
-                '<div class="w-cta"><a class="btn dark" href="/welcome/phone">Set up · 4 steps, about 5 minutes</a></div></div>'
+                '<div class="w-cta"><a class="btn next" href="/welcome/reading">Get started → <span>(About 2 minutes)</span></a>'
+                + self._form("/hub/welcome/done", {"next": "/"}, "Skip, go to my library", "w-link") + '</div></div>'
                 + self._demo() + "</div>")
 
     def _demo(self) -> str:
@@ -108,75 +122,13 @@ class WelcomePages:
                 f'<div class="demo-cap" id="dcap"><span class="on">1 · Share</span><span>2 · Your Mac reads it</span>'
                 f'<span>3 · Find it any time</span></div></div>')
 
-    def _w_phone(self, s: dict, q: dict, flash: str) -> str:
-        paired = ", ".join(p["name"] for p in s["phones"])
-        steps = (self._ws(1, "", "Get your iPhone ready", "<small>On the iPhone open <b>Settings → Safari → Downloads</b> "
-                          "and choose <b>On My iPhone</b> (a full iCloud Drive stops the Shortcut installing). Join your home "
-                          "Wi-Fi.</small>")
-                 + self._ws(2, "ok" if s["phones"] else "wait", "Scan the code and add the Shortcut",
-                            "<small>Point the iPhone Camera at the code, tap the banner, then <b>Get “Magpiary”</b> → "
-                            "<b>Download</b>. Open the download from Safari's address bar and tap <b>Add Shortcut</b>.</small>",
-                            f"✓ Paired: {e(paired)}" if s["phones"] else "Waiting…")
-                 + self._ws(3, "ok" if s["delivered"] else "", "Allow everything once",
-                            "<small>Open the <b>Shortcuts</b> app and tap the Magpiary tile once. Tap <b>Allow</b> or <b>Always "
-                            "Allow</b> on every question. Never dismiss one: a dismissed question blocks Magpiary until it is "
-                            "fixed in Shortcuts' privacy settings. Expect a few more questions the first time you share from each app (Instagram, then "
-                            "YouTube and others): tap <b>Always Allow</b> each time. After that it stays quiet.</small>", "✓ Done" if s["delivered"] else "Next"))
-        qr, dialog = "", ""
-        if self.setup:
-            self.setup.check_signing()  # in the background: ready by the time a name is typed
-            state = self.setup.signing_state()
-            if state in ("icloud", "error"):
-                flash += ('<div class="flash err"><b>iCloud isn\'t ready on this Mac.</b> Apple signs the Shortcut through iCloud. Open <b>System Settings</b>, '
-                          'click your name, choose <b>iCloud</b>, turn on <b>iCloud Drive</b>, open the <b>Shortcuts</b> app once, then reload this page.</div>' if state == "icloud" else
-                          '<div class="flash err"><b>Apple\'s Shortcut signing isn\'t answering.</b> Check this Mac is online (and not on a VPN) '
-                          'and signed in to iCloud in System Settings, then reload this page.</div>')
-        if q.get("qr") and self.setup:
-            dialog = self._qr_block(q["qr"], q.get("phone", ""), "/welcome/phone")
-        if self.setup:
-            qr = (f'<div class="qrbox"><form method="post" action="/hub/phones/add">{ui.hidden(self.csrf, next="/welcome/phone")}'
-                  f'<b>{"Pair another phone" if s["phones"] else "Your iPhone"}</b>'
-                  f'<label>Name for this phone<input type="text" name="name" required maxlength="60" placeholder="Like “My iPhone”"></label>'
-                  f'<small>The phone sends on any Wi-Fi your Mac is on.</small>'
-                  f'{self.phone_advanced()}'
-                  f'<button class="btn" type="submit">Show the QR code</button></form></div>')
-        else:
-            qr = '<div class="qrbox"><b>Pairing runs with the background service</b><small>Start it with <code>magpiary service install</code>.</small></div>'
-        return (f'<div class="w-body"><div><div class="w-kick">Step 1 of 4</div><h1 class="w-h">Pair your <em>iPhone.</em></h1>'
-                f'<p class="w-p">A few taps on the phone, once. These tick themselves off as Magpiary sees them happen.</p>{flash}'
-                f'<div class="wsteps">{steps}</div><div class="why1"><b>Why “when I get home”?</b> Your phone never talks to the '
-                f'internet for Magpiary. It keeps what you share while you\'re out and hands it to this Mac over Wi-Fi.</div>'
-                f'<div class="w-cta"><a class="btn dark" href="/welcome/automatic"{"" if s["phones"] else " aria-disabled=true"}>Continue</a>'
-                f'<a class="btn" style="background:none" href="/welcome/automatic">Skip for now</a></div></div><div>{qr}</div>{dialog}</div>')
-
-    def _w_auto(self, s: dict, q: dict, flash: str) -> str:
-        awake = s["awake"]
-        toggle = ui.button_form(self.csrf, "/hub/awake", {"enabled": "0" if awake else "1", "next": "/welcome/automatic"},
-                                f'<span class="tg{"" if awake else " off"}" style="margin:0"></span> Keep this Mac awake while '
-                                f'plugged in: {"on" if awake else "off"}', "btn")
-        steps = (self._ws(1, "ok" if s["delivered"] else "", "Send when I get home",
-                          "<ol><li>In Shortcuts open <b>Automation</b> → <b>+</b> → <b>Wi-Fi</b>.</li><li>Choose your home "
-                          "network and tick <b>Is Joined</b> only.</li><li>Pick <b>Run Immediately</b>.</li><li>Add the action "
-                          "<b>Run Shortcut → Magpiary</b>.</li><li>Switch <b>Notify When Run</b> off.</li></ol><small>iPhones don't "
-                          "let a program create this part, so it's done by hand once. Shares made away from home then arrive "
-                          "by themselves when you get back.</small>")
-                 + self._ws(2, "ok" if awake else "", "Keep this Mac ready",
-                            f"<small>A sleeping Mac can't receive shares (nothing is lost; they wait on the phone). If the "
-                            f"firewall asks whether Magpiary may accept incoming connections, choose <b>Allow</b>. Optional: "
-                            f"System Settings → Battery → Options → <b>Wake for network access</b>.</small>"
-                            f'<div style="margin-top:10px">{toggle}</div>'))
-        return (f'<div class="w-body one"><div><div class="w-kick">Step 2 of 4</div><h1 class="w-h">Make it <em>automatic.</em></h1>'
-                f'<p class="w-p">So you never have to think about it: shares go to this Mac whenever the phone gets home.</p>{flash}'
-                f'<div class="wsteps">{steps}</div><div class="w-cta"><a class="btn dark" href="/welcome/reading">Continue</a>'
-                f'<a class="btn" style="background:none" href="/welcome/phone">← Back</a></div></div></div>')
-
     def _w_reading(self, s: dict, q: dict, flash: str) -> str:
         mode = s["mode"] if s["chosen"] or self.store.get_setting(modes.SETTING, "") else ""
-        leaves = {"smart": ["Sent to your AI: caption, transcript, a few frames", "The video file stays on your Mac", "~20 s a post"],
+        leaves = {"smart": ["Sent to your AI: caption, transcript, a few frames", "The video stays on your Mac"],
                   "private": ["Sent to any AI: nothing", "No summaries"]}
         presets = "".join(
             f'<form method="post" action="/hub/settings/mode">{ui.hidden(self.csrf, mode=m, next="/welcome/reading")}'
-            f'<button type="submit" class="wp{" on" if m == mode else ""}" aria-pressed="{str(m == mode).lower()}">'
+            f'<button type="submit" class="wp{" on" if m == mode else ""}{" hero" if m == "smart" else ""}" aria-pressed="{str(m == mode).lower()}">'
             f'<span class="rd"></span><span><b>{e(name)}{"<em>Recommended</em>" if m == "smart" else ""}</b><p>{e(text)}</p>'
             f'<span class="leaves">{"".join(f"<span>{e(x)}</span>" for x in leaves[m])}</span></span></button></form>'
             for m, (name, text) in modes.MODES.items())
@@ -184,40 +136,152 @@ class WelcomePages:
             side = ('<div class="keybox"><h3>No key needed</h3><p class="small" style="margin:0;color:var(--fg-2)">Saves are '
                     'downloaded, transcribed on this Mac, grouped into piles and searchable by caption and by what was said. '
                     'Switch to Smart any time in Settings to have summaries written.</p></div>')
-        else:
+        elif mode == "smart":
+            ai = {p: v for p, v in keyring.PROVIDERS.items() if v["kind"] == "ai"}
             keys = [k for k in keyring.load() if keyring.PROVIDERS[k.provider]["kind"] == "ai"]
             have = "".join(f'<div class="key" style="background:var(--bg)"><span class="ord">✓</span><div><b>{e(k.name)}</b>'
                            f'<small>{e(keyring.PROVIDERS[k.provider]["name"].split(" (")[0])}</small></div></div>' for k in keys)
-            options = "".join(f'<option value="{p}">{e(v["name"])}</option>' for p, v in keyring.PROVIDERS.items() if v["kind"] == "ai")
-            guides = self._key_guides({p: v for p, v in keyring.PROVIDERS.items() if v["kind"] == "ai"})
+            first = next(iter(ai))
+            options = "".join(f'<li role="option" id="opt-{p}" data-v="{p}" aria-selected="{str(p == first).lower()}"><span>'
+                              f'<b>{e(v["name"].split(" (")[0])}</b><small>{e(self.GUIDE_CHIP.get(p, ""))}</small></span>'
+                              f'<i aria-hidden="true">✓</i></li>' for p, v in ai.items())
+            picker = (f'<div class="dd" id="prov"><input type="hidden" name="provider" value="{first}">'
+                      f'<button type="button" class="dd-btn" id="provbtn" role="combobox" aria-haspopup="listbox" aria-expanded="false" '
+                      f'aria-controls="provlist" aria-label="Provider"><span>{e(ai[first]["name"])}</span>{ui.icon("chev")}</button>'
+                      f'<ul class="dd-list" id="provlist" role="listbox" aria-label="Provider" tabindex="-1" hidden>{options}</ul></div>')
+            guides = self._key_guides(ai)
             side = (f'<div class="keybox"><h3>{"Your AI keys" if keys else "Paste your AI key"}</h3>{have}'
                     f'<form method="post" action="/hub/keys/add" autocomplete="off">{ui.hidden(self.csrf, next="/welcome/reading", tier="free")}'
-                    f'<div class="form" style="grid-template-columns:1fr"><select name="provider" id="provider" aria-label="Provider">{options}</select>'
-                    f'<input type="password" name="key" placeholder="{"Add another key" if keys else "Paste the key"}" required aria-label="Key"></div>'
-                    f'<div style="margin-top:10px">{guides}</div>'
-                    f'<div class="row" style="margin-top:12px"><button class="btn dark" type="submit">Check and save</button></div></form>'
+                    f'<div class="field"><label>Provider</label>{picker}</div>'
+                    f'<div class="field"><label for="wkey">Key</label><input id="wkey" type="password" name="key" '
+                    f'placeholder="{"Add another key" if keys else "Paste the key"}" required></div>'
+                    f'<button class="btn dark sm" type="submit">Check and save</button>'
+                    f'<button class="helpbtn" type="button" aria-expanded="false" aria-controls="guidewrap" data-helpbtn>Need help getting a key? {ui.icon("chev")}</button>'
+                    f'<div id="guidewrap" hidden>{guides}</div></form>'
                     f'<p class="note2">Stored only on this Mac (~/.config/magpiary, owner-only) and never shown again. With a free '
                     f'Gemini key, Google may use what is sent to improve its products.</p></div>')
+        else:
+            side = ('<div class="keybox"><h3>Choose one to continue</h3><p class="small" style="margin:0;color:var(--fg-2)">Smart writes '
+                    'summaries with an AI key you provide. Private uses no AI at all. You can change this any time in Settings.</p></div>')
         ready = s["chosen"]
-        return (f'<div class="w-body"><div><div class="w-kick">Step 3 of 4</div><h1 class="w-h">How should posts be <em>read?</em></h1>'
-                f'<p class="w-p">Smart sends the caption, the transcript and a few frames to the AI you choose. The video file stays on your Mac. Private sends nothing to any AI. You can change this any time in Settings.</p>{flash}'
-                f'<div class="wpre">{presets}</div><div class="w-cta"><a class="btn dark" href="/welcome/share"'
-                f'{"" if ready else " aria-disabled=true"}>Continue</a>'
-                f'<small>{"" if ready else "Choose Private, or add a key for Smart, to continue."}</small></div></div>'
+        decide = self._form("/hub/welcome/no-ai", {"next": "/welcome/browser"}, "Decide later", "w-link")
+        return (f'<div class="w-body"><div><div class="w-kick">Step 1 of 3</div><h1 class="w-h">How should posts be <em>read?</em></h1>'
+                f'<p class="w-p">Smart sends the caption, the transcript and a few frames to the AI you choose. The video file stays on your Mac. Private sends nothing to any AI.</p>{flash}'
+                f'<div class="wpre">{presets}</div><div class="w-cta"><a class="btn next" href="/welcome/browser"'
+                f'{"" if ready else " aria-disabled=true"}>Continue →</a>{"" if ready else decide}'
+                f'<small>{"" if ready else "Deciding later chooses Private for now."}</small></div></div>'
                 f'<div>{side}</div></div>')
+
+    def _w_browser(self, s: dict, q: dict, flash: str) -> str:
+        x = s["ext"]
+        code = q.get("chromecode", "")
+        code = code if len(code) == 14 and all(ch.isalnum() or ch == "-" for ch in code) else ""
+        back = {"next": "/welcome/browser"}
+        hand = ('<small>The Chrome Web Store version is coming soon. For now, add it by hand. It takes about a minute.</small>'
+                '<ol class="mini"><li><span>a</span><div>Open Chrome\'s extensions page. Copy the address, paste it into Chrome\'s '
+                'address bar and press Enter.<div class="inl"><code>chrome://extensions</code><button type="button" class="btn sm" '
+                'data-copycode="chrome://extensions" data-copywhat="Address">Copy</button></div></div></li>'
+                '<li><span>b</span><div>Turn on <b>Developer mode</b>, the switch at the top right of that page.</div></li>'
+                '<li><span>c</span><div>Click <b>Load unpacked</b>, then choose the <b>chrome-extension</b> folder inside Magpiary.'
+                f'<div class="inl">{self._form("/hub/extension/get", back, "Show the folder", "btn sm")}</div></div></li></ol>'
+                '<button class="btn sm" type="button" disabled style="margin-top:12px">Chrome Web Store · coming soon</button>')
+        pin_btn = ("" if x["pinned"] or not x["added"] else
+                   f'<div style="margin-top:8px">{self._form("/hub/welcome/pinned", back, "I\'ve pinned it", "btn sm")}</div>')
+        if x["paired"]:
+            connect_body, connect_badge = "<small>The extension and this Mac are talking.</small>", "✓ Chrome connected"
+        elif code:
+            connect_body = ('<small>Open the extension and paste this code. It works once and runs out in 15 minutes.</small>'
+                            f'<span class="code"><b>{e(code)}</b><button type="button" class="btn sm" data-copycode="{e(code)}" '
+                            f'data-copywhat="Code">Copy</button></span>')
+            connect_badge = "Waiting…"
+        else:
+            connect_body = ('<small>Click the Magpiary button in Chrome\'s toolbar. It asks for a one-time code.</small>'
+                            f'<div style="margin-top:8px">{self._form("/hub/browsers/add", back, "Show my code", "btn sm")}</div>')
+            connect_badge = "Next" if x["added"] else ""
+        rows = (self._ws(1, "ok" if x["added"] else "wait", "Add the extension to Chrome", hand, "✓ Added" if x["added"] else "Next")
+                + self._ws(2, "ok" if x["pinned"] else "wait" if x["added"] else "", "Pin it",
+                           "<small>Click the puzzle-piece icon in Chrome's toolbar, then the pin beside Magpiary, so the button stays "
+                           "in sight.</small>" + pin_btn, "✓ Pinned" if x["pinned"] else "Next" if x["added"] else "")
+                + self._ws(3, "ok" if x["paired"] else "wait" if x["added"] else "", "Connect it", connect_body, connect_badge)
+                + self._ws(4, "ok" if s["chrome_saved"] else "wait" if x["paired"] else "", "Try it",
+                           "<small>Open any page and click the Magpiary button. This screen tells you when the save arrives.</small>",
+                           "✓ Saved" if s["chrome_saved"] else "Waiting…" if x["paired"] else ""))
+        art = ('<div class="art"><div class="chrome"><div class="bar"><span class="dots"><i></i><i></i><i></i></span>'
+               '<span class="url">example.com/article</span><span class="tbtn">⋯</span><span class="tbtn me">' + ui.logo_mark() +
+               '</span></div><div class="pg"><i style="width:70%"></i><i></i><i style="width:90%"></i><i style="width:55%"></i></div>'
+               '<div class="pop"><b>Save to Magpiary</b>' + ('<span class="ok">✓ Saved to your Mac</span>' if s["chrome_saved"] else
+               'Page: example.com/article<br><span style="color:#888">Board: none · Note: none</span>') + '</div></div></div>')
+        return (f'<div class="w-body"><div><div class="w-kick">Step 2 of 3</div><h1 class="w-h">Save from your <em>Mac.</em></h1>'
+                f'<p class="w-p">Add the Magpiary extension to Chrome. One click saves the page you are on, or pick a single post from a feed. It talks only to this Mac.</p>{flash}'
+                f'<div class="wsteps">{rows}</div><div class="w-cta"><a class="btn next" href="/welcome/phone">Continue →</a>'
+                f'<a class="w-link" href="/welcome/phone">Not using Chrome? Skip</a></div></div>{art}</div>')
+
+    def _w_phone(self, s: dict, q: dict, flash: str) -> str:
+        phones = s["phones"]
+        state = ""
+        if self.setup:
+            self.setup.check_signing()  # in the background: ready by the time a name is typed
+            state = self.setup.signing_state()
+        name = phones[0]["name"] if phones else ""
+        if state in ("icloud", "error") and not phones:
+            card = ('<div class="card"><h3>Your iPhone</h3><div class="note"><b>' + (
+                "Phone setup needs iCloud on this Mac." if state == "icloud" else "Apple's Shortcut signing isn't answering.") + '</b><p>' + (
+                "Apple signs the Shortcut through iCloud, and iCloud Drive is off here. Turn it on in System Settings, click your name, "
+                "choose iCloud, then turn on iCloud Drive and open the Shortcuts app once. Or skip the phone and use the Chrome extension. "
+                "You can add the phone any time in Settings." if state == "icloud" else
+                "Check this Mac is online (and not on a VPN) and signed in to iCloud in System Settings. Or skip the phone and use the "
+                "Chrome extension. You can add the phone any time in Settings.") + '</p><div class="w-cta" style="margin:0">'
+                '<a class="btn dark sm" href="/welcome/share">Skip, I\'ll use Chrome</a>'
+                '<a class="btn sm" href="/welcome/phone">I turned it on, check again</a></div></div></div>')
+        elif not phones:
+            card = ('<div class="card"><h3>Your iPhone</h3>'
+                    '<p class="small" style="color:var(--fg-2);margin:0">First, on the iPhone open <b>Settings → Safari → Downloads</b> '
+                    'and choose <b>On My iPhone</b> (a full iCloud Drive stops the Shortcut installing), and join your home Wi-Fi.</p>'
+                    + (f'<form method="post" action="/hub/phones/add">{ui.hidden(self.csrf, next="/welcome/phone")}'
+                       '<div class="field"><label for="nm">Name for this phone</label><input id="nm" type="text" name="name" required '
+                       'maxlength="60" placeholder="Like “My iPhone”"><small style="color:var(--fg-2)">The phone sends on any Wi-Fi your Mac is on.</small></div>'
+                       f'{self.phone_advanced()}<button class="btn dark sm" type="submit" style="margin-top:12px">Show the QR code</button></form>'
+                       if self.setup else '<p class="small">Pairing runs with the background service. Start it with <code>magpiary service install</code>.</p>')
+                    + self._ws(2, "fold", "Scan the code and add the Shortcut", "") + self._ws(3, "fold", "Allow everything once", "") + '</div>')
+        else:
+            qr = ""
+            token_url = q.get("qr", "")
+            if self.setup and token_url.startswith(f"http://{self.setup.host_name}:") and not s["fetched"]:
+                qr = (f'<div class="qr">{self.setup.qr_svg(token_url)}</div><small style="color:var(--fg-3)">Can\'t scan? Send this link to '
+                      f'the iPhone and open it there: <code>{e(token_url)}</code></small>'
+                      + self._form("/hub/phones/new-code", {"name": name, "next": "/welcome/phone"}, "The code ran out? Make a new one", "btn sm"))
+            elif not s["fetched"] and not s["contact"]:
+                qr = self._form("/hub/phones/new-code", {"name": name, "next": "/welcome/phone"}, "Show the QR code again", "btn sm")
+            got = s["fetched"] or s["contact"]
+            add = self._ws(2, "ok" if got else "wait", "Scan the code and add the Shortcut",
+                           "<small>On the iPhone, open Camera and point it at the code, tap the banner, then <b>Get “Magpiary”</b> then "
+                           "<b>Download</b>. Open the download from Safari's address bar and tap <b>Add Shortcut</b>.</small>",
+                           "✓ Shortcut downloaded" if got else "Waiting…")
+            allow = self._ws(3, "ok" if s["contact"] or s["phone_saved"] else "wait" if got else "fold", "Allow everything once",
+                             "<small>Open the <b>Shortcuts</b> app and tap the Magpiary tile once. Tap <b>Allow</b> or <b>Always Allow</b> on "
+                             "every question. Never dismiss one. The first share from each app (Instagram, YouTube and others) asks a few "
+                             "more: tap <b>Always Allow</b> each time. After that it stays quiet.</small>" if got else "",
+                             "✓ Done" if s["contact"] or s["phone_saved"] else "Next" if got else "")
+            head = self._ws(1, "ok", f"Paired: {e(name)}", "", "✓ Done") if got else ""
+            card = f'<div class="card"><h3>Your iPhone</h3>{head}{add if not got else head and add}{qr if not got else ""}{allow}</div>'
+        done = s["contact"] or s["phone_saved"]
+        art = ('<div class="art"><div class="wphone"><div class="wscr"><div class="wshr"><span><i></i>Messages</span><span><i></i>Notes</span>'
+               '<span class="mg"><i></i>Magpiary</span><span><i></i>Mail</span></div></div></div></div>')
+        return (f'<div class="w-body"><div><div class="w-kick">Step 3 of 3 · Optional</div><h1 class="w-h">Add your <em>iPhone.</em></h1>'
+                f'<p class="w-p">Share from any app on your iPhone and it arrives here. A few taps on the phone, once. Skip it now and add it later in Settings.</p>{flash}{card}'
+                f'<div class="w-cta"><a class="btn next" href="/welcome/share">{"Continue" if done else "Continue without a phone"} →</a>'
+                f'<a class="w-link" href="/welcome/share">Skip for now</a></div></div>{art}</div>')
 
     def _w_share(self, s: dict, q: dict, flash: str) -> str:
         newest = self.store.hub_items("inbox", limit=1)
         saved = bool(s["delivered"] or newest)  # a share from the phone, a pasted link or the browser extension all count
         ready = saved and s["chosen"]
-        done = self._form("/hub/welcome/done", {"next": "/"}, "Open my library" if ready else "Skip for now",
-                          "btn dark" if ready else "btn")
+        done = self._form("/hub/welcome/done", {"next": "/"}, "Open my library →" if ready else "Skip for now",
+                          "btn next" if ready else "w-link")
         hint = ("" if s["chosen"] else '<small>Choose Smart or Private any time in Settings.</small>') if saved else (
-            '<small>No phone? Paste a link above, or skip: you can set up the phone any time.</small>')
-        listen = ('<div class="listen ok" id="listen"><i></i>Arrived! Your phone and this Mac are talking.</div>' if s["delivered"]
-                  else '<div class="listen ok" id="listen"><i></i>Saved. Your Mac is reading it now.</div>' if newest
-                  else '<div class="listen" id="listen" data-listen><i></i>Listening for your iPhone on Wi-Fi…</div>')
-        finish = done + hint
+            '<small>No save yet? You can skip and save later.</small>')
+        listen = ('<div class="listen ok" id="listen"><i></i>Saved. Your Mac is reading it now.</div>' if saved
+                  else '<div class="listen" id="listen"><i></i>Listening for your first save…</div>')
         arrived = ""
         if newest:
             it = newest[0]
@@ -226,24 +290,24 @@ class WelcomePages:
                        + (f'<img src="{e(thumb)}" alt="">' if thumb else "") + f'</div><div class="label" style="background:'
                        f'{ui.type_colour(it.get("ai_type")) if it.get("ai_status") == "done" else ui.source_colour(it["source"])}">'
                        f'<div class="t">{e(ui.title_of(it))}</div><div class="m"><span>{e(ui.source_name(it["source"]))}</span></div></div></div>')
-        return (f'<div class="w-body"><div><div class="w-kick">Step 4 of 4</div><h1 class="w-h">Now share <em>something.</em></h1>'
-                f'<p class="w-p">On your iPhone, open any reel or post you like, tap <b>Share</b>, then <b>Magpiary</b>. Your '
-                f'iPhone asks for permission separately for each kind of thing you share, so the first share from each app '
-                f'(Instagram, then YouTube and others) can ask a few questions again: tap <b>Always Allow</b> every time, and '
-                f'never dismiss one. After that it stays quiet. If the share sheet pauses for a few seconds, wait.</p>{flash}{listen}'
-                f'<p class="small muted" style="margin:0 0 8px">No phone handy? Paste a link instead:</p>'
+        return (f'<div class="w-body"><div><div class="w-kick">Last step</div><h1 class="w-h">Now save <em>something.</em></h1>'
+                f'<p class="w-p">Use whichever is closest. Any one of these finishes setup.</p>{flash}'
+                f'<div class="ways"><div class="way"><span class="ic">1</span><div><b>From Chrome</b><small>Open a page and click the Magpiary button.</small></div></div>'
+                f'<div class="way"><span class="ic">2</span><div><b>From your iPhone</b><small>Share a reel or post, then tap Magpiary.</small></div></div></div>'
+                f'{listen}<p class="small muted" style="margin:0 0 8px">Or paste a link here:</p>'
                 f'<form method="post" action="/hub/add" class="orpaste">{ui.hidden(self.csrf, next="/welcome/share")}'
-                f'<input type="url" name="url" placeholder="https://www.instagram.com/reel/…" required aria-label="Link to a post">'
-                f'<button class="btn dark" type="submit">Add</button></form><div class="w-cta">{finish}</div>'
-                f'<p class="small muted" style="margin:18px 0 0">Optional: <a class="link" href="/settings/privacy#lock">lock your library '
-                f'with a PIN or Touch ID</a>. You can do this any time in Settings.</p></div>'
-                f'<div>{arrived}</div></div>')
+                f'<input type="url" name="url" placeholder="https://example.com/a-page" required aria-label="Link to a page">'
+                f'<button class="btn dark sm" type="submit">Add</button></form><div class="w-cta">{done}{hint}</div>'
+                f'<p class="small muted" style="margin:18px 0 0">Optional, any time in Settings: <a class="link" href="/settings/privacy#lock">lock your library '
+                f'with a PIN or Touch ID</a>.</p></div><div>{arrived}</div></div>')
 
     def welcome_post(self, path: str, form: dict) -> bool:
         if path == "/hub/welcome/done":
             self.store.set_setting(DONE_SETTING, "1")  # the guide is never a trap: every step can be skipped
         elif path == "/hub/welcome/no-ai":
             self.store.set_setting(modes.SETTING, "private")
+        elif path == "/hub/welcome/pinned":  # an extension too old to report it: the owner says so
+            self.store.set_setting("ext_pinned_manual", "1")
         else:
             return False
         return True
