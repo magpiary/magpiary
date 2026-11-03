@@ -390,6 +390,14 @@ button.kp:hover, .kp.on { background: var(--chip); }
 .kp b { width: 26px; height: 26px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; display: grid; place-items: center; }
 .kp.on b { background: var(--t-design); color: #fff; }
 .kp small { color: var(--fg-3); font-weight: 600; font-size: 12.5px; padding-top: 2px; font-variant-numeric: tabular-nums; }
+.pvlist { list-style: none; counter-reset: pvli; margin: 4px 0 0; padding: 0; }
+.pvli { counter-increment: pvli; display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; padding: 9px 12px; border-radius: 14px; line-height: 1.45; font-size: 15px; }
+.pvli::before { content: counter(pvli); grid-row: span 3; width: 26px; height: 26px; border-radius: 50%; background: var(--chip); color: var(--fg-2); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.pvli:hover { background: var(--chip); }
+.pvli a { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.pvli b { font-weight: 600; }
+.pvli small { display: block; color: var(--fg-3); font-size: 12.5px; font-weight: 600; }
+.pvli p { margin: 3px 0 0; color: var(--fg-2); font-size: 14px; }
 .tline { display: grid; grid-template-columns: 52px 1fr; gap: 8px; padding: 5px 8px; border-radius: 10px; font-size: 14px; line-height: 1.5; text-align: left; width: 100%; }
 .tline:hover { background: var(--chip); }
 .tline small { color: var(--fg-3); font-weight: 600; font-variant-numeric: tabular-nums; }

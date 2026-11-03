@@ -222,7 +222,7 @@ def link_pause(source: str) -> None:
     """GitHub allows about 10 searches a minute without a login; OpenStreetMap and Wikidata ask for one request
     a second."""
     time.sleep({"github": 6.5, "github_guess": 1.0, "catalog_skill": 1.0, "places": 1.1, "wikidata": 1.1,
-                "search": 1.1, "crossref": 0.5, "alternativeto": 2.0}.get(source, 0.3))
+                "search": 1.1, "youtube": 1.0, "crossref": 0.5, "alternativeto": 2.0}.get(source, 0.3))
 
 
 SEARCH_LIMIT = 500  # web searches a month, whatever the provider allows (Settings can change it)
@@ -252,7 +252,7 @@ def links_due(store: Store, activity=None, get=None, pause: Callable[[str], None
     """Find links for summarised items with the free directories and, if the owner added one, a web search key
     (Tavily or Brave). Never uses the AI key. Returns how many items were done."""
     from magpiary import keys as keyring
-    from magpiary.links import find_links, http_get
+    from magpiary.links import find_links, http_get, youtube_search
 
     key_source = key_source or keyring
     get = get or http_get
@@ -280,7 +280,8 @@ def links_due(store: Store, activity=None, get=None, pause: Callable[[str], None
             meta = _meta(item)
             found = find_links(record, meta.get("text") or "", item.get("transcript_text") or "", comments,
                                get=get, search=search, skip=store.removed_links(item["canonical_url"]),
-                               author=meta.get("author") or "", pause=pause)
+                               author=meta.get("author") or "", pause=pause,
+                               videos=youtube_search() if record.get("list_items") else None)
         except Exception as err:  # one bad page must not stop the rest
             log(f"link search failed: {type(err).__name__}")
             found = []

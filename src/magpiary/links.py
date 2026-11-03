@@ -27,12 +27,18 @@ from magpiary.network import public_urlopen
 Get = Callable[[str, dict], tuple[int, str, bytes]]
 # A web search: query -> [{"title", "url", "snippet"}]. Raises SearchLimit when the month's searches are used.
 Search = Callable[[str], list[dict]]
+# A YouTube search on the Mac: query -> [{"title", "url", "channel"}]. No key; yt-dlp reads YouTube's results logged out.
+VideoSearch = Callable[[str], list[dict]]
 
 KINDS = {"tools": "Tools and apps", "skills_code": "Skills and code", "products": "Products",
          "books_media": "Books, films and shows", "places": "Places", "people": "People", "sources": "Sources",
-         "links": "Websites"}
+         "videos": "Videos", "articles": "Articles and posts", "links": "Websites"}
 TARGET_KIND = {"tool": "tools", "code": "skills_code", "product": "products", "book_media": "books_media",
-               "place": "places", "person": "people", "source": "sources"}
+               "place": "places", "person": "people", "source": "sources", "video": "videos", "article": "articles"}
+# A list post's item kinds (brain.LIST_KINDS) as link target kinds
+LIST_TARGET = {"video": "video", "podcast": "video", "article": "article", "course": "article", "other": "article",
+               "book": "book_media", "show": "book_media", "film": "book_media", "music": "book_media",
+               "tool": "tool", "product": "product", "place": "place"}
 ENTITY_KIND = {"tools": "tool", "skills_code": "code", "products": "product", "books_media": "book_media",
                "places": "place", "people": "person"}
 CATALOGS = [("anthropics/skills", "skills")]  # official skill lists, checked first for skills
@@ -109,6 +115,7 @@ class Target:
     repo: str = ""  # owner/name when the post gives it
     section: str = "named"
     guessed: bool = False  # from the named things, not the AI's link tags: its role is a guess
+    by: str = ""  # a list item's channel, author or maker
     found: list[Found] = field(default_factory=list)
 
     @property
@@ -361,6 +368,10 @@ def targets_for(record: dict, caption: str, transcript: str, comments: list[dict
         seen[key] = t
         targets.append(t)
 
+    for t in record.get("list_items") or []:  # a list post: every item, in order, before anything else
+        if isinstance(t, dict) and t.get("name"):
+            add(Target(t["name"].strip(), LIST_TARGET.get(t.get("kind") or "", "article"), "central",
+                       by=(t.get("by") or "").strip()))
     for t in record.get("link_targets") or []:
         if isinstance(t, dict) and t.get("name"):
             add(Target(t["name"].strip(), guess_kind(t["name"], t.get("kind") or "tool"),
@@ -691,10 +702,72 @@ def _own_root(name: str, url: str) -> str:
     return f"https://{'.'.join(labels[at:])}/"
 
 
+def youtube_search(ytdlp=None) -> VideoSearch:
+    """YouTube's top results for a query, read logged out by yt-dlp on the Mac (no key, nothing downloaded)."""
+    from magpiary.tools import YtDlp
+
+    tool = ytdlp or YtDlp()
+
+    def search(query: str) -> list[dict]:
+        result = tool.run([*tool._base(), "--flat-playlist", "-J", f"ytsearch5:{query}"], 60)
+        try:
+            entries = json.loads(result.stdout or "{}").get("entries") or []
+        except ValueError:
+            return []
+        return [{"title": e.get("title") or "", "channel": e.get("channel") or e.get("uploader") or "",
+                 "url": f"https://www.youtube.com/watch?v={e['id']}"} for e in entries if isinstance(e, dict) and e.get("id")]
+    return search
+
+
+def _same_maker(by: str, text: str) -> bool:
+    return bool(by) and (name_score(by, text) >= 2 or norm(by).replace(" ", "") in norm(text).replace(" ", ""))
+
+
+def youtube_match(target: Target, videos: VideoSearch) -> Found | None:
+    """The video a list names: its title must match, and the channel too when the post gives one. A title alone
+    that matches only in part is a possible match."""
+    try:
+        hits = videos(f"{target.name} {target.by}".strip())
+    except (OSError, ValueError, RuntimeError):
+        return None
+    best = None
+    for hit in hits:
+        score = name_score(target.name, hit["title"])
+        channel = _same_maker(target.by, hit.get("channel", ""))
+        if score == 3 or (score == 2 and (channel or not target.by)):
+            rank = 7 if channel or not target.by else 5
+            found = Found(target.name, "videos", hit["url"], hit["title"][:120], "YouTube", rank,
+                          possible=bool(target.by) and not channel)
+            if not found.possible:
+                return found
+            best = best or found
+    return best
+
+
+def article_search(target: Target, search: Search, kind: str) -> Found | None:
+    """An article, post or episode a list names, found with the owner's search key: the title must match, and the
+    author or publication when the post gives one (else it is only a possible match)."""
+    query = f'"{target.name}" {target.by}'.strip()
+    best = None
+    for hit in search(query)[:5]:
+        url, title = hit.get("url", ""), hit.get("title", "")
+        if not url or on_host(url, ("instagram.com", "threads.com", "threads.net", "x.com", "twitter.com")):
+            continue
+        if name_score(target.name, title) < 2:
+            continue
+        maker = _same_maker(target.by, f"{title} {host_of(url)} {hit.get('snippet', '')}")
+        found = Found(target.name, kind, url, title[:120], "web search", 6 if maker else 4,
+                      possible=bool(target.by) and not maker)
+        if not found.possible:
+            return found
+        best = best or found
+    return best
+
+
 # ---- one thing ----------------------------------------------------------------------------
 
 def resolve(target: Target, get: Get, context: set[str], posted: list["PostPage"], search: Search | None,
-            pause) -> list[Found]:
+            pause, videos: VideoSearch | None = None) -> list[Found]:
     """The main link and its badges for one thing, best first."""
     if target.kind == "source":
         found = crossref(target, get, pause)
@@ -734,6 +807,18 @@ def resolve(target: Target, get: Get, context: set[str], posted: list["PostPage"
                     break
             if main:
                 break
+
+    if target.kind in ("video", "article"):
+        if main is None and target.kind == "video" and videos:
+            pause("youtube")
+            main = youtube_match(target, videos)
+        if main is None and search:
+            pause("search")
+            try:
+                main = article_search(target, search, kind)
+            except SearchLimit:
+                pass
+        return [main] if main else []
 
     if target.kind == "code":
         if target.repo:
@@ -883,7 +968,7 @@ def alternatives(product: str, named: set[str], get: Get, search: Search | None,
 
 def find_links(record: dict, caption: str, transcript: str, comments: list[dict] | None, get: Get = http_get,
                search: Search | None = None, skip: set[str] | None = None, author: str = "",
-               pause: Callable[[str], None] = lambda source: None) -> list[Found]:
+               pause: Callable[[str], None] = lambda source: None, videos: VideoSearch | None = None) -> list[Found]:
     """Every link worth showing: per thing one main link (possibly with badges), central ones first.
     `skip` holds URLs the owner removed."""
     skip = skip or set()
@@ -901,7 +986,7 @@ def find_links(record: dict, caption: str, transcript: str, comments: list[dict]
     for target in targets:
         if skipped(target):
             continue
-        target.found = [f for f in resolve(target, get, context, posted, search, pause) if f.url not in skip]
+        target.found = [f for f in resolve(target, get, context, posted, search, pause, videos) if f.url not in skip]
         results += target.found
     for page in posted:  # addresses no named thing claimed: their own row
         if not page.claimed and not any(f.url.rstrip("/") == page.url.rstrip("/") for f in results):

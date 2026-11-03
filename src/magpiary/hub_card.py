@@ -554,6 +554,30 @@ class CardPages:
                              + f'>{v}</section>'
                              for k, _, _, v in tabs)
 
+    def _list_block(self, item: dict, record: dict | None) -> str:
+        """A list post's items (a round-up, "10 tools"): each with who made it, the poster's note and its link once found."""
+        items = (record or {}).get("list_items") or []
+        if not items:
+            return ""
+        found = {}
+        for link in self.store.links_for(item["canonical_url"]):
+            if link.get("role", "main") == "main":
+                found.setdefault(link["name"].lower(), link)
+        kinds = {"video": "Video", "article": "Article", "book": "Book", "show": "Show", "film": "Film", "podcast": "Podcast",
+                 "music": "Music", "course": "Course", "tool": "Tool", "product": "Product", "place": "Place"}
+        rows = []
+        for n, it in enumerate(items, 1):
+            link = found.get(it["name"].lower())
+            name = (f'<a href="{e(link["url"])}" target="_blank" rel="noopener noreferrer">{e(it["name"])} ↗</a>'
+                    if link else f'<b>{e(it["name"])}</b>')
+            meta = " · ".join(x for x in (kinds.get(it.get("kind"), ""), it.get("by") or "",
+                                          f'slide {it["slide"]}' if it.get("slide") else "") if x)
+            flag = ('<span class="bd p">possible match</span>' if link and link.get("rank") == "possible"
+                    else "" if link or not links_done(item) else '<span class="bd">No link found</span>')
+            rows.append(f'<li class="pvli"><div>{name}{flag}</div><small>{e(meta)}</small>'
+                        + (f'<p>{e(it["note"])}</p>' if it.get("note") else "") + "</li>")
+        return f'<h4>The list <span>· {len(items)} things</span></h4><ol class="pvlist">{"".join(rows)}</ol>'
+
     def _note_block(self, item: dict, here: str) -> str:
         """Your note, right under the summary: a button until you write one, then plain text with an Edit button."""
         out: list[str] = []
@@ -605,6 +629,7 @@ class CardPages:
 
     def _summary_pane(self, item: dict, record: dict | None, caption: str, here: str) -> str:
         out = [self._summary_blocks(item, record)]  # the summary itself sits under the title (_lead), the caption after it
+        out.append(self._list_block(item, record))
         if record:
             extras = record.get("extras") or {}
             for label, key in (("Ingredients", "ingredients"), ("Steps", "steps"), ("Takeaways", "takeaways")):

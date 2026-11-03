@@ -117,7 +117,8 @@ def process_item(item: dict, key, notes_dir: Path, call: Call = http_call,
     images = [folder / m for m in meta.get("media") or [] if not m.endswith(VIDEO)][:MAX_IMAGES]
     comments = _load(folder / "discussion.json", None)
     transcript, frames, problem = senses(folder, meta, transcriber, framer, progress)
-    parts = build_evidence(meta, transcript, frames, images, folder, comments, item.get("note") or "")
+    screen = _load(folder / "ocr.json", None)  # text read on the Mac, when it has been read (a re-read, or a photo post)
+    parts = build_evidence(meta, transcript, frames, images, folder, comments, item.get("note") or "", screen)
     progress.step("summary")
     record = summarise(parts, key.secret, key.model, call, provider=key.provider)
     senses_used = "local (whisper.cpp small, ffmpeg frames)"
