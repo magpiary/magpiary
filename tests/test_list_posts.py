@@ -126,3 +126,44 @@ def test_a_thin_page_is_drawn_once_by_a_browser_and_a_refusing_page_is_not():
     except FetchFailed as err:
         assert err.reason == "login_wall"
     assert len(drawn) == 1  # a refusal is respected, never drawn another way
+
+
+# ---- format, topic and the owner's own tags ------------------------------------------------
+
+from magpiary.brain import reuse_tags  # noqa: E402
+
+
+def test_format_and_topic_are_kept_and_checked():
+    got = tidy({**RECORD, "format": "list", "topic": "  Product   Design "})
+    assert got["format"] == "list" and got["topic"] == "product design"
+    assert tidy({**RECORD, "format": "essay"})["format"] == ""
+
+
+def test_suggested_tags_use_the_owners_spelling():
+    assert reuse_tags(["UI Designs", "figma", "ui-design", "colour"], ["ui design", "Figma"]) == ["ui design", "Figma", "colour"]
+
+
+def test_the_owners_tags_and_topics_go_into_the_evidence(tmp_path):
+    parts = build_evidence({"source": "instagram"}, None, [], [], tmp_path, None, "", None,
+                           {"tags": ["ui design", "baking"], "topics": ["product design"]})
+    assert "THE OWNER'S EXISTING TAGS: ui design, baking" in parts[0]["text"]
+    assert "THE OWNER'S EXISTING TOPICS: product design" in parts[0]["text"]
+
+
+def test_known_words_lists_tags_by_use_and_topics_from_records(tmp_path):
+    import json
+
+    from magpiary.store import Store
+
+    store = Store(tmp_path / "m.db")
+    for n, (topic, tags) in enumerate([("product design", ["figma", "ui"]), ("baking", ["figma"])]):
+        url = f"https://www.instagram.com/p/k{n}/"
+        folder = tmp_path / f"k{n}"
+        folder.mkdir()
+        record = {**tidy(RECORD), "topic": topic, "suggested_tags": tags, "engine": {}}
+        (folder / "record.json").write_text(json.dumps(record))
+        store.add_link(url)
+        store.fetch_succeeded(url, str(folder))
+        store.brain_succeeded(url, record, "", apply_tags=True)
+    known = store.known_words()
+    assert known["tags"][0] == "figma" and set(known["topics"]) == {"product design", "baking"}

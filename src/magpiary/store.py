@@ -1317,6 +1317,28 @@ class Store(ChatStore, StatsStore):
                 "SELECT COUNT(*) FROM items WHERE shelf='inbox' AND status='needs_attention' AND login_only!=2").fetchone()[0]
         return {"shelves": shelves, "sources": sources, "tags": tags, "attention": attention}
 
+    def known_words(self, limit: int = 60) -> dict:
+        """The owner's most used tags and the topics of their posts, for the summary to reuse."""
+        with self._lock:
+            tags = [r[0] for r in self._db.execute(
+                "SELECT t.tag FROM tags t JOIN items i ON i.canonical_url=t.canonical_url WHERE i.shelf != 'trash' "
+                "GROUP BY t.tag ORDER BY COUNT(*) DESC, t.tag LIMIT ?", (limit,)).fetchall()]
+        topics: dict[str, int] = {}
+        for folder in self._recent_folders(200):
+            try:
+                topic = json.loads((Path(folder) / "record.json").read_text()).get("topic")
+            except (OSError, ValueError):
+                continue
+            if topic:
+                topics[topic] = topics.get(topic, 0) + 1
+        return {"tags": tags, "topics": sorted(topics, key=lambda t: -topics[t])[:30]}
+
+    def _recent_folders(self, limit: int) -> list[str]:
+        with self._lock:
+            return [r[0] for r in self._db.execute(
+                "SELECT archive_dir FROM items WHERE ai_status='done' AND archive_dir IS NOT NULL AND shelf != 'trash' "
+                "ORDER BY processed_at DESC LIMIT ?", (limit,)).fetchall()]
+
     def tags_for(self, url: str) -> list[str]:
         with self._lock:
             return [r["tag"] for r in self._db.execute(

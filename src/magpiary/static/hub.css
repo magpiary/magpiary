@@ -4247,3 +4247,6 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .wel .w-body.al { grid-template-areas: "head ." "main side"; align-items: start; row-gap: 0; }
 .wel .w-body.al > .head { grid-area: head; } .wel .w-body.al > .main { grid-area: main; } .wel .w-body.al > .side { grid-area: side; }
 @media (max-width: 860px) { .wel .w-body.al { grid-template-areas: "head" "main" "side"; row-gap: 20px; } }
+
+/* A post's shape and topic beside its type: "List · product design" */
+.it-type .itfmt { font-style: normal; font-size: 12px; font-weight: 650; color: var(--fg-2); background: var(--chip); padding: 2px 9px; border-radius: 999px; margin-left: 6px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }

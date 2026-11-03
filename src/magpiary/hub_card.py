@@ -362,6 +362,9 @@ class CardPages:
         colour = ui.deep(ui.type_colour(kind)) if done else ui.deep(ui.source_colour(item["source"]))
         badge = (f'<b style="background:{colour}">{e(ui.type_name(kind) if done else ui.source_name(item["source"]))}</b>')
         where = ui.source_badge(item["source"]) if done else ""
+        from magpiary.brain import FORMAT_NAMES
+        shape = " · ".join(x for x in (FORMAT_NAMES.get((record or {}).get("format") or "", ""), (record or {}).get("topic") or "") if x)
+        badge += f'<em class="itfmt">{e(shape)}</em>' if shape else ""
         return (f'<div class="it-type">{where}{badge}<span>{"From a friend’s board" if item.get("media_only") else "Saved"} '
                 f'{e(ui.day(item.get("first_shared_at") or item.get("created_at")))}'
                 + (f' · {item["saved_count"]}×' if item["saved_count"] > 1 else "") + "</span></div>")
