@@ -16,7 +16,10 @@ PAID = Key("p1", "claude", "paid", "s", "", "claude-haiku-5-5", "")
 
 @pytest.fixture
 def store(tmp_path, monkeypatch):
+    from magpiary import keys as keyring
+
     monkeypatch.setattr(engines, "installed", lambda kind: True)
+    monkeypatch.setattr(keyring, "load", lambda: [FREE, PAID])
     return Store(tmp_path / "m.db")
 
 
@@ -31,9 +34,9 @@ def test_only_a_passing_test_allows_it_and_the_owners_order_decides(store):
     assert engines.allow(store, "codex", test=lambda kind: (True, ""))[0]
     assert engines.allow(store, "claude_code", test=lambda kind: (True, ""))[0]
     keys = [FREE, PAID]
-    assert [o["id"] for o in engines.options(store, keys)] == ["key:f1", "key:p1", "claude_code", "codex"]  # keys first by default
+    assert [o["id"] for o in engines.options(store, keys)] == ["key:f1", "key:p1", "codex", "claude_code"]  # each joins the end when allowed
     assert engines.choice(store, "digest", keys)["id"] == "key:p1"  # the first that is not a free key
-    assert [getattr(s, "id") for s in engines.summarisers(store, [FREE, PAID], today="2026-11-04")] == ["f1", "p1", "claude_code", "codex"]
+    assert [getattr(s, "id") for s in engines.summarisers(store, [FREE, PAID], today="2026-11-04")] == ["f1", "p1", "codex", "claude_code"]
 
 
 def test_dragging_claude_code_to_the_top_makes_it_write_summaries(store, monkeypatch):
@@ -41,14 +44,14 @@ def test_dragging_claude_code_to_the_top_makes_it_write_summaries(store, monkeyp
 
     monkeypatch.setattr(keyring, "reorder", lambda ids: None)
     keys = [FREE, PAID]
-    assert not engines.set_order(store, ["claude_code", "key:f1"], keys)  # every one must be in the new order
-    assert engines.set_order(store, ["claude_code", "key:f1", "codex", "key:p1"], keys)
     assert [s.id for s in engines.summarisers(store, keys, today="2026-11-04")] == ["f1", "p1"]  # not allowed: skipped
     engines.allow(store, "claude_code", test=lambda kind: (True, ""))
+    assert engines.summarisers(store, keys, today="2026-11-04")[-1].id == "claude_code"  # allowed: last until dragged up
+    assert not engines.set_order(store, ["claude_code", "key:f1"], keys)  # every one must be in the new order
+    assert engines.set_order(store, ["claude_code", "key:f1", "key:p1", "codex"], keys)
     first = engines.summarisers(store, keys, today="2026-11-04")[0]
     assert first.id == "claude_code" and first.provider == "claude_code" and first.model == "haiku"
     assert engines.choice(store, "ask", keys)["id"] == "claude_code"
-
 
 def test_free_keys_only_everything_off_digest_and_ask_can_be_turned_on_deeper_dive_never(store):
     keys = [FREE]
@@ -102,7 +105,8 @@ def test_keys_take_the_order_they_are_dragged_into(mac, monkeypatch):
     assert [k.id for k in store_keys["list"]] == ["cccc0003", "bbbb0002", "aaaa0001"]
     body = page(mac, "/settings/ai")[2]
     assert "data-keylist" in body and body.count("data-keyhandle") == 4  # two keys, Claude Code and Codex, in one list
-    assert body.index('id="key-cccc0003"') < body.index('id="local-claude_code"') < body.index('id="key-aaaa0001"')
+    assert body.index('id="key-cccc0003"') < body.index('id="key-aaaa0001"') < body.index('id="local-claude_code"')  # not in use: below
+    assert body.count("data-keyhandle disabled") == 2
 
 
 def test_a_summary_by_claude_code_gets_the_pictures_as_files_and_the_summary_rules(monkeypatch):

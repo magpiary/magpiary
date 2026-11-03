@@ -356,7 +356,7 @@
     let drag = null;
     list.addEventListener("pointerdown", (ev) => {
       const handle = ev.target.closest("[data-keyhandle]");
-      if (!handle) return;
+      if (!handle || handle.disabled) return;
       ev.preventDefault();
       const row = handle.closest(".keyrow");
       drag = { row, start: ev.clientY, moved: false };
@@ -379,8 +379,9 @@
       for (let guard = 0; guard < 20; guard++) {  // a quick drag can pass several rows at once
         const at = row.getBoundingClientRect().top + row.offsetHeight / 2;
         const up = row.previousElementSibling, down = row.nextElementSibling;
-        if (up?.classList.contains("keyrow") && at < up.getBoundingClientRect().top + up.offsetHeight / 2) swap(up, true);
-        else if (down?.classList.contains("keyrow") && at > down.getBoundingClientRect().top + down.offsetHeight / 2) swap(down, false);
+        const can = (r) => r?.classList.contains("keyrow") && !r.classList.contains("offrow");  // the ones not in use stay below
+        if (can(up) && at < up.getBoundingClientRect().top + up.offsetHeight / 2) swap(up, true);
+        else if (can(down) && at > down.getBoundingClientRect().top + down.offsetHeight / 2) swap(down, false);
         else break;
       }
     });
@@ -396,10 +397,10 @@
     list.addEventListener("pointercancel", drop);
     list.addEventListener("keydown", (ev) => {
       const handle = ev.target.closest("[data-keyhandle]");
-      if (!handle || !["ArrowUp", "ArrowDown"].includes(ev.key)) return;
+      if (!handle || handle.disabled || !["ArrowUp", "ArrowDown"].includes(ev.key)) return;
       ev.preventDefault();
       const row = handle.closest(".keyrow"), other = ev.key === "ArrowUp" ? row.previousElementSibling : row.nextElementSibling;
-      if (!other?.classList.contains("keyrow")) return;
+      if (!other?.classList.contains("keyrow") || other.classList.contains("offrow")) return;
       list.insertBefore(row, ev.key === "ArrowUp" ? other : other.nextSibling);
       renumber(); handle.focus(); save();
     });

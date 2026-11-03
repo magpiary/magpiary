@@ -161,8 +161,11 @@ def _lock(key: str) -> str:
     return f'<div class="plock"><p>{e(LOCKS[key])}</p></div>'
 
 
-def _handle(name: str) -> str:
-    """The grip on a row of the AI list: drag it, or focus it and use the arrow keys."""
+def _handle(name: str, on: bool = True) -> str:
+    """The grip on a row of the AI list: drag it, or focus it and use the arrow keys. Greyed and still for one not in use."""
+    if not on:
+        return (f'<button type="button" class="draghandle" data-keyhandle disabled aria-label="{e(name)} is not in use, so it '
+                f'stays below the others" title="Not in use: it stays below">{ui.icon("grip")}</button>')
     return (f'<button type="button" class="draghandle" data-keyhandle aria-label="Reorder {e(name)}: drag, or use the arrow keys" '
             f'title="Drag to change the order">{ui.icon("grip")}</button>')
 
@@ -452,8 +455,10 @@ class SettingsPages:
                 from magpiary.hub_ask import ENGINE_LOGO
 
                 logo = ENGINE_LOGO.get(k.provider, ui.icon("links"))
+                working = not k.refused and keyring.PROVIDERS.get(k.provider, {}).get("ready", False)
                 rows.append((f"key:{k.id}", _row(e(k.name), desc, _stat(state, tone) + _menu(f"More for {k.name}", items),
-                                                 lead=_handle(k.name) + logo, sid=f"key-{k.id}", cls="keyrow")))
+                                                 lead=_handle(k.name, working) + logo, sid=f"key-{k.id}",
+                                                 cls="keyrow" + ("" if working else " offrow"))))
             else:
                 rows.append(("", _row(e(k.name), desc, _stat(state, tone) + _menu(f"More for {k.name}", items), lead=ui.icon("search"))))
         if kind == "ai":
@@ -484,15 +489,16 @@ class SettingsPages:
                                     {"kind": kind, "enabled": "1", "next": "/settings/ai#keys"}, f"Allow {eng.SHORT[kind]}",
                                     confirm="" if on else confirm)
                        if on or here else '<a class="btn sm" href="/settings/ask#engine">Set it up</a>')
-            rows[kind] = _row(eng.LOCAL[kind], desc, control, lead=_handle(eng.SHORT[kind]) + logo, sid=f"local-{kind}",
-                              cls="keyrow" + ("" if on else " offrow"))
+            rows[kind] = _row(eng.LOCAL[kind], desc, control, lead=_handle(eng.SHORT[kind], on and here) + logo, sid=f"local-{kind}",
+                              cls="keyrow" + ("" if on and here else " offrow"))
         return rows
 
     def _keys_group(self, q: dict) -> str:
         from magpiary import engines as eng
 
         keyed = {**self._key_rows("ai"), **self._local_rows()}
-        rows = "".join(keyed[i] for i in eng.order(self.store) if i in keyed)
+        ordered = [i for i in eng.order(self.store) if i in keyed]
+        rows = "".join(sorted((keyed[i] for i in ordered), key=lambda r: " offrow" in r.split(">", 1)[0]))  # in use first, in order
         have_keys = any(i.startswith("key:") for i in keyed)
         lists = "".join(f'<datalist id="models-{prov}">' + "".join(f'<option value="{e(m)}">' for m in models)
                         + "</datalist>" for prov, models in SUGGESTED_MODELS.items())
@@ -770,9 +776,10 @@ class SettingsPages:
                qr]
         return "".join(out)
 
-    def _switch(self, action: str, on: bool, fields_off: dict, fields_on: dict, label: str, confirm: str = "") -> str:
+    def _switch(self, action: str, on: bool, fields_off: dict, fields_on: dict, label: str, confirm: str = "", ok: str = "") -> str:
+        """An on/off switch that posts. `confirm` asks first in a dialog; `ok` is that dialog's button ("I understand, turn it on")."""
         fields = fields_off if on else fields_on
-        ask = f' data-confirm="{e(confirm)}"' if confirm else ""
+        ask = (f' data-confirm="{e(confirm)}"' + (f' data-confirm-ok="{e(ok)}"' if ok else "")) if confirm else ""
         return (f'<form method="post" action="{e(action)}"{ask}>{ui.hidden(self.csrf, **fields)}<button type="submit" '
                 f'class="sw{" on" if on else ""}" role="switch" aria-checked="{str(on).lower()}" aria-label="{e(label)}">'
                 f'<span></span></button></form>')
@@ -1019,15 +1026,9 @@ class SettingsPages:
         on = engines.is_on(self.store, "digest")
         free = engines.only_free(self.store)
         switch = self._switch("/hub/digest/on", on, {"enabled": "0", "next": back}, {"enabled": "1", "next": back}, "Digest",
-                              confirm=(engines.warning("digest") + " Turn it on with your free key anyway?") if (free and not on) else "")
-        more = ""
-        if not on and free:
-            more = (f'<p class="small">{e(engines.warning("digest"))}</p>'
-                    '<a class="btn sm dark" href="/settings/ai#keys">Allow Claude Code or Codex</a>')
-        elif not on and not engines.options(self.store):
-            more = '<p class="small">It needs Claude Code or Codex allowed in AI keys, or an AI key.</p>'
-        rows = _row("Digest", "What your saves were about and what's worth acting on, written for you each week or month. "
-                    "On by itself once Claude Code or Codex is allowed or a paid key is saved.", switch,
+                              confirm=engines.warning("digest") if (free and not on) else "", ok="I understand, turn it on")
+        more = '<p class="small">It needs an AI key, or Claude Code or Codex allowed in AI keys.</p>' if not on and not engines.options(self.store) else ""
+        rows = _row("Digest", "What your saves were about and what's worth acting on, written for you each week or month.", switch,
                     lead=ui.icon("digest"), sid="digest-on", more=more)
         if on:
             usable = engines.options(self.store)

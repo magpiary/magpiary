@@ -93,6 +93,10 @@ def allow(store, kind: str, test=None) -> tuple[bool, str]:
     now = allowed(store)
     if kind not in now:
         store.set_setting(ALLOWED, json.dumps([*now, kind]))
+        ids = [i for i in order(store) if i != kind]  # it joins the end of the ones in use, ready to be dragged up
+        in_use = {o["id"] for o in options(store)}
+        at = max((n for n, i in enumerate(ids) if i in in_use), default=-1) + 1
+        store.set_setting(ORDER, json.dumps(ids[:at] + [kind] + ids[at:]))
     store.set_setting(f"{kind}_allowed_at", datetime.now().isoformat(timespec="seconds"))
     for feature in FEATURES:
         store.set_setting(_state_key(feature), "")

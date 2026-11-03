@@ -37,18 +37,11 @@ class AskSettings:
         switch = self._switch("/hub/askset", on, {"on": "0", "next": BACK}, {"on": "1", "next": BACK}, "Ask Magpiary",
                               confirm=("Turn off Ask Magpiary? This closes every open Ask panel, stops any answer being written, and "
                                        "removes every Ask button. Your chats are kept for when you turn it back on.") if on else
-                              (engines.warning("ask") + " Turn it on with your free key anyway?") if free else "")
-        why = ""
-        if not on and free:
-            why = (f'<p class="small">{e(engines.warning("ask"))}</p><div class="row">'
-                   '<a class="btn sm dark" href="/settings/ai#keys">Allow Claude Code or Codex</a>'
-                   + self._askset_form({"on": "1"}, "Use my free key anyway", "btn sm").replace(
-                       "<form", f'<form data-confirm="{e(engines.warning("ask"))} Turn it on anyway?"', 1) + "</div>")
-        elif not on and not engines.options(self.store):
-            why = ('<p class="small">Ask needs Claude Code or Codex allowed in AI keys, or an AI key.</p>'
-                   '<a class="btn sm dark" href="/settings/ai#keys">Open AI keys</a>')
-        out = [_group("", _row("Use Ask Magpiary", "Ask about a post, a pile, a board or your whole library, and the web. "
-                                           "It is on by itself once Claude Code or Codex is allowed or a paid key is saved.", switch,
+                              engines.warning("ask") if free else "",
+                              ok="" if on else "I understand, turn it on")
+        why = ('<p class="small">Ask needs an AI key, or Claude Code or Codex allowed in AI keys.</p>'
+               if not on and not engines.options(self.store) else "")
+        out = [_group("", _row("Use Ask Magpiary", "Ask about a post, a pile, a board or your whole library, and the web.", switch,
                                more=why), gid="onoff", cls="feat")]
         if not on:
             return "".join(out)
