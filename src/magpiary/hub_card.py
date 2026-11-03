@@ -8,9 +8,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlsplit
 
+from magpiary.hub_map import local_map_html
 from magpiary.hub_wall import empty_state
 from magpiary import keys as keyring
-from magpiary import icons, login, modes, ocr, ui
+from magpiary import facets, icons, login, modes, ocr, ui
 from magpiary import related as rel
 from magpiary.activity import STEPS
 from magpiary.brain import type_of
@@ -525,6 +526,30 @@ class CardPages:
         """Blocks a post type adds to the top of the Summary tab (a map for a place, a price list for a product…)."""
         return ""
 
+    def _facets_block(self, item: dict, record: dict | None, here: str) -> str:
+        """What the post looks like: the one-line look, then facet groups (Format, Setting, Mood...) as chips that
+        open a search for that value. The owner can remove a value or add one; removed values stay removed."""
+        have = self.store.facets_for(item["canonical_url"])
+        look = (item.get("look") or (record or {}).get("look") or "").strip()
+        if not have and not look:
+            return ""
+        rows = []
+        for key, label, values in facets.labelled(have):
+            chips = "".join(
+                f'<span class="fchip"><a href="/?q={e(quote(v))}" title="Search the library for “{e(v)}”">{e(v)}</a>'
+                + ui.button_form(self.csrf, "/hub/facet/remove", {"id": item["id"], "facet": key, "value": v, "next": here}, "×", "link",
+                                 title=f"Remove {v}").replace("<form", '<form style="display:inline"') + "</span>" for v in values)
+            rows.append(f'<div class="frow"><small>{e(label)}</small><div class="chips">{chips}</div></div>')
+        options = "".join(f'<option value="{k}">{e(v)}</option>' for k, v in facets.FACETS.items() if k != "length")
+        add = (f'<form method="post" action="/hub/facet/add" class="pvtagadd fadd" hidden>{ui.hidden(self.csrf, id=item["id"], next=here)}'
+               f'<select name="facet" aria-label="Kind">{options}</select>'
+               f'<input type="text" name="value" maxlength="40" placeholder="e.g. kitchen" aria-label="Value">'
+               f'<button class="btn sm" type="submit">Save</button><button class="link" type="button" data-pvhide>Cancel</button></form>'
+               f'<button type="button" class="pvaddbtn" data-pvshow>{ui.icon("plus")}Add detail</button>')
+        return (f'<h4>Look <span>· what it is like, not what it says</span></h4>'
+                + (f'<p class="it-sum sm looksent">{e(look)}</p>' if look else "")
+                + f'<div class="facets">{"".join(rows)}</div><div class="pvadd">{add}</div>')
+
     def _card_tabs(self, item, record, folder, caption, meta, here, tab, context: str = "library") -> str:
         links = self.store.links_for(item["canonical_url"])
         related = []
@@ -639,6 +664,7 @@ class CardPages:
         out.append(self._agent_note_block(item, here))
         out.append(f'<h4>Tags <span>· {"added by the AI, " if record else ""}yours to change</span></h4>'
                    f'<div class="chips">{tags}</div><div class="pvadd">{add}</div>' + in_piles)
+        out.append(self._facets_block(item, record, here))
         if suggested:
             out.append(f'<p class="small muted" style="margin:8px 0 0">Suggested tags: {" ".join("#" + e(t) for t in suggested)} '
                        + self._form("/hub/accept-tags", {"id": item["id"], "next": here}, "Add them", "link")
@@ -793,7 +819,9 @@ class CardPages:
         more = (f'<p style="margin:12px 8px 0"><a class="btn sm" href="{here}/related">See all {len(related)} related →</a></p>'
                 if len(related) > RELATED_SHOWN else
                 f'<p style="margin:12px 8px 0"><a class="link" href="{here}/related">More like this →</a></p>')
-        return ('<p class="small muted" style="margin:10px 8px">Best match first: the same named things, the same tags and '
+        library = self.related_library()
+        return ((local_map_html(self.store, item["id"], library) if library is not None else "") +
+                '<p class="small muted" style="margin:10px 8px">Best match first: the same named things, the same tags and '
                 'the same topic all count. “Not related” takes one out for good.</p>' + "".join(rows) + more)
 
     def _screen_cloud(self, item: dict, folder: Path | None, here: str) -> str:

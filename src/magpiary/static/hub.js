@@ -1700,6 +1700,8 @@
     if (!text) {
       const r = recent();
       if (r.length) html += '<div class="sh">Recent</div>' + r.map((x) => row("/?q=" + encodeURIComponent(x), esc(x), "", '<i class="si">↺</i>')).join("");
+      html += '<div class="sh">Try describing what you remember</div>' + ["a calm recipe from last month", "screen recording on instagram", "the one filmed in a kitchen"].map((x) => row("/?q=" + encodeURIComponent(x), esc(x), "", '<i class="si">✎</i>')).join("");
+      if (d.views && d.views.length) html += '<div class="sh">Your views</div>' + d.views.map((v) => row("/?q=" + encodeURIComponent(v.q) + (v.no ? "&no=" + encodeURIComponent(v.no) : ""), esc(v.name), v.n + (v.n === 1 ? " save" : " saves"), '<i class="si">◎</i>')).join("");
       html += '<div class="sh">Sources</div><div class="schips">' + d.sources.map((s) =>
         `<a class="sopt chip" role="option" href="/?source=${esc(s.source)}"><i style="background:var(--s-${SRC.includes(s.source) ? s.source : "other"})"></i>${esc(s.name)} <small>${s.n}</small></a>`).join("") + "</div>";
       if (d.types.length) html += '<div class="sh">Types</div><div class="schips">' + d.types.map((t) =>

@@ -106,6 +106,8 @@ def item_text(row: dict, record: dict) -> str:
     parts = [row.get("ai_title") or row.get("title") or "", row.get("summary") or row.get("caption") or "",
              ", ".join(sorted({*row.get("tags", []), *_suggested(row)})),
              ", ".join(sorted(named_things(row, record).values()))]
+    if row.get("look") or row.get("facet_values"):
+        parts.append(". ".join(filter(None, [row.get("look"), ", ".join(row.get("facet_values") or [])])))
     if not row.get("summary"):
         parts.append((row.get("transcript_text") or "")[:1500])
     return "\n".join(p for p in parts if p.strip())[:4000]

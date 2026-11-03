@@ -27,7 +27,8 @@ STATIC_FILES = {"hub.css": "text/css; charset=utf-8", "hub.js": "text/javascript
                 "vendor/gsap.min.js": "text/javascript; charset=utf-8",
                 "vendor/Flip.min.js": "text/javascript; charset=utf-8", "icon.svg": "image/svg+xml",
                 "emoji.json": "application/json",
-                "lock.js": "text/javascript; charset=utf-8", "settings.js": "text/javascript; charset=utf-8"}  # every emoji (Unicode names and keywords, MIT: emoji.LICENSE.txt)
+                "lock.js": "text/javascript; charset=utf-8", "settings.js": "text/javascript; charset=utf-8",
+                "map.js": "text/javascript; charset=utf-8", "map.css": "text/css; charset=utf-8"}  # every emoji (Unicode names and keywords, MIT: emoji.LICENSE.txt)
 
 SIZES = {"s": "Small tiles", "m": "Medium tiles", "l": "Large tiles"}
 # Looks the owner kept as choices in Settings → Appearance (24 Oct); the first of each is the default.
@@ -132,13 +133,13 @@ def document(title: str, body: str, look: dict, csrf: str, page: str, status: in
            f'<title>{e(title)} · Magpiary</title>'
            f'<link rel="icon" type="image/svg+xml" href="/static/icon.svg?v={v}">'
            f'<link rel="stylesheet" href="/static/hub.css?v={v}">'
-           f'<link rel="stylesheet" href="/static/indigo.css?v={v}">'
+           f'<link rel="stylesheet" href="/static/indigo.css?v={v}"><link rel="stylesheet" href="/static/map.css?v={v}">'
            f'<link rel="preload" href="/static/fonts/quicksand.woff2" as="font" type="font/woff2" crossorigin>'
            f'<link rel="preload" href="/static/fonts/dm-sans.woff2" as="font" type="font/woff2" crossorigin>'
            f'<script defer src="/static/vendor/gsap.min.js?v={v}"></script>'
            f'<script defer src="/static/vendor/Flip.min.js?v={v}"></script>'
            f'<script defer src="/static/vendor/lenis.min.js?v={v}"></script>'
-           f'<script defer src="/static/digest.js?v={v}"></script>'
+           f'<script defer src="/static/digest.js?v={v}"></script><script defer src="/static/map.js?v={v}"></script>'
            f'<script defer src="/static/hub.js?v={v}"></script>'
            f'<script defer src="/static/indigo.js?v={v}"></script>'
            f'<script defer src="/static/lock.js?v={v}"></script><script defer src="/static/settings.js?v={v}"></script></head>'

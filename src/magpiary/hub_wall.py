@@ -15,6 +15,7 @@ from magpiary import modes, spotlight, ui
 from magpiary import related as rel
 from magpiary.activity import STEPS
 from magpiary.brain import TYPE_NAMES
+from magpiary.query import keep, understand
 from magpiary.queuepage import REASONS, when
 from magpiary.store import TRASH_DAYS
 from magpiary.web import Response, e
@@ -72,7 +73,7 @@ class WallPages:
                 f'<kbd>/</kbd><div class="spanel" id="spanel" role="listbox" hidden></div></form></div>'
                 f'<a class="btn dark addp" href="/add" id="addbtn" title="Paste a link to any post or page">{ui.icon("plus")} <span class="lbl">Add a post</span></a>'
                 f'<nav class="seg shelfsw" id="shelfsw" aria-label="Library, Archive, Trash"><i class="slider" aria-hidden="true"></i>{shelves}</nav>'
-                f'<div class="right">' + self.lock_button() + self.digest_button(active) +
+                f'<div class="right">' + self.lock_button() + self.digest_button(active) + self.map_button(active) +
                 f'<a class="ubtn nestbtn{busy}{" on" if active == "nest" else ""}" href="/nest" id="t-nest" data-mood="{mood}" '
                 f'title="The nest: {e(line)}">{ui.icon("activity", "ico nesti")}<span class="lbl">Nest</span><span class="nline" id="nline">{e(line)}</span>'
                 f'<span class="nbadge" id="nbadge" data-badge{"" if needs else " hidden"}>{needs}</span></a>'
@@ -263,7 +264,7 @@ class WallPages:
         query = q.get("q", "").strip()
         flash = f'<div class="flash err">{e(ERRORS[q["error"]])}</div>' if q.get("error") in ERRORS else ""
         if query:
-            return self.search_page(query, flash, words_only=q.get("words") == "1")
+            return self.search_page(query, flash, words_only=q.get("words") == "1", no=set(q.get("no", "").split("|")) - {""})
         if shelf != "inbox":
             return self.shelf_page(shelf, flash)
         view = q.get("view") if q.get("view") in ("piles", "boards") else "everything"
@@ -570,15 +571,30 @@ class WallPages:
 
     # ---- search ------------------------------------------------------------------------------
 
-    def search_page(self, query: str, flash: str = "", words_only: bool = False) -> Response:
-        words = re.findall(r"\w+", query, flags=re.UNICODE)[:12]
-        items = self.store.hub_items("kept", query)
-        if not words_only:
-            items = self._with_meaning(query, items)
+    def find(self, query: str, no: set, words_only: bool = False):
+        """The search itself: what was understood in the query, then the words and meaning left over, then the filters."""
+        got = understand(query, self.store.facet_counts(), ui.type_name, ui.source_name, no=no)
+        words = re.findall(r"\w+", got.rest, flags=re.UNICODE)[:12]
+        items = self.store.hub_items("kept", got.rest if words else "", limit=5000 if got.parts else 300)
+        if words and not words_only:
+            items = self._with_meaning(got.rest, items)
+        wanted = [(p.key, p.value) for p in got.parts if p.kind == "facet"]
+        with_facets = self.store.urls_with_facets(wanted) if wanted else None
+        return [i for i in items if keep(i, got, with_facets)], got, words
+
+    def search_page(self, query: str, flash: str = "", words_only: bool = False, no: set | None = None) -> Response:
+        no = no or set()
+        items, got, words = self.find(query, no, words_only)
         ctx = self.tile_context()
         tiles = "".join(self.tile(i, ctx, quote=ui.why(i, words), words=words) for i in items)
+        chips = "".join(
+            f'<a class="uchip" href="/?q={e(quote(query))}&no={e(quote("|".join(sorted(no | {p.token}))))}" '
+            f'title="Read from “{e(p.phrase)}”. Press to search for the words instead">{e(p.label)}<i aria-hidden="true">×</i></a>'
+            for p in got.parts)
+        save = self._form("/hub/view/save", {"q": query, "no": "|".join(sorted(no)), "next": "/"}, "Save as a view", "pillb") if query else ""
+        read = (f'<div class="understood"><small>Read as</small>{chips}</div>' if chips else "")
         head = (f'<div class="sec" style="margin-top:0"><h2>{len(items)} found</h2><span>for “{e(query)}”, across the '
-                f'library and the archive, with the matching line on each tile</span>{self.size_control()}{self.select_button()}</div>')
+                f'library and the archive, with the matching line on each tile</span>{save}{self.size_control()}{self.select_button()}</div>{read}')
         guess = self.store.did_you_mean(query) if len(items) <= 2 else ""
         mean = (f'<p class="didyou">Did you mean <a class="link" href="/?q={e(quote(guess))}"><b>{e(guess)}</b></a>?</p>'
                 if guess and guess.lower() != query.strip().lower() else "")

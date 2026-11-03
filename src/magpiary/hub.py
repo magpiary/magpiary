@@ -37,6 +37,7 @@ from magpiary.hub_activity import ActivityPages
 from magpiary.hub_digest import DigestPages
 from magpiary.hub_help import HelpPages
 from magpiary.hub_lock import LockPages
+from magpiary.hub_map import MapPages
 from magpiary.hub_media import MediaPages
 from magpiary.hub_settings import SettingsPages
 from magpiary.hub_wall import WallPages
@@ -118,6 +119,7 @@ class Hub(
     DigestPages,
     WelcomePages,
     RelatedPages,
+    MapPages,
     BoardPages,
     LockPages,
     ChecklistPages,
@@ -237,6 +239,10 @@ class Hub(
             return Response(200, json.dumps(data).encode(), "application/json", headers={"Cache-Control": "no-store"})
         if path == "/checklist/panel":
             return self.checklist_fragment()
+        if path == "/map":
+            return self.map_page(q)
+        if path == "/graph.json":
+            return self.graph_json(q)
         if path == "/search.json":
             return self._search_json(q.get("q", ""), q.get("piles") == "1")
         if m := re.fullmatch(r"/item/(\d+)", path):
@@ -309,6 +315,17 @@ class Hub(
             item = self.store.item_by_id(item_id)
             if item:
                 self.store.set_tags(item_id, ", ".join(t for t in item["tags"] if t != form.get("tag", "")))
+        elif path in ("/hub/facet/add", "/hub/facet/remove"):
+            item = self.store.item_by_id(item_id)
+            if item and path.endswith("add"):
+                self.store.add_facet(item["canonical_url"], form.get("facet", ""), form.get("value", ""))
+            elif item:
+                self.store.remove_facet(item["canonical_url"], form.get("facet", ""), form.get("value", ""))
+            self.store.set_setting("piles_dirty", "1")
+        elif path == "/hub/view/save":
+            self.store.save_view(form.get("q", ""), {"q": form.get("q", ""), "no": [x for x in form.get("no", "").split("|") if x]})
+        elif path == "/hub/view/delete":
+            self.store.delete_view(int(form["view"])) if form.get("view", "").isdigit() else None
         elif path == "/hub/note":
             self.store.set_note(item_id, form.get("note", ""))
         elif path == "/hub/agentnote/remove":
@@ -476,7 +493,10 @@ class Hub(
         for i in self.store.hub_items("inbox"):
             if i.get("ai_status") == "done":
                 types[i.get("ai_type") or "other"] = types.get(i.get("ai_type") or "other", 0) + 1
-        data = {"piles": piles, "tags": tags, "names": names,
+        views = [{"id": v["id"], "name": v["name"], "q": v["rule"].get("q", ""), "no": "|".join(v["rule"].get("no", [])),
+                  "n": len(self.find(v["rule"].get("q", ""), set(v["rule"].get("no", [])), True)[0])} for v in self.store.views()] \
+            if not words else []
+        data = {"piles": piles, "tags": tags, "names": names, "views": views,
                 "sources": [{"source": k, "name": ui.source_name(k), "n": n} for k, n in
                             sorted(counts["sources"].items(), key=lambda kv: -kv[1])],
                 "types": [{"type": k, "name": ui.type_name(k), "n": n} for k, n in sorted(types.items(), key=lambda kv: -kv[1])]}

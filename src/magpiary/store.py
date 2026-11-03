@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from magpiary import facets
 from magpiary.protocol import DEFAULT_RETRY_WAIT
 from magpiary.stats import STATS_SCHEMA, StatsStore
 from magpiary.store_chat import ChatStore
@@ -89,7 +90,9 @@ MIGRATIONS = ["ALTER TABLE items ADD COLUMN archive_dir TEXT", "ALTER TABLE item
               "ALTER TABLE items ADD COLUMN agent_note_at TEXT NOT NULL DEFAULT ''",
               # Instagram shows this post only to logged-in people: 1 = flagged (no automatic refresh, never in the background
               # with a login), 2 = the owner chose to keep it as it is (leaves Needs attention, no more tries)
-              "ALTER TABLE items ADD COLUMN login_only INTEGER NOT NULL DEFAULT 0"]
+              "ALTER TABLE items ADD COLUMN login_only INTEGER NOT NULL DEFAULT 0",
+              # what the post looks like, one or two sentences from the AI (see facets.py)
+              "ALTER TABLE items ADD COLUMN look TEXT NOT NULL DEFAULT ''"]
 
 HUB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS agent_usage (day TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, kind));
@@ -105,6 +108,11 @@ CREATE TABLE IF NOT EXISTS timings (canonical_url TEXT NOT NULL, step TEXT NOT N
     seconds REAL NOT NULL, PRIMARY KEY (canonical_url, step));
 CREATE TABLE IF NOT EXISTS vectors (canonical_url TEXT NOT NULL, model TEXT NOT NULL, text_hash TEXT NOT NULL,
     vector BLOB NOT NULL, PRIMARY KEY (canonical_url, model));
+CREATE TABLE IF NOT EXISTS facets (canonical_url TEXT NOT NULL, facet TEXT NOT NULL, value TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'auto', PRIMARY KEY (canonical_url, facet, value));
+CREATE INDEX IF NOT EXISTS facets_value ON facets(facet, value);
+CREATE TABLE IF NOT EXISTS views (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, rule TEXT NOT NULL,
+    created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS not_related (a TEXT NOT NULL, b TEXT NOT NULL, PRIMARY KEY (a, b));
 CREATE TABLE IF NOT EXISTS piles (id INTEGER PRIMARY KEY, name TEXT NOT NULL, auto_name TEXT NOT NULL DEFAULT '',
     owner_named INTEGER NOT NULL DEFAULT 0, owner_made INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0,
@@ -1111,7 +1119,7 @@ class Store(ChatStore, StatsStore):
     def _reindex(self, url: str) -> None:
         with self._lock:
             row = self._db.execute(
-                "SELECT title, ai_title, author, caption, note, agent_note, summary, transcript_text, entities_text, screen_text "
+                "SELECT title, ai_title, author, caption, note, agent_note, summary, transcript_text, entities_text, screen_text, look "
                 "FROM items WHERE canonical_url=?", (url,)).fetchone()
             self._db.execute("DELETE FROM search WHERE url=?", (url,))
             if row:
@@ -1119,7 +1127,8 @@ class Store(ChatStore, StatsStore):
                     f"INSERT INTO search (url, {', '.join(SEARCH_COLUMNS)}) VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (url, " ".join(filter(None, (row["ai_title"], row["title"]))), row["author"] or "",
                      row["caption"] or "", " ".join(self.tags_for(url)), " ".join(filter(None, (row["note"], row["agent_note"]))), row["summary"] or "",
-                     row["transcript_text"] or "", " ".join(filter(None, [row["entities_text"] or "", *(
+                     row["transcript_text"] or "", " ".join(filter(None, [row["entities_text"] or "", row["look"] or "",
+                                                                           *(v for vs in self.facets_for(url).values() for v in vs), *(
                          r[0] for r in self._db.execute("SELECT DISTINCT name FROM links WHERE canonical_url=? AND removed=0",
                                                         (url,)).fetchall())])),
                      row["screen_text"] or ""))
@@ -1477,6 +1486,7 @@ class Store(ChatStore, StatsStore):
         with self._lock:
             self._db.execute("UPDATE items SET senses_status='done', transcript_text=? WHERE canonical_url=?",
                              (transcript_text, url))
+        self.refresh_local_facets(url)
         self._reindex(url)
 
     def paused(self, part: str) -> bool:
@@ -1498,7 +1508,98 @@ class Store(ChatStore, StatsStore):
             if apply_tags:
                 self._db.executemany("INSERT OR IGNORE INTO tags VALUES (?,?)",
                                      [(url, t) for t in record["suggested_tags"]])
+            self._db.execute("UPDATE items SET look=? WHERE canonical_url=?", (record.get("look") or "", url))
+        self.save_facets(url, record.get("facets") or {})
+        self.refresh_local_facets(url)
         self._reindex(url)
+
+    def save_facets(self, url: str, values: dict, origin: str = "auto") -> None:
+        """Replace this post's automatic values for the facets given; the owner's own values stay."""
+        with self._lock, self._db:
+            for facet, items in values.items():
+                if facet not in facets.FACETS:
+                    continue
+                self._db.execute("DELETE FROM facets WHERE canonical_url=? AND facet=? AND origin=?", (url, facet, origin))
+                self._db.executemany("INSERT OR IGNORE INTO facets VALUES (?,?,?,?)",
+                                     [(url, facet, v, origin) for v in items])
+
+    def refresh_local_facets(self, url: str) -> None:
+        """Length (and a plain format when there is no speech), worked out on the Mac with no AI."""
+        with self._lock:
+            row = self._db.execute("SELECT archive_dir, transcript_text FROM items WHERE canonical_url=?", (url,)).fetchone()
+        if not row or not row["archive_dir"]:
+            return
+        try:
+            meta = json.loads((Path(row["archive_dir"]) / "meta.json").read_text())
+        except (OSError, ValueError):
+            return
+        media = meta.get("media") or []
+        is_video = any(m.endswith((".mp4", ".webm", ".mov")) for m in media)
+        local = facets.local_facets(meta.get("duration"), len((row["transcript_text"] or "").split()) > 5, is_video)
+        with self._lock:  # a format the AI gave is better than the guess
+            if self._db.execute("SELECT 1 FROM facets WHERE canonical_url=? AND facet='format' AND origin!='local'", (url,)).fetchone():
+                local.pop("format", None)
+        self.save_facets(url, local, origin="local")
+
+    def facets_for(self, url: str) -> dict[str, list[str]]:
+        with self._lock:
+            rows = self._db.execute("SELECT facet, value FROM facets WHERE canonical_url=? AND origin!='removed' ORDER BY facet, value", (url,)).fetchall()
+        out: dict[str, list[str]] = {}
+        for r in rows:
+            out.setdefault(r["facet"], []).append(r["value"])
+        return out
+
+    def add_facet(self, url: str, facet: str, value: str) -> None:
+        value = facets.clean_value(value)
+        if facet in facets.FACETS and value:
+            self.save_facets_owner(url, facet, value, add=True)
+
+    def save_facets_owner(self, url: str, facet: str, value: str, add: bool) -> None:
+        with self._lock, self._db:
+            if add:
+                self._db.execute("INSERT OR REPLACE INTO facets VALUES (?,?,?, 'owner')", (url, facet, value))
+            else:
+                self._db.execute("DELETE FROM facets WHERE canonical_url=? AND facet=? AND value=?", (url, facet, value))
+                # a removed automatic value must not come back on the next run: keep a marker
+                self._db.execute("INSERT OR REPLACE INTO facets VALUES (?,?,?, 'removed')", (url, facet, value))
+
+    def remove_facet(self, url: str, facet: str, value: str) -> None:
+        self.save_facets_owner(url, facet, value, add=False)
+
+    def facet_counts(self) -> dict[str, dict[str, int]]:
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT f.facet, f.value, COUNT(*) n FROM facets f JOIN items i ON i.canonical_url=f.canonical_url "
+                "WHERE i.shelf IN ('inbox','archive') AND f.origin!='removed' GROUP BY f.facet, f.value").fetchall()
+        out: dict[str, dict[str, int]] = {}
+        for r in rows:
+            out.setdefault(r["facet"], {})[r["value"]] = r["n"]
+        return out
+
+    def urls_with_facets(self, wanted: list[tuple[str, str]]) -> set[str]:
+        """Posts that have every (facet, value) asked for."""
+        found: set[str] | None = None
+        with self._lock:
+            for facet, value in wanted:
+                rows = {r[0] for r in self._db.execute(
+                    "SELECT canonical_url FROM facets WHERE facet=? AND value=? AND origin!='removed'", (facet, value))}
+                found = rows if found is None else found & rows
+        return found or set()
+
+    def views(self) -> list[dict]:
+        with self._lock:
+            rows = self._db.execute("SELECT id, name, rule FROM views ORDER BY id").fetchall()
+        return [{"id": r["id"], "name": r["name"], "rule": json.loads(r["rule"] or "{}")} for r in rows]
+
+    def save_view(self, name: str, rule: dict) -> int:
+        with self._lock, self._db:
+            cur = self._db.execute("INSERT INTO views (name, rule, created_at) VALUES (?,?,?)",
+                                   (name.strip()[:60] or "View", json.dumps(rule), self._stamp()))
+        return cur.lastrowid
+
+    def delete_view(self, view_id: int) -> None:
+        with self._lock, self._db:
+            self._db.execute("DELETE FROM views WHERE id=?", (view_id,))
 
     def brain_failed(self, url: str, reason: str, detail: str, retry: bool) -> None:
         with self._lock:
@@ -1692,11 +1793,15 @@ class Store(ChatStore, StatsStore):
         with self._lock:
             rows = [dict(r) for r in self._db.execute(
                 "SELECT rowid AS id, canonical_url, source, archive_dir, title, ai_title, caption, summary, suggested_tags, "
-                "transcript_text, author, first_shared_at, created_at, published_at, thumb, media_kind, shelf "
+                "transcript_text, author, first_shared_at, created_at, published_at, thumb, media_kind, shelf, look "
                 "FROM items WHERE status='archived' AND shelf IN ('inbox', 'archive') "
                 "ORDER BY created_at").fetchall()]
             tags = self._db.execute("SELECT canonical_url, tag FROM tags").fetchall()
             names = self._db.execute("SELECT DISTINCT canonical_url, name FROM links WHERE removed=0").fetchall()
+            looks = self._db.execute("SELECT canonical_url, value FROM facets WHERE origin!='removed' AND facet!='length'").fetchall()
+        by_look: dict[str, list[str]] = {}
+        for r in looks:
+            by_look.setdefault(r[0], []).append(r[1])
         by_tag: dict[str, list[str]] = {}
         for r in tags:
             by_tag.setdefault(r[0], []).append(r[1])
@@ -1706,6 +1811,7 @@ class Store(ChatStore, StatsStore):
         for r in rows:
             r["tags"] = by_tag.get(r["canonical_url"], [])
             r["link_names"] = by_name.get(r["canonical_url"], [])
+            r["facet_values"] = by_look.get(r["canonical_url"], [])
         return rows
 
     def related_signature(self) -> tuple:

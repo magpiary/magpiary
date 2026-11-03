@@ -43,7 +43,7 @@ RETRY_CHECK_SECONDS = 60
 
 
 HUB_PAGES = ("/", "/ask", "/lock", "/lock.json", "/pair.json", "/add", "/help", "/profile/photo.jpg", "/boards.json", "/digest", "/settings", "/nest", "/activity.json", "/queue", "/doctor", "/doctor.json",
-             "/welcome", "/welcome.json", "/search.json", "/checklist/panel", "/panel.json")
+             "/welcome", "/welcome.json", "/map", "/graph.json", "/search.json", "/checklist/panel", "/panel.json")
 HUB_PREFIXES = ("/stats/", "/board/", "/join/", "/item/", "/media/", "/pile/", "/static/", "/settings/", "/welcome/", "/digest/", "/ask/", "/icon/")
 
 

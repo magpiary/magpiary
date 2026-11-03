@@ -4233,3 +4233,17 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .wel .w-body.al { grid-template-areas: "head ." "main side"; align-items: start; row-gap: 0; }
 .wel .w-body.al > .head { grid-area: head; } .wel .w-body.al > .main { grid-area: main; } .wel .w-body.al > .side { grid-area: side; }
 @media (max-width: 860px) { .wel .w-body.al { grid-template-areas: "head" "main" "side"; row-gap: 20px; } }
+
+/* facets: what a post looks like, and what the search understood */
+.facets { display: grid; gap: 8px; margin-top: 6px; }
+.facets .frow { display: grid; grid-template-columns: 84px 1fr; align-items: baseline; gap: 10px; }
+.facets .frow > small { font: 700 11px var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--fg-3); }
+.fchip { display: inline-flex; align-items: center; gap: 2px; padding: 4px 6px 4px 12px; border-radius: 999px; background: var(--chip); font-size: 13.5px; }
+.chips .fchip a { padding: 0; background: none; border-radius: 0; } .chips .fchip a:hover { background: none; text-decoration: underline; }
+.fchip .link { padding: 0 6px; color: var(--fg-3); } .fchip .link:hover { color: var(--fg); }
+.looksent { font-style: italic; color: var(--fg-2); margin: 0 0 10px; }
+.fadd select, .fadd input { font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+.understood { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 18px; }
+.understood > small { font: 700 11px var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--fg-3); }
+.uchip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 8px 5px 12px; border-radius: 999px; background: var(--chip); font-size: 13.5px; }
+.uchip i { font-style: normal; color: var(--fg-3); } .uchip:hover i { color: var(--fg); }
