@@ -445,8 +445,11 @@ class SettingsPages:
                 confirm=f"Remove {k.name}? It is deleted from this Mac.")
             desc = (f'{e(provider)} · {e(keyring.TIERS[k.tier])}' + (f' · <span class="mono">{e(k.model)}</span>' if k.model else "")
                     + f' · added {e(k.added)}')
+            handle = (f'<button type="button" class="draghandle" data-keyhandle aria-label="Reorder {e(k.name)}: drag, or use the '
+                      f'arrow keys" title="Drag to change the order">{ui.icon("grip")}</button>') if kind == "ai" and len(mine) > 1 else ""
             rows.append(_row(e(k.name), desc, _stat(state, tone) + _menu(f"More for {k.name}", items),
-                             lead=f'<span class="ord">{n + 1}</span>' if kind == "ai" else ui.icon("search")))
+                             lead=handle + f'<span class="ord">{n + 1}</span>' if kind == "ai" else ui.icon("search"),
+                             sid=f"key-{k.id}", cls="keyrow" if kind == "ai" else ""))
         return "".join(rows)
 
     def _local_rows(self) -> str:
@@ -484,8 +487,8 @@ class SettingsPages:
                      cls="emptyrow") if not rows else ""
         add = (f'<details class="addk"{"" if rows else " open"}><summary class="btn sm">{ui.icon("plus")}Add a key</summary>'
                f'{self._add_key_form("ai")}</details>')
-        return _group("AI keys", rows + empty + f'<div class="srow addrow">{add}</div>' + lists + self._local_rows(), gid="keys", cls="feat hero pink",
-                      desc="Used in this order: the first key that works writes the summary.", lock="ai",
+        return _group("AI keys", f'<div class="keylist" data-keylist>{rows}</div>' + empty + f'<div class="srow addrow">{add}</div>' + lists + self._local_rows(), gid="keys", cls="feat hero pink",
+                      desc="Used in this order: the first key that works writes the summary. Drag a key by its handle to change the order.", lock="ai",
                       more=_more("<p>When a key reaches its daily limit or is refused, Magpiary moves to the next, and goes "
                                  "back to the first the next day. Each post records which key wrote it. Free keys are paced "
                                  "to stay within their limits.</p>"))
@@ -1474,6 +1477,9 @@ class SettingsPages:
             elif getattr(self, "keep_awake", None):
                 (self.keep_awake.start if enabled else self.keep_awake.stop)()
                 self.store.set_setting("stay_awake", "1" if enabled else "0")
+            return True
+        if path == "/hub/keys/order":
+            keyring.reorder([i for i in form.get("ids", "").split(",") if re.fullmatch(r"[0-9a-f]{8}", i)])
             return True
         if path in ("/hub/keys/up", "/hub/keys/down"):
             keyring.move(form.get("key_id", ""), -1 if path.endswith("up") else 1)

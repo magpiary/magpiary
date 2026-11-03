@@ -155,6 +155,19 @@ def move(key_id: str, step: int) -> None:
     _save(keys)
 
 
+def reorder(ids: list[str]) -> None:
+    """The keys named in `ids` take that order among themselves (dragged in Settings); the others keep their places.
+    The order is the order they are tried in."""
+    keys = load()
+    wanted = [k for i in ids for k in keys if k.id == i]
+    if len({k.id for k in wanted}) != len(wanted) or not wanted:
+        return
+    slots = [n for n, k in enumerate(keys) if k.id in {w.id for w in wanted}]
+    for n, k in zip(slots, wanted):
+        keys[n] = k
+    _save(keys)
+
+
 def mark(key_id: str, limit: bool = False, refused: bool = False, today: str | None = None) -> None:
     keys = load()
     for k in keys:

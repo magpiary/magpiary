@@ -341,4 +341,62 @@
 })();
 
 // Ask Magpiary: while Claude Code or Codex is being set up in the background, look again every few seconds
-(() => { if (document.querySelector("[data-askwait]")) setTimeout(() => location.reload(), 3000); })();
+(() => { if (document.querySelector("[data-askwait]")) setTimeout(() => location.reload(), 3000); 
+  // ---- AI keys: drag a key by its handle (or use the arrow keys on it) to change the order they are tried in ----------
+  (() => {
+    const list = $("[data-keylist]");
+    if (!list) return;
+    const csrf = $('meta[name="csrf"]')?.content || "";
+    const rows = () => $$(".keyrow", list);
+    const renumber = () => rows().forEach((r, n) => { const o = $(".ord", r); if (o) o.textContent = n + 1; });
+    const save = () => fetch("/hub/keys/order", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ csrf, ids: rows().map((r) => r.id.replace("key-", "")).join(","), next: "/settings/ai" }) });
+    let drag = null;
+    list.addEventListener("pointerdown", (ev) => {
+      const handle = ev.target.closest("[data-keyhandle]");
+      if (!handle) return;
+      ev.preventDefault();
+      const row = handle.closest(".keyrow");
+      drag = { row, start: ev.clientY, moved: false };
+      row.classList.add("dragging");
+      handle.setPointerCapture(ev.pointerId);
+    });
+    list.addEventListener("pointermove", (ev) => {
+      if (!drag) return;
+      const { row } = drag;
+      row.style.transform = `translateY(${ev.clientY - drag.start}px)`;
+      const mid = row.getBoundingClientRect().top + row.offsetHeight / 2;
+      const prev = row.previousElementSibling, next = row.nextElementSibling;
+      const swap = (other, before) => {
+        const shift = other.getBoundingClientRect().top;
+        list.insertBefore(row, before ? other : other.nextSibling);
+        drag.start += other.getBoundingClientRect().top - shift;  // keep the row under the finger after the swap
+        row.style.transform = `translateY(${ev.clientY - drag.start}px)`;
+        if (!calm) other.animate([{ transform: `translateY(${shift - other.getBoundingClientRect().top}px)` }, { transform: "none" }],
+                                 { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)" });
+        drag.moved = true; renumber();
+      };
+      if (prev?.classList.contains("keyrow") && mid < prev.getBoundingClientRect().top + prev.offsetHeight / 2) swap(prev, true);
+      else if (next?.classList.contains("keyrow") && mid > next.getBoundingClientRect().top + next.offsetHeight / 2) swap(next, false);
+    });
+    const drop = () => {
+      if (!drag) return;
+      const { row, moved } = drag;
+      drag = null;
+      row.classList.remove("dragging");
+      row.style.transform = "";
+      if (moved) save();
+    };
+    list.addEventListener("pointerup", drop);
+    list.addEventListener("pointercancel", drop);
+    list.addEventListener("keydown", (ev) => {
+      const handle = ev.target.closest("[data-keyhandle]");
+      if (!handle || !["ArrowUp", "ArrowDown"].includes(ev.key)) return;
+      ev.preventDefault();
+      const row = handle.closest(".keyrow"), other = ev.key === "ArrowUp" ? row.previousElementSibling : row.nextElementSibling;
+      if (!other?.classList.contains("keyrow")) return;
+      list.insertBefore(row, ev.key === "ArrowUp" ? other : other.nextSibling);
+      renumber(); handle.focus(); save();
+    });
+  })();
+})();

@@ -327,6 +327,15 @@ class CardPages:
         if item["status"] == "archived" and modes.current(self.store) != "private" and item["shelf"] != "trash":
             acts.append(self._form("/hub/again", {"id": item["id"], "next": here},
                                    "Summarise again" if done else "✦ Summarise", "mi"))
+        if done and item["status"] == "archived" and item["shelf"] != "trash":
+            from magpiary import deepdive
+
+            if deepdive.enabled(self.store):
+                meta = (_read_json(Path(item["archive_dir"]) / "meta.json") if item.get("archive_dir") else None) or {}
+                sug = item.get("deep_status") is None and deepdive.suggested(self.store, meta)
+                label = "Open the deeper dive" if item.get("deep_status") == "done" else "Deeper dive…"
+                acts.append(f'<a class="mi" href="{here}?tab=deep" data-tabto="deep">{label}'
+                            + ('<em class="sugtext"> ✦ Suggested</em>' if sug else "") + "</a>")
         if item["shelf"] == "inbox":
             acts.append(self._form("/hub/shelf", {"id": item["id"], "shelf": "archive", "next": here}, "Archive", "mi"))
         elif item["shelf"] != "board":
@@ -572,7 +581,7 @@ class CardPages:
         button = (f'<form method="post" action="/hub/deep"{f" data-confirm={chr(34)}{e(confirm)}{chr(34)}" if confirm else ""}>'
                   f'{ui.hidden(self.csrf, id=item["id"], next=here)}<button class="btn dark" type="submit">'
                   f'{ui.icon("sparkle")}{"Try the deeper dive again" if status == "failed" else "Start the deeper dive"}</button></form>')
-        return (f'<div class="deepintro">{"<span class=" + chr(34) + "bd p" + chr(34) + ">Suggested</span>" if long else ""}'
+        return (f'<div class="deepintro">{"<b class=" + chr(34) + "sugtext" + chr(34) + ">✦ Suggested for this post</b>" if long else ""}'
                 f'<p class="it-sum">{e(why)}{e(what)}</p><p class="small muted">{e(cost)}. Once per post.</p>{failed}{button}</div>')
 
     def _deep_result(self, result: dict) -> str:
@@ -666,7 +675,8 @@ class CardPages:
             (f'<a role="tab" data-tab="{k}" class="off" aria-disabled="true" tabindex="-1" title="{e(off[1])}" aria-label="{name}: {e(off[1])}">{name}</a>'
              if k == off[0] else
              f'<a href="#{k}" role="tab" data-tab="{k}" class="{"on" if k == tab else ""}" '
-             f'aria-selected="{str(k == tab).lower()}">{name}' + (f"<small>{n}</small>" if n else "") + "</a>")
+             f'aria-selected="{str(k == tab).lower()}">{name}'
+             + ((f'<em class="sugtext">✦ {n}</em>' if not str(n).isdigit() else f"<small>{n}</small>") if n else "") + "</a>")
             for k, name, n, _ in tabs) + "</nav>")
         return nav + "".join(f'<section class="pane" id="{k}" role="tabpanel" data-pane="{k}"'
                              + (f' data-related-src="{here}?frag=1&amp;tab=rel&amp;from=preview"' if k == "rel" and lazy_related else "")

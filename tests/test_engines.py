@@ -70,3 +70,19 @@ def test_allowing_in_settings_runs_the_test_and_explains_a_failure(mac, monkeypa
     assert engines.allowed(mac.store) == ["claude_code"]
     post(mac, "/hub/engine/allow", kind="claude_code", enabled="0", next="/settings/ai")
     assert engines.allowed(mac.store) == []
+
+
+def test_keys_take_the_order_they_are_dragged_into(mac, monkeypatch):
+    from magpiary import keys as keyring
+
+    saved = [Key("aaaa0001", "gemini", "free", "s", "", "m", ""), Key("bbbb0002", "tavily", "free", "s", "", "", ""),
+             Key("cccc0003", "openrouter", "free", "s", "", "m", "")]
+    store_keys = {"list": saved}
+    monkeypatch.setattr(keyring, "load", lambda: list(store_keys["list"]))
+    monkeypatch.setattr(keyring, "_save", lambda keys: store_keys.update(list=keys))
+    post(mac, "/hub/keys/order", ids="cccc0003,aaaa0001", next="/settings/ai")
+    assert [k.id for k in store_keys["list"]] == ["cccc0003", "bbbb0002", "aaaa0001"]  # the search key keeps its place
+    post(mac, "/hub/keys/order", ids="cccc0003,cccc0003", next="/settings/ai")  # nonsense changes nothing
+    assert [k.id for k in store_keys["list"]] == ["cccc0003", "bbbb0002", "aaaa0001"]
+    body = page(mac, "/settings/ai")[2]
+    assert "data-keylist" in body and body.count("data-keyhandle") == 2
