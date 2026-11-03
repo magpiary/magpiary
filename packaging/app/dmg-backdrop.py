@@ -1,5 +1,5 @@
 """The picture behind the icons in the Magpiary disk image: a clear first step (drag to Applications) and the steps for the one
-thing every unsigned Mac app needs, macOS's "Open Anyway". Run by build-dmg.sh: dmg-backdrop.py <out.tiff> <brand icons folder>.
+thing every unsigned Mac app needs, macOS's "Open Anyway". Run by build-dmg.sh: dmg-backdrop.py <out.tiff> <assets folder>.
 
 The window is 760 x 528 points (Finder's title bar and optional path bar cover about 60 of them, so the content stays in the top 440); the file holds a 1x and a 2x picture (Finder reads a plain 1520 px PNG as a window twice the size).
 It is light, because Finder draws icon names in dark text over any backdrop."""

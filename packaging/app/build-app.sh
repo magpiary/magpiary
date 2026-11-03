@@ -63,9 +63,9 @@ swiftc -O -target "$ARCH-apple-macos12.0" -o "$APP/Contents/MacOS/Magpiary" "$HE
 cp -R "$HERE/installer" "$RES/installer"
 cp -R "$HERE/panel" "$RES/panel"
 echo "== Icon, logos, Info.plist"
-for tone in white black; do cp "$ROOT/brand/logo/final/icons/magpiary-symbol-$tone-256.png" "$RES/symbol-$tone.png"; done
+for tone in white black; do cp "$ROOT/assets/magpiary-symbol-$tone-256.png" "$RES/symbol-$tone.png"; done
 ICONSET="$(mktemp -d)/Magpiary.iconset"; mkdir -p "$ICONSET"
-SRC="$ROOT/brand/logo/final/icons/magpiary-app-icon-1024.png"
+SRC="$ROOT/assets/magpiary-app-icon-1024.png"
 for size in 16 32 128 256 512; do
   sips -z $size $size "$SRC" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
   sips -z $((size*2)) $((size*2)) "$SRC" --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null

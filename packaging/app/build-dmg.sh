@@ -16,7 +16,7 @@ echo "== Staging"
 mkdir -p "$WORK/stage/.background"
 ditto "$APP" "$WORK/stage/Magpiary.app"   # ditto keeps the signature, links and permissions intact
 ln -s /Applications "$WORK/stage/Applications"
-uv run --with pillow python "$HERE/dmg-backdrop.py" "$WORK/backdrop.tiff" "$ROOT/brand/logo/final/icons"
+uv run --with pillow python "$HERE/dmg-backdrop.py" "$WORK/backdrop.tiff" "$ROOT/assets"
 tiffutil -cathidpicheck "$WORK/backdrop.png" "$WORK/backdrop@2x.png" -out "$WORK/stage/.background/backdrop.tiff"
 
 echo "== Disk image"

@@ -176,6 +176,7 @@
 | 2026-11-02 | Release | **Three install routes for the Mac app:** disk image with Open Anyway steps, Terminal script `install-app.sh`, and a Homebrew cask. The last two open with no macOS warning | Owner |
 | 2026-11-02 | Release | **One hub per Mac account** (0.1.3 candidate): supersedes "one Magpiary per Mac for now" | Owner |
 | 2026-11-02 | Brand | **The disk image uses the logo the app and website show** (mark plus "magpiary" wordmark), not the lockup files | Owner |
+| 2026-11-03 | Brand | **One brand kit built on the app's logo (owner):** The Pair plus "magpiary" in Bricolage Grotesque 800, outlined; the older capital-M outlined wordmark is retired. The kit lives outside this repository; the repo keeps only the five images the app, the disk image and the README use, in `assets/`. Palette: Pink, Ink, Cream, plus Night, Deep Indigo, Blue, Purple and Spark Gold | Owner |
 
 ---
 

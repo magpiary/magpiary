@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="brand/logo/final/lockup-horizontal.svg" alt="Magpiary" width="360">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/magpiary-horizontal-on-dark.svg">
+    <img src="assets/magpiary-horizontal-on-light.svg" alt="Magpiary" width="360">
+  </picture>
 </p>
 
 <p align="center"><b>Your saved posts, kept on your own Mac, searchable by what you half remember.</b></p>
