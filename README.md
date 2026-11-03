@@ -39,7 +39,7 @@ Requires macOS (Apple Silicon recommended), an iPhone with Shortcuts, and about 
 curl -fsSL https://raw.githubusercontent.com/magpiary/magpiary/main/install-app.sh | sh
 ```
 
-**Or the disk image.** Download `Magpiary-0.1.3.dmg` from the [latest release](https://github.com/magpiary/magpiary/releases/latest), open it and drag Magpiary to Applications. The app is not signed with a paid Apple account, so macOS blocks the first open. Open Magpiary once, then go to System Settings > Privacy & Security, scroll down, click **Open Anyway** and enter your password. The app then downloads about 720 MB of tools and models and opens the setup page in your browser. One Magpiary per Mac for now: do not install it for two accounts on the same Mac.
+**Or the disk image.** Download `Magpiary-0.1.4.dmg` from the [latest release](https://github.com/magpiary/magpiary/releases/latest), open it and drag Magpiary to Applications. The app is not signed with a paid Apple account, so macOS blocks the first open. Open Magpiary once, then go to System Settings > Privacy & Security, scroll down, click **Open Anyway** and enter your password. The app then downloads about 720 MB of tools and models and opens the setup page in your browser. One Magpiary per Mac for now: do not install it for two accounts on the same Mac.
 
 **Or from Terminal:**
 
