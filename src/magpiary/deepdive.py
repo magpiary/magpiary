@@ -78,7 +78,10 @@ Ask = Callable[[str, dict, list[dict], list[Path]], str]
 # ---- settings ---------------------------------------------------------------------------------
 
 def enabled(store) -> bool:
-    return store.get_setting(ON, "0") == "1"
+    """On by itself once Claude Code or Codex is allowed or a paid key is saved, unless the owner turned it off (engines.py)."""
+    from magpiary import engines as eng
+
+    return eng.is_on(store, "deep")
 
 
 def long_after(store) -> float:
@@ -106,18 +109,11 @@ def suggested_urls(store) -> set[str]:
     return out
 
 
-def engines(keys=None) -> list[tuple[str, str]]:
-    """(value, label) of every engine this Mac can use: the AI keys, then Claude Code and Codex when installed."""
-    from magpiary import ask, ask_codex
-    from magpiary import keys as keyring
+def engines(store, keys=None) -> list[tuple[str, str]]:
+    """(id, label) of the engines a deeper dive may use: allowed local engines, then paid keys. Never a free-tier key."""
+    from magpiary import engines as eng
 
-    out = [(f"key:{k.id}", k.name) for k in (keys if keys is not None else keyring.load())
-           if keyring.PROVIDERS.get(k.provider, {}).get("kind") == "ai"]
-    if ask.claude_available():
-        out.append(("claude_code", "Claude Code on this Mac"))
-    if ask_codex.available():
-        out.append(("codex", "Codex on this Mac"))
-    return out
+    return [(o["id"], o["label"]) for o in eng.options(store, keys, free=False)]
 
 
 def models_for(kind: str, key=None) -> dict[str, str]:
@@ -157,21 +153,16 @@ def efforts_for(kind: str, key=None) -> dict[str, str]:
 
 
 def engine(store, keys=None) -> dict:
-    """The chosen engine: {"kind": key, claude_code or codex, "key": the Key or None, "model", "effort", "label"}. Without
-    a choice, the first AI key. A model or effort the engine does not offer falls back to its default. kind is "" when
-    nothing is usable."""
-    from magpiary import keys as keyring
+    """The chosen engine: {"kind": key, claude_code or codex, "key": the Key or None, "model", "effort", "label"}: the
+    owner's pick, else the first allowed local engine, else the first paid key. A model or effort the engine does not
+    offer falls back to its default. kind is "" when nothing may be used."""
+    from magpiary import engines as eng
 
-    keys = keys if keys is not None else keyring.load()
-    choice = store.get_setting(ENGINE, "")
-    ai = [k for k in keys if keyring.PROVIDERS.get(k.provider, {}).get("kind") == "ai"]
-    if choice in ("claude_code", "codex"):
-        kind, key, label = choice, None, "Claude Code" if choice == "claude_code" else "Codex"
-    else:
-        key = next((k for k in ai if f"key:{k.id}" == choice), ai[0] if ai else None)
-        if key is None:
-            return {"kind": "", "key": None, "model": "", "effort": "", "label": ""}
-        kind, label = "key", key.name
+    picked = eng.choice(store, "deep", keys)
+    if picked is None:
+        return {"kind": "", "key": None, "model": "", "effort": "", "label": ""}
+    kind, key = picked["kind"], picked["key"]
+    label = eng.SHORT.get(kind, picked["label"])
     models, efforts = models_for(kind, key), efforts_for(kind, key)
     model = store.get_setting(MODEL, "")
     effort = store.get_setting(EFFORT, DEFAULT_EFFORT)

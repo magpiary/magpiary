@@ -44,7 +44,7 @@ SECTION_BLURBS = {"profile": "What friends see on a board, and what your AI know
                   "privacy": "The hub lock, what leaves this Mac, where your data lives, and how to delete it."}
 SAVED = {"key": "Key checked and saved.", "login": "Instagram connected.", "model": "Model changed.",
          "mode": "Saved. New summaries follow this mode.", "budget": "Saved.", "look": "Saved.", "phone": "Phone removed.",
-         "awake": "Saved.", "limit": "Search limit saved.", "longvideo": "Saved.", "deep": "Deeper dive engine saved.", "keys": "Keys removed.", "profile": "Profile saved.",
+         "awake": "Saved.", "limit": "Search limit saved.", "longvideo": "Saved.", "allowed": "Allowed. The Digest, Ask and Deeper dive now use it.", "stopped": "Stopped. Magpiary no longer uses it.", "deep": "Deeper dive engine saved.", "keys": "Keys removed.", "profile": "Profile saved.",
          "photo": "Photo saved.", "nophoto": "Photo removed.", "bucket": "Bucket connected and checked.",
          "nobucket": "Bucket removed from this Mac.", "claude": "Claude Code settings saved.",
          "claudetest": "Test finished.", "claudeoff": "Claude Code disconnected. Your AI key writes the digest now.", "via": "New boards will sync there.", "joined": "You joined the board. It fills in as it syncs."}
@@ -518,6 +518,33 @@ class SettingsPages:
                              lead=f'<span class="ord">{n + 1}</span>' if kind == "ai" else ui.icon("search")))
         return "".join(rows)
 
+    def _local_rows(self) -> str:
+        """Claude Code and Codex on this Mac: off until allowed here, the only place they are allowed or stopped. Allowing asks
+        first (a dialog), then a tiny test run; only a passing test allows it."""
+        from magpiary import engines as eng
+        from magpiary.hub_ask import ENGINE_LOGO
+
+        rows = []
+        for kind in eng.LOCAL:
+            on = eng.is_allowed(self.store, kind)
+            here = eng.installed(kind)
+            logo = ENGINE_LOGO.get("claude" if kind == "claude_code" else "codex", "")
+            confirm = (f"Allow {eng.SHORT[kind]} on this Mac? Magpiary will use {eng.PLAN[kind]} for the Digest, Ask Magpiary "
+                       f"and Deeper dive. It sends the text and frames of the posts involved; your keys and other files stay on "
+                       f"this Mac. A tiny test runs first (a few tokens). The Digest, Ask and Deeper dive then turn on and use it.")
+            if on:
+                desc = f"Allowed. The Digest, Ask and Deeper dive may use {eng.PLAN[kind]}."
+            elif here:
+                desc = f"Found on this Mac, not allowed. Magpiary never uses {eng.PLAN[kind]} until you allow it here."
+            else:
+                desc = f"Not on this Mac. Set it up from Ask Magpiary's settings, then allow it here."
+            control = (self._switch("/hub/engine/allow", on, {"kind": kind, "enabled": "0", "next": "/settings/ai#local"},
+                                    {"kind": kind, "enabled": "1", "next": "/settings/ai#local"}, f"Allow {eng.SHORT[kind]}",
+                                    confirm="" if on else confirm)
+                       if on or here else '<a class="btn sm" href="/settings/ask#engine">Set it up</a>')
+            rows.append(_row(eng.LOCAL[kind], desc, control, lead=logo, sid=f"local-{kind}"))
+        return f'<div class="srow addrow" id="local"><small class="muted">On this Mac</small></div>' + "".join(rows)
+
     def _keys_group(self, q: dict) -> str:
         rows = self._key_rows("ai")
         lists = "".join(f'<datalist id="models-{prov}">' + "".join(f'<option value="{e(m)}">' for m in models)
@@ -526,7 +553,7 @@ class SettingsPages:
                      cls="emptyrow") if not rows else ""
         add = (f'<details class="addk"{"" if rows else " open"}><summary class="btn sm">{ui.icon("plus")}Add a key</summary>'
                f'{self._add_key_form("ai")}</details>')
-        return _group("AI keys", rows + empty + f'<div class="srow addrow">{add}</div>' + lists, gid="keys", cls="feat hero pink",
+        return _group("AI keys", rows + empty + f'<div class="srow addrow">{add}</div>' + lists + self._local_rows(), gid="keys", cls="feat hero pink",
                       desc="Used in this order: the first key that works writes the summary.", lock="ai",
                       more=_more("<p>When a key reaches its daily limit or is refused, Magpiary moves to the next, and goes "
                                  "back to the first the next day. Each post records which key wrote it. Free keys are paced "
@@ -585,31 +612,39 @@ class SettingsPages:
     # ---- Finding links, the Instagram login -----------------------------------------------------
 
     def _deep_group(self) -> str:
-        """Deeper dive: off by default. On, it offers the engine, the model and when to suggest one for a long video."""
+        """Deeper dive: on by itself once Claude Code or Codex is allowed or a paid key is saved; never on a free-tier key."""
         from magpiary import deepdive
+        from magpiary import engines as eng
 
         on = deepdive.enabled(self.store)
         back = "/settings/ai#deepdive"
-        rows = _row("Deeper dive", "An extra, deeper reading of a post when you ask for it: every part of a long video, "
-                    "more frames, comments and linked pages, with sections, takeaways and quotes. The normal summary stays as it is.",
+        usable = deepdive.engines(self.store)
+        what = ("An extra, deeper reading of a post when you ask for it: every part of a long video, more frames, comments and "
+                "linked pages, with sections, takeaways and quotes. The normal summary stays as it is.")
+        if not usable:
+            rows = _row("Deeper dive", what + " It needs Claude Code or Codex allowed in AI keys, or a paid key: a free key "
+                        "would run out.", '<a class="btn sm" href="/settings/ai#local">Allow Claude Code or Codex</a>',
+                        lead=ui.icon("sparkle"), sid="deepdive")
+            return _group("Deeper dive", rows, gid="deep", desc="Off: no engine that can carry it.")
+        rows = _row("Deeper dive", what,
                     self._switch("/hub/deep/on", on, {"enabled": "0", "next": back}, {"enabled": "1", "next": back}, "Deeper dive"),
                     lead=ui.icon("sparkle"), sid="deepdive",
-                    info="Off: nothing about it shows anywhere. It runs only when you press Deeper dive on a post, once per post. "
+                    info="It runs only when you press Deeper dive on a post, once per post. "
                          f"Up to {deepdive.CONFIRM_ABOVE} AI calls it starts at once; more, and it asks first.")
         if on:
             chosen = deepdive.engine(self.store)
-            choices = deepdive.engines()
-            current = (f"key:{chosen['key'].id}" if chosen["kind"] == "key" else chosen["kind"])
+            picked = eng.choice(self.store, "deep")
             pick = lambda name, label, items, now: (  # noqa: E731
                 f'<label class="deeppick"><span>{label}</span><select name="{name}" aria-label="{label}">'
                 + "".join(f'<option value="{e(v)}"{" selected" if v == now else ""}>{e(t)}</option>' for v, t in items) + "</select></label>")
             efforts = deepdive.efforts_for(chosen["kind"], chosen["key"])
             control = (f'<form method="post" action="/hub/deep/engine" class="deepengine" data-autosubmit>{ui.hidden(self.csrf)}'
-                       + pick("engine", "Engine", choices, current)
+                       + (pick("engine", "Engine", usable, picked["id"]) if len(usable) > 1 else
+                          f'<span class="deeppick"><span>Engine</span><em>{e(picked["label"])}</em></span>')
                        + pick("model", "Model", deepdive.models_for(chosen["kind"], chosen["key"]).items(), chosen["model"])
                        + (pick("effort", "Effort", efforts.items(), chosen["effort"]) if efforts else
                           '<span class="deeppick"><span>Effort</span><em>Set by the model</em></span>')
-                       + "</form>") if choices else '<span class="small muted">Add an AI key above, or install Claude Code or Codex.</span>'
+                       + "</form>")
             rows += _row("Engine", "Which AI reads it. Frames and text go to that AI; the video never leaves this Mac. "
                          "A stronger model and higher effort read more closely and use more of your plan or quota.",
                          control, lead=ui.icon("sliders"), sid="deepengine", cls="rstack")
@@ -622,7 +657,7 @@ class SettingsPages:
                          f'<button class="btn sm" type="submit">Save</button></form>', lead=ui.icon("clock"), sid="longvideo",
                          more=(f'<a class="link" href="/?deep=suggested">{waiting} long video{"s" if waiting != 1 else ""} '
                                f'could use one now →</a>') if waiting else "")
-        return _group("Deeper dive", rows, gid="deep", desc="Off unless you turn it on.")
+        return _group("Deeper dive", rows, gid="deep", desc=f'Uses {e(eng.choice(self.store, "deep")["label"])}.' if on else "Off.")
 
     def _finding_group(self) -> str:
         """Links work with no setup; a web search key only finds what the free directories miss."""
@@ -1416,9 +1451,9 @@ class SettingsPages:
             agent_log.clear()
             return True
         if path == "/hub/deep/on":
-            from magpiary import deepdive
+            from magpiary import engines as eng
 
-            self.store.set_setting(deepdive.ON, "1" if form.get("enabled") == "1" else "0")
+            eng.set_on(self.store, "deep", form.get("enabled") == "1")
             return True
         if path == "/hub/beta/map":
             from magpiary.hub_map import BETA_SETTING
@@ -1486,6 +1521,18 @@ class SettingsPages:
 
     def settings_redirects(self, path: str, form: dict) -> Response | None:
         """Settings changes that come back with a message. None for a path this does not handle."""
+        if path == "/hub/engine/allow":
+            from magpiary import engines as eng
+
+            kind = form.get("kind", "")
+            if kind in eng.LOCAL:
+                if form.get("enabled") == "1":
+                    ok, why = eng.allow(self.store, kind)
+                    if not ok:
+                        return Response(303, b"", headers={"Location": "/settings/ai?error=" + quote(why) + "#local"})
+                    return Response(303, b"", headers={"Location": "/settings/ai?saved=allowed#local"})
+                eng.disallow(self.store, kind)
+            return Response(303, b"", headers={"Location": "/settings/ai?saved=stopped#local"})
         if path == "/hub/askset":
             return self.askset_post(form)
         if path == "/hub/versioncheck/now":
@@ -1608,17 +1655,17 @@ class SettingsPages:
             return Response(303, b"", headers={"Location": "/settings/profile?saved=nophoto"})
         if path == "/hub/deep/engine":
             from magpiary import deepdive
+            from magpiary import engines as eng
 
-            before = self.store.get_setting(deepdive.ENGINE, "")
-            if form.get("engine", "") in {v for v, _ in deepdive.engines()}:
-                self.store.set_setting(deepdive.ENGINE, form["engine"])
-            chosen = deepdive.engine(self.store)
-            if self.store.get_setting(deepdive.ENGINE, "") != before:  # a new engine starts on its own defaults
-                self.store.set_setting(deepdive.MODEL, "")
-            elif form.get("model", "") in deepdive.models_for(chosen["kind"], chosen["key"]):
-                self.store.set_setting(deepdive.MODEL, form["model"])
-            if form.get("effort", "") in deepdive.efforts_for(chosen["kind"], chosen["key"]):
-                self.store.set_setting(deepdive.EFFORT, form["effort"])
+            before = (eng.choice(self.store, "deep") or {}).get("id")
+            if form.get("engine") and form["engine"] != before and eng.choose(self.store, "deep", form["engine"]):
+                self.store.set_setting(deepdive.MODEL, "")  # a new engine starts on its own defaults
+            else:
+                chosen = deepdive.engine(self.store)
+                if form.get("model", "") in deepdive.models_for(chosen["kind"], chosen["key"]):
+                    self.store.set_setting(deepdive.MODEL, form["model"])
+                if form.get("effort", "") in deepdive.efforts_for(chosen["kind"], chosen["key"]):
+                    self.store.set_setting(deepdive.EFFORT, form["effort"])
             return Response(303, b"", headers={"Location": "/settings/ai?saved=deep#deepengine"})
         if path == "/hub/settings/long-video":
             minutes = form.get("minutes", "").strip()

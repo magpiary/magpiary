@@ -172,13 +172,20 @@ def test_bio_links_are_remembered_a_week_and_a_refusal_gives_none(tmp_path):
     assert deepdive.bio_links(store, "reddit", "x", profile) == [] and deepdive.bio_links(store, "x", "bad/handle", profile) == []
 
 
-def test_the_tab_shows_only_when_on_and_asks_first_for_big_ones(mac, tmp_path):
+def allow_local(mac, monkeypatch, *kinds):
+    """Claude Code and Codex count as installed, and the named ones as allowed (no test run here)."""
+    from magpiary import engines
+
+    monkeypatch.setattr(engines, "installed", lambda kind: True)
+    mac.store.set_setting(engines.ALLOWED, json.dumps(list(kinds)))
+
+
+def test_the_tab_shows_only_when_on_and_asks_first_for_big_ones(mac, tmp_path, monkeypatch):
     url, folder = saved(mac.store, tmp_path, meta={"duration": 7200})
     mac.store.brain_succeeded(url, json.loads((folder / "record.json").read_text()), "", apply_tags=False)
     item_id = mac.store.id_for(url)
     assert 'data-tab="deep"' not in page(mac, f"/item/{item_id}")[2]  # off by default
-    mac.store.set_setting(deepdive.ON, "1")
-    mac.store.set_setting(deepdive.ENGINE, "claude_code")
+    allow_local(mac, monkeypatch, "claude_code")  # allowed: Deeper dive is on by itself
     body = page(mac, f"/item/{item_id}?tab=deep")[2]
     assert 'action="/hub/deep"' in body and "data-confirm=" in body and "about 9 AI calls" in body and "Suggested" in body
     post(mac, "/hub/deep", id=str(item_id), next=f"/item/{item_id}?tab=deep")
@@ -186,32 +193,31 @@ def test_the_tab_shows_only_when_on_and_asks_first_for_big_ones(mac, tmp_path):
     assert "Deeper dive under way" in page(mac, f"/item/{item_id}?tab=deep")[2]
 
 
-def test_each_engine_offers_its_own_models_and_efforts_and_a_new_engine_starts_on_defaults(mac):
+def test_each_engine_offers_its_own_models_and_efforts_and_a_new_engine_starts_on_defaults(mac, monkeypatch):
     from magpiary.keys import Key
 
     gemini = Key("g1", "gemini", "free", "secret", "", "gemini-3.5-flash-lite", "")
     assert list(deepdive.models_for("key", gemini)) == ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.5-pro"]
     assert deepdive.efforts_for("key", gemini) == {}  # Gemini: set by the model
     assert list(deepdive.models_for("claude_code")) == ["sonnet", "opus", "haiku"] and deepdive.efforts_for("codex") == deepdive.EFFORTS
-    mac.store.set_setting(deepdive.ON, "1")
-    mac.store.set_setting(deepdive.ENGINE, "claude_code")
+    allow_local(mac, monkeypatch, "claude_code", "codex")
     post(mac, "/hub/deep/engine", model="opus", effort="high")
     chosen = deepdive.engine(mac.store)
     assert (chosen["model"], chosen["effort"]) == ("opus", "high")
     post(mac, "/hub/deep/engine", model="nonsense", effort="extreme")
     assert deepdive.engine(mac.store)["model"] == "opus"  # nonsense is ignored
-    mac.store.set_setting(deepdive.ENGINE, "codex")
+    post(mac, "/hub/deep/engine", engine="codex")
     assert deepdive.engine(mac.store)["model"] == "gpt-6-sol"  # opus is not a Codex model: Codex's default
     body = page(mac, "/settings/ai")[2]
     assert 'class="deepengine" data-autosubmit' in body and 'name="effort"' in body
 
 
-def test_the_count_in_settings_opens_the_library_filtered_to_those_videos(mac, tmp_path):
+def test_the_count_in_settings_opens_the_library_filtered_to_those_videos(mac, tmp_path, monkeypatch):
     long_url, folder = saved(mac.store, tmp_path, "dvlong", meta={"duration": 3600})
     short_url, _ = saved(mac.store, tmp_path, "dvshort", meta={"duration": 60})
     with mac.store._lock:
         mac.store._db.execute("UPDATE items SET media_kind='video', status='archived'")
-    mac.store.set_setting(deepdive.ON, "1")
+    allow_local(mac, monkeypatch, "codex")
     assert deepdive.suggested_urls(mac.store) == {long_url}
     assert 'href="/?deep=suggested">1 long video could use one now' in page(mac, "/settings/ai")[2]
     body = page(mac, "/?deep=suggested")[2]

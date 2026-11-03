@@ -392,14 +392,17 @@ def test_restore_refuses_anything_that_is_not_a_sound_backup(mac):
     assert mac.store.get_item("https://example.com/stays")
 
 
-def test_deeper_dive_settings_show_only_once_it_is_on(mac):
+def test_deeper_dive_needs_a_local_engine_or_a_paid_key(mac, monkeypatch):
+    from magpiary import engines
+
     body = page(mac, "/settings/ai")[2]
-    assert 'id="deepdive"' in body and 'action="/hub/settings/long-video"' not in body  # off by default: just the switch
-    post(mac, "/hub/deep/on", enabled="1", next="/settings/ai")
+    assert 'id="deepdive"' in body and "Allow Claude Code or Codex" in body and 'action="/hub/deep/on"' not in body
+    monkeypatch.setattr(engines, "installed", lambda kind: True)
+    mac.store.set_setting(engines.ALLOWED, json.dumps(["claude_code"]))
     body = page(mac, "/settings/ai")[2]
-    assert 'action="/hub/settings/long-video"' in body and 'action="/hub/deep/engine"' in body
+    assert 'action="/hub/settings/long-video"' in body and 'action="/hub/deep/engine"' in body  # on by itself
     post(mac, "/hub/deep/on", enabled="0", next="/settings/ai")
-    assert mac.store.get_setting("deep_on") == "0"
+    assert not engines.is_on(mac.store, "deep")
 
 
 def test_long_videos_get_a_deeper_dive_suggested_after_the_minutes_set(mac):
