@@ -28,10 +28,6 @@ LINKS = [
     "https://www.reddit.com/r/Design/comments/AbC123/a_title/?utm_name=x",
     "https://www.reddit.com/r/Design/s/XyZ987",
     "https://redd.it/abc123",
-    "https://www.youtube.com/watch?v=Example0005&si=tracker&t=10s",
-    "https://youtu.be/Example0005?si=abc",
-    "https://www.youtube.com/shorts/Example0005?feature=share",
-    "https://www.youtube.com/feed/subscriptions",
     "https://www.linkedin.com/posts/someone_topic-activity-123-AbCd?utm_source=share",
     "https://lnkd.in/p/abc123",
     "https://example.com/article?id=7&utm_campaign=x&fbclid=y&si=z",
@@ -59,3 +55,17 @@ def test_js_cleaner_matches_python_cleaner():
             continue
         assert "error" not in js, f"{link}: js refused ({js})"
         assert (js["url"], js["source"], js.get("kind"), bool(js.get("needsExpansion"))) == (py.url, py.source, py.kind, py.needs_expansion), link
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_extension_treats_video_sites_as_ordinary_web_pages():
+    """The extension has no site-specific rule for video sites: it strips tracking and keeps the rest, and the Mac's own
+    cleaner then puts the link in its exact form (the second check)."""
+    script = ("const {clean}=require(process.argv[1]);console.log(JSON.stringify(JSON.parse(process.argv[2]).map(l=>clean(l))));")
+    links = ["https://www.youtube.com/watch?v=Example0005&si=tracker&t=10s", "https://youtu.be/Example0005?si=abc"]
+    out = json.loads(subprocess.run(["node", "-e", script, str(EXT / "clean.js"), json.dumps(links)],
+                                    capture_output=True, text=True, check=True).stdout)
+    assert [o["source"] for o in out] == ["other", "other"]
+    assert out[0]["url"] == "https://www.youtube.com/watch?v=Example0005"
+    assert out[1]["url"] == "https://youtu.be/Example0005"
+    assert clean(out[0]["url"]).source == "youtube"  # the Mac still recognises it when it cleans again

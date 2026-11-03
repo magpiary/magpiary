@@ -1,8 +1,8 @@
 /* The toolbar panel: pair once, then save this page, or pick one post on a feed. */
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
-const PICK_SITES = /(^|\.)(instagram\.com|threads\.com|threads\.net|youtube\.com|reddit\.com|x\.com|twitter\.com|linkedin\.com)$/;
-const SOURCE = { instagram: ["Instagram", "#c13584"], threads: ["Threads", "#8a8a8a"], youtube: ["YouTube", "#d81f1f"], reddit: ["Reddit", "#ff4500"],
+const PICK_SITES = /(^|\.)(instagram\.com|threads\.com|threads\.net|reddit\.com|x\.com|twitter\.com|linkedin\.com)$/;
+const SOURCE = { instagram: ["Instagram", "#c13584"], threads: ["Threads", "#8a8a8a"], reddit: ["Reddit", "#ff4500"],
   x: ["X", "#8a8a8a"], linkedin: ["LinkedIn", "#0a66c2"], other: ["Web page", "#8a8a8a"] };
 
 function ago(iso) {

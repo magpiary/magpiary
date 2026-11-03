@@ -75,16 +75,6 @@
     throw new Unsupported("not a linkedin post link");
   }
 
-  function youtube(segments, host, params) {
-    let id = null;
-    if (host === "youtu.be") id = segments[0] || null;
-    else if (segments[0] === "watch") id = params.get("v");
-    else if (segments.length >= 2 && ["shorts", "live", "embed", "v"].includes(segments[0])) id = segments[1];
-    if (id && /^[A-Za-z0-9_-]{11}$/.test(id))
-      return { url: `https://www.youtube.com/watch?v=${id}`, source: "youtube", kind: segments[0] === "shorts" ? "short" : "video" };
-    throw new Unsupported("not a youtube video link");
-  }
-
   function other(u) {
     if (!["http:", "https:"].includes(u.protocol) || !u.hostname) throw new Unsupported("not a web link");
     const kept = [];
@@ -96,7 +86,7 @@
 
   const HANDLERS = [
     [["instagram.com"], instagram], [["threads.net", "threads.com"], threads], [["x.com", "twitter.com", "t.co"], x],
-    [["reddit.com", "redd.it"], reddit], [["youtube.com", "youtu.be"], youtube], [["linkedin.com", "lnkd.in"], linkedin],
+    [["reddit.com", "redd.it"], reddit], [["linkedin.com", "lnkd.in"], linkedin],
   ];
 
   /** Clean a link (or text holding one). Returns {url, source, kind?, needsExpansion?} or {error}. Never throws. */
