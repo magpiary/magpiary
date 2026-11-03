@@ -478,12 +478,6 @@ class CardPages:
             pct = f' {int(lane["percent"])}%' if lane.get("percent") is not None else ""
             return (f'<div class="pstate"><b>{e(STEPS.get(lane["step"], "Working"))}{pct}</b><p>Being read on this Mac '
                     'now. This card fills in by itself.</p></div>')
-        if item.get("ai_status") == "long":
-            minutes = round((self._duration(item) or 0) / 60)
-            return (f'<div class="pstate"><b>Long video{f" · {minutes} min" if minutes else ""}</b><p>Saved, but not read yet: '
-                    'long videos wait for you, so your Mac stays free for everything else. Reading makes the transcript and '
-                    'frames on this Mac, then one summary with your AI key.</p>'
-                    + self._form("/hub/again", {"id": item["id"], "next": here}, "Read it now", "btn sm dark") + "</div>")
         if item.get("ai_status") == "needs_attention":
             why = AI_REASONS.get(item.get("ai_reason") or "", "something went wrong")
             return (f'<div class="pstate bad"><b>No summary yet</b><p>Not made: {e(why)}.</p>'

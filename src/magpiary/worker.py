@@ -151,13 +151,9 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
     prepare = prepare or (lambda item, progress: senses(Path(item["archive_dir"]), _meta(item), progress=progress))
     apply_tags = store.get_setting("auto_tags", "apply") == "apply"
     done = asked = 0
-    long_after = float(store.get_setting("long_video_minutes", str(LONG_VIDEO_MINUTES)) or 0) * 60
     for item in store.due_for_brain():
         forced = bool(item.get("ai_force"))
         url = item["canonical_url"]
-        if not forced and long_after and (_meta(item).get("duration") or 0) > long_after:
-            store.wait_long(url)  # a long video is read only when the owner asks: the Mac stays free for the rest
-            continue
         if not item.get("senses_status"):
             if store.paused("transcribe") and not forced:
                 continue
@@ -228,6 +224,67 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
 LONG_VIDEO_MINUTES = 20  # longer videos wait for the owner's "Read it" (0 in Settings: read everything)
 
 
+def deep_due(store: Store, notes_dir: Path, activity=None, log: Callable[[str], None] = lambda m: None, asker=None) -> int:
+    """Deeper dives the owner asked for, one at a time with the engine chosen in Settings. Returns how many were made."""
+    from magpiary import deepdive
+    from magpiary.brain import BrainFailed
+
+    done = 0
+    for item in store.due_for_deep():
+        url = item["canonical_url"]
+        store.deep_running(url)
+        progress = activity.begin("process", item) if activity else NO_PROGRESS
+        try:
+            ask = asker or deepdive.asker_for(deepdive.engine(store))
+            result = deepdive.run(item, store, ask, progress=progress)
+        except BrainFailed as err:
+            store.deep_failed(url, err.detail)
+            log(f"deeper dive failed: {err.reason}")
+            continue
+        except Exception as err:  # one broken post must not stop the rest
+            store.deep_failed(url, type(err).__name__)
+            log(f"deeper dive failed: {type(err).__name__}")
+            continue
+        finally:
+            if activity:
+                activity.end("process")
+        store.deep_done(url, deepdive.as_text(result))
+        _rewrite_note(item, notes_dir)
+        done += 1
+    return done
+
+
+def _rewrite_note(item: dict, notes_dir: Path) -> None:
+    """The post's Markdown note again, now with its Deeper dive section."""
+    from magpiary.process import write_note
+
+    folder = Path(item["archive_dir"])
+    record = _load_json(folder / "record.json")
+    if not record:
+        return
+    transcript = (_load_json(folder / "transcript.json") or {}).get("segments")
+    try:
+        write_note(item, _meta(item), record, transcript, notes_dir / f"{folder.name}.md")
+    except (OSError, KeyError):
+        pass
+
+
+def _with_deep(record: dict, folder: Path) -> dict:
+    """The record plus the things its deeper dive named, so the link search looks for them too."""
+    deep = _load_json(folder / "deep.json")
+    if not deep or not deep.get("named"):
+        return record
+    record = dict(record)
+    targets, items = list(record.get("link_targets") or []), list(record.get("list_items") or [])
+    for n in deep["named"]:
+        if n["kind"] in ("video", "article"):
+            items.append({"name": n["name"], "kind": n["kind"], "by": "", "note": "", "slide": 0})
+        else:
+            targets.append({"name": n["name"], "kind": n["kind"], "role": "passing"})
+    record["link_targets"], record["list_items"] = targets, items
+    return record
+
+
 def _meta(item: dict) -> dict:
     try:
         return json.loads((Path(item["archive_dir"]) / "meta.json").read_text())
@@ -280,7 +337,7 @@ def links_due(store: Store, activity=None, get=None, pause: Callable[[str], None
             return done
         folder = Path(item["archive_dir"])
         try:
-            record = json.loads((folder / "record.json").read_text())
+            record = _with_deep(json.loads((folder / "record.json").read_text()), folder)
         except (OSError, ValueError):
             store.save_found_links(item["canonical_url"], [])
             continue

@@ -94,15 +94,16 @@ def _chat_headers(provider: str, secret: str) -> dict:
 
 
 def ask_chat(provider: str, parts: list[dict], history: list[tuple[str, str]], secret: str, model: str,
-             request: Request = http_request) -> str:
-    """One request to OpenRouter or OpenAI. `history` is earlier (role, text) turns after the evidence."""
+             request: Request = http_request, system: str = PROMPT, schema: dict = SCHEMA) -> str:
+    """One request to OpenRouter or OpenAI. `history` is earlier (role, text) turns after the evidence. `system` and
+    `schema` default to the summary's; a deeper dive passes its own."""
     service = NAMES[provider]
     content = [{"type": "text", "text": v} if kind == "text" else
                {"type": "image_url", "image_url": {"url": f"data:{v[0]};base64,{v[1]}"}}
                for kind, v in _images(parts)]
-    messages = [{"role": "system", "content": PROMPT}, {"role": "user", "content": content},
+    messages = [{"role": "system", "content": system}, {"role": "user", "content": content},
                 *({"role": "assistant" if r == "model" else "user", "content": t} for r, t in history)]
-    formats = [{"type": "json_schema", "json_schema": {"name": "record", "strict": False, "schema": json_schema()}},
+    formats = [{"type": "json_schema", "json_schema": {"name": "record", "strict": False, "schema": json_schema(schema)}},
                {"type": "json_object"}]  # a model without schema support may still promise JSON
     for n, response_format in enumerate(formats):
         body = {"model": model, "messages": messages, "response_format": response_format}
@@ -180,7 +181,8 @@ def _claude_failure(err: Exception) -> BrainFailed:
     return BrainFailed("unknown", f"Claude: {type(err).__name__}")
 
 
-def ask_claude(parts: list[dict], history: list[tuple[str, str]], secret: str, model: str, client=None) -> str:
+def ask_claude(parts: list[dict], history: list[tuple[str, str]], secret: str, model: str, client=None,
+               system: str = PROMPT, schema: dict = SCHEMA) -> str:
     content = [{"type": "text", "text": v} if kind == "text" else
                {"type": "image", "source": {"type": "base64", "media_type": v[0], "data": v[1]}}
                for kind, v in _images(parts)]
@@ -188,8 +190,8 @@ def ask_claude(parts: list[dict], history: list[tuple[str, str]], secret: str, m
                 *({"role": "assistant" if r == "model" else "user", "content": t} for r, t in history)]
     try:
         response = (client or _claude_client(secret)).messages.create(
-            model=model, max_tokens=16000, system=PROMPT, messages=messages,
-            output_config={"effort": "low", "format": {"type": "json_schema", "schema": json_schema()}})
+            model=model, max_tokens=16000, system=system, messages=messages,
+            output_config={"effort": "low", "format": {"type": "json_schema", "schema": json_schema(schema)}})
     except Exception as err:  # the library's errors, mapped to the shared reasons
         raise _claude_failure(err) from err
     if response.stop_reason == "refusal":

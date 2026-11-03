@@ -418,14 +418,14 @@ def _asker(provider: str, key: str, model: str, call: Call, wait):
 
 
 def ask_gemini(parts: list[dict], history: list[tuple[str, str]], key: str, model: str, call: Call = http_call,
-               wait=None) -> str:
+               wait=None, system: str = PROMPT, schema: dict = SCHEMA) -> str:
     """One Gemini request. A busy answer (503) is retried after a short wait, twice."""
     import time
 
     wait = wait or time.sleep
     contents = [{"role": "user", "parts": parts}, *({"role": r, "parts": [{"text": t}]} for r, t in history)]
-    body = {"system_instruction": {"parts": [{"text": PROMPT}]}, "contents": contents,
-            "generationConfig": {"responseMimeType": "application/json", "responseSchema": SCHEMA,
+    body = {"system_instruction": {"parts": [{"text": system}]}, "contents": contents,
+            "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema,
                                  "temperature": 0.2}}
     for pause in (*BUSY_WAITS, None):
         try:

@@ -10,7 +10,8 @@ import time
 from collections.abc import Callable
 
 STEPS = {"fetch": "Reading details", "download": "Downloading", "transcribe": "Transcribing",
-         "frames": "Picking frames", "summary": "Summarising", "links": "Finding links", "screen": "Reading on-screen text"}
+         "frames": "Picking frames", "summary": "Summarising", "links": "Finding links", "screen": "Reading on-screen text",
+         "subtitles": "Getting the subtitles", "pages": "Reading linked pages", "deep": "Deeper dive"}
 LANES = {"fetch": "Fetching", "process": "Summarising"}
 
 

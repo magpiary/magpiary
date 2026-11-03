@@ -92,7 +92,10 @@ MIGRATIONS = ["ALTER TABLE items ADD COLUMN archive_dir TEXT", "ALTER TABLE item
               # with a login), 2 = the owner chose to keep it as it is (leaves Needs attention, no more tries)
               "ALTER TABLE items ADD COLUMN login_only INTEGER NOT NULL DEFAULT 0",
               # what the post looks like, one or two sentences from the AI (see facets.py)
-              "ALTER TABLE items ADD COLUMN look TEXT NOT NULL DEFAULT ''"]
+              "ALTER TABLE items ADD COLUMN look TEXT NOT NULL DEFAULT ''",
+              # Deeper dive (deepdive.py): NULL (none), queued, running, done or failed; deep_text is its words, for search
+              "ALTER TABLE items ADD COLUMN deep_status TEXT", "ALTER TABLE items ADD COLUMN deep_text TEXT NOT NULL DEFAULT ''",
+              "ALTER TABLE items ADD COLUMN deep_detail TEXT NOT NULL DEFAULT ''"]
 
 HUB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS agent_usage (day TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, kind));
@@ -216,6 +219,7 @@ class Store(ChatStore, StatsStore):
             if statement.split()[5] not in columns:
                 self._db.execute(statement)
         self._db.execute("UPDATE items SET login_only=1 WHERE use_login=1 AND login_only=0")  # fetched with the owner's login at first
+        self._db.execute("UPDATE items SET ai_status=NULL WHERE ai_status='long'")  # 0.1.4 held long videos back: they get the normal summary now
         if sum(r["pk"] > 0 for r in self._db.execute("PRAGMA table_info(vectors)")) == 1:
             self._db.execute("DROP TABLE vectors")  # one reading per item before; vectors are made again
         self._db.executescript(HUB_SCHEMA)
@@ -1119,14 +1123,15 @@ class Store(ChatStore, StatsStore):
     def _reindex(self, url: str) -> None:
         with self._lock:
             row = self._db.execute(
-                "SELECT title, ai_title, author, caption, note, agent_note, summary, transcript_text, entities_text, screen_text, look "
+                "SELECT title, ai_title, author, caption, note, agent_note, summary, deep_text, transcript_text, entities_text, screen_text, look "
                 "FROM items WHERE canonical_url=?", (url,)).fetchone()
             self._db.execute("DELETE FROM search WHERE url=?", (url,))
             if row:
                 self._db.execute(
                     f"INSERT INTO search (url, {', '.join(SEARCH_COLUMNS)}) VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (url, " ".join(filter(None, (row["ai_title"], row["title"]))), row["author"] or "",
-                     row["caption"] or "", " ".join(self.tags_for(url)), " ".join(filter(None, (row["note"], row["agent_note"]))), row["summary"] or "",
+                     row["caption"] or "", " ".join(self.tags_for(url)), " ".join(filter(None, (row["note"], row["agent_note"]))),
+                     " ".join(filter(None, (row["summary"], row["deep_text"]))),  # a deeper dive's words count as summary
                      row["transcript_text"] or "", " ".join(filter(None, [row["entities_text"] or "", row["look"] or "",
                                                                            *(v for vs in self.facets_for(url).values() for v in vs), *(
                          r[0] for r in self._db.execute("SELECT DISTINCT name FROM links WHERE canonical_url=? AND removed=0",
@@ -1636,11 +1641,33 @@ class Store(ChatStore, StatsStore):
                 "UPDATE items SET ai_status='needs_attention', ai_reason=?, ai_detail=?, ai_attempts=?, ai_next_at=?, "
                 "ai_force=0 WHERE canonical_url=?", (reason, detail[:200], attempts, retry_at, url))
 
-    def wait_long(self, url: str) -> None:
-        """A long video: saved and searchable by its details, read (transcript, frames, summary) only when the owner
-        asks. "Read it" goes through summarise_again, like Try again."""
+    def queue_deep(self, item_id: int) -> bool:
+        """The owner pressed Deeper dive. Once per post: a finished one is never queued again. Returns True when queued."""
         with self._lock:
-            self._db.execute("UPDATE items SET ai_status='long', ai_force=0 WHERE canonical_url=?", (url,))
+            cur = self._db.execute("UPDATE items SET deep_status='queued', deep_detail='' WHERE rowid=? AND status='archived' "
+                                   "AND (deep_status IS NULL OR deep_status='failed')", (item_id,))
+        return cur.rowcount > 0
+
+    def due_for_deep(self) -> list[dict]:
+        with self._lock:
+            return [dict(r) for r in self._db.execute(
+                "SELECT rowid AS id, * FROM items WHERE deep_status IN ('queued','running') AND shelf != 'trash' "
+                "ORDER BY rowid").fetchall()]
+
+    def deep_running(self, url: str) -> None:
+        with self._lock:
+            self._db.execute("UPDATE items SET deep_status='running' WHERE canonical_url=?", (url,))
+
+    def deep_done(self, url: str, text: str) -> None:
+        """Saved: its words count in search, and the links are looked for again with the things it named."""
+        with self._lock:
+            self._db.execute("UPDATE items SET deep_status='done', deep_text=?, deep_detail='', links_force=1 "
+                             "WHERE canonical_url=?", (text, url))
+        self._reindex(url)
+
+    def deep_failed(self, url: str, detail: str) -> None:
+        with self._lock:
+            self._db.execute("UPDATE items SET deep_status='failed', deep_detail=? WHERE canonical_url=?", (detail[:200], url))
 
     def summarise_again(self, item_id: int | None = None) -> int:
         """Queue one item (or all with a problem, when item_id is None) to be summarised again."""

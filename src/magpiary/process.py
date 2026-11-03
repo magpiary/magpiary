@@ -156,6 +156,11 @@ def write_note(item: dict, meta: dict, record: dict, transcript: list | None, pa
         lines += ["## Mentioned", ""] + named + [""]
     if record.get("discussion_summary"):
         lines += ["## The discussion", "", record["discussion_summary"], ""]
+    deep = _load(Path(item["archive_dir"]) / "deep.json", None) if item.get("archive_dir") else None
+    if deep:
+        from magpiary.deepdive import as_markdown
+
+        lines += as_markdown(deep)
     if item.get("note"):
         lines += ["## My note", "", item["note"], ""]
     if meta.get("text"):

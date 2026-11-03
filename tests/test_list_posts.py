@@ -171,14 +171,14 @@ def test_known_words_lists_tags_by_use_and_topics_from_records(tmp_path):
 
 # ---- long videos wait for the owner -------------------------------------------------------
 
-def test_a_long_video_waits_until_the_owner_asks(tmp_path):
+def test_a_long_video_gets_the_normal_summary_straight_away(tmp_path):
     import json
 
     from magpiary.store import Store
     from magpiary.worker import brain_due
 
     store = Store(tmp_path / "m.db")
-    folders = {}
+    urls = []
     for code, seconds in (("short", 90), ("long", 3600)):
         url = f"https://www.youtube.com/watch?v={code:_<11}"
         folder = tmp_path / code
@@ -186,19 +186,11 @@ def test_a_long_video_waits_until_the_owner_asks(tmp_path):
         (folder / "meta.json").write_text(json.dumps({"url": url, "duration": seconds, "media": []}))
         store.add_link(url)
         store.fetch_succeeded(url, str(folder))
-        folders[code] = url
-    read = []
-
+        urls.append(url)
     prepared = []
     brain_due(store, tmp_path, prepare=lambda item, progress: prepared.append(item["canonical_url"]),
-              process=lambda item, key, progress: read.append(item["canonical_url"]), pause=lambda tier: None)
-    assert prepared == [folders["short"]]  # the hour-long one was not transcribed
-    long_item = next(i for i in store.hub_items() if i["canonical_url"] == folders["long"])
-    assert long_item["ai_status"] == "long"
-    store.summarise_again(long_item["id"])
-    brain_due(store, tmp_path, prepare=lambda item, progress: prepared.append(item["canonical_url"]),
-              process=lambda item, key, progress: read.append(item["canonical_url"]), pause=lambda tier: None)
-    assert prepared[-1] == folders["long"]  # "Read it now": transcribed even though it is long
+              process=lambda item, key, progress: None, pause=lambda tier: None)
+    assert sorted(prepared) == sorted(urls)  # an hour-long video is read like any other: nothing waits for length
 
 
 def test_the_creators_chapters_shape_the_key_points(tmp_path):
