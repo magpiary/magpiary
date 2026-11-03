@@ -227,8 +227,10 @@ def threads_embed(url: str, get: Get) -> dict:
         return empty
     videos = [html.unescape(src) for src in re.findall(r'<video[^>]*>\s*<source[^>]*\bsrc="(https://[^"]+)"', body)]
     meta: dict = {}
-    counts = [_short_number(c) for c in re.findall(r'class="ActionBarCount"[^>]*>([^<]*)<', body)]
-    if len(counts) == len(_THREADS_COUNTS) and all(c is not None for c in counts):  # a changed layout is skipped, not guessed
+    bar = body.partition('class="ActionBarContainer"')[2].partition("</div>")[0]
+    slots = bar.split('class="ActionBarIcon"')[1:]  # one per icon; Threads leaves the number out when it is 0
+    counts = [_short_number(m.group(1)) if (m := re.search(r'class="ActionBarCount"[^>]*>([^<]*)<', slot)) else 0 for slot in slots]
+    if len(counts) == len(_THREADS_COUNTS) and None not in counts:  # a changed layout is skipped, not guessed
         meta.update(zip(_THREADS_COUNTS, counts, strict=True))
     posted = re.search(r'class="Timestamp"[^>]*>[^<]*?([A-Z][a-z]{2} \d{1,2}, \d{4})', body)
     if posted:

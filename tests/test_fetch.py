@@ -133,9 +133,16 @@ def test_threads_post_without_a_video_still_gets_its_counts():
     assert got.videos == [] and got.images == ["https://cdn.example/threads.jpg"] and got.meta["like_count"] == 51
 
 
+def test_threads_leaves_a_zero_count_out_of_the_page_but_keeps_its_place():
+    url = "https://www.threads.com/@alex.example/post/Example0015/"
+    embed = THREADS_EMBED_HTML.replace(b'<span class="ActionBarCount">1</span>', b"").replace(b'<span class="ActionBarCount">5</span>', b"")
+    got = describe("threads", url, pages({url: THREADS_HTML, url.rstrip("/") + "/embed": embed}), FakeYtDlp())
+    assert (got.meta["like_count"], got.meta["comment_count"], got.meta["repost_count"], got.meta["share_count"]) == (51, 0, 0, 1200)
+
+
 def test_threads_counts_are_skipped_when_the_embed_layout_changes():
     url = "https://www.threads.com/@alex.example/post/Example0015/"
-    embed = THREADS_EMBED_HTML.replace(b'<span class="ActionBarCount">1.2K</span>', b"")  # three numbers, not four
+    embed = THREADS_EMBED_HTML.replace(b'<span class="ActionBarCount">1.2K</span>', b'</span><span class="ActionBarIcon">')  # five icons, not four
     got = describe("threads", url, pages({url: THREADS_HTML, url.rstrip("/") + "/embed": embed}), FakeYtDlp())
     assert "like_count" not in got.meta and got.meta["published_at"] == "2026-11-02"
 
