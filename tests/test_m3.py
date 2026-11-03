@@ -387,6 +387,43 @@ def test_a_busy_model_is_replaced_and_tried_once_more(store, tmp_path):
     assert calls == ["gemini-3-flash"]
 
 
+class NoRepick:
+    usable, mark = staticmethod(keyring.usable), staticmethod(keyring.mark)
+
+    @staticmethod
+    def repick(key):
+        return False
+
+
+def test_a_busy_key_hands_the_item_to_the_next_key_and_stays_first(store, tmp_path):
+    for n in range(2):
+        keyring.add("gemini", "free", f"AIza-{n}", f"key{n}", FakeGemini((200, MODELS)))
+    used = []
+
+    def process(item, key, progress):
+        used.append(key.label)
+        if key.label == "key0" and len(used) == 1:
+            raise BrainFailed("busy", "503")
+        return tidy(GOOD)
+    assert brain_due(store, tmp_path / "notes", pause=lambda t: None, process=process, key_source=NoRepick) == 2
+    assert used == ["key0", "key1", "key0"]  # busy is not a limit: the next item asks key0 first again
+    assert [k.label for k in keyring.usable()] == ["key0", "key1"]
+
+
+def test_when_every_key_is_busy_the_item_waits_for_the_next_try(store, tmp_path):
+    for n in range(2):
+        keyring.add("gemini", "free", f"AIza-{n}", f"key{n}", FakeGemini((200, MODELS)))
+    used = []
+
+    def process(item, key, progress):
+        used.append(key.label)
+        raise BrainFailed("busy", "503")
+    assert brain_due(store, tmp_path / "notes", pause=lambda t: None, process=process, key_source=NoRepick) == 0
+    assert used == ["key0", "key1", "key0", "key1"]  # each key once per item, no loop
+    r0 = store.get_item("https://www.instagram.com/reel/R0/")
+    assert r0["ai_status"] == "needs_attention" and r0["ai_reason"] == "busy" and r0["ai_next_at"]
+
+
 def test_a_busy_answer_is_retried_after_a_short_wait():
     waits = []
     fake = FakeGemini((503, {"error": {"message": "high demand"}}), answer(GOOD))
