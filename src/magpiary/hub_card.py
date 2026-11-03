@@ -526,9 +526,95 @@ class CardPages:
     # ---- the tabs ---------------------------------------------------------------------------
 
     def _extra_tabs(self, item: dict, record: dict | None, context: str) -> list[tuple[str, str, str, str]]:
-        """Tabs that only some posts or contexts have, as (key, label, count text, pane html): Ask, once the post is read. Next in
-        line: Notes (always), Discussion (when the post is on a board)."""
-        return []  # Ask is not a tab any more: the pink button and the bar at the bottom right open its side sheet for this post
+        """Tabs that only some posts or contexts have, as (key, label, count text, pane html). Today: Deeper dive, when it
+        is turned on in Settings and the post has been read. (Ask is not a tab: its side sheet opens from the bar.)"""
+        from magpiary import deepdive
+
+        if not record or item.get("status") != "archived" or item.get("shelf") == "trash" or not deepdive.enabled(self.store):
+            return []
+        meta = (_read_json(Path(item["archive_dir"]) / "meta.json") if item.get("archive_dir") else None) or {}
+        hint = "Suggested" if item.get("deep_status") is None and deepdive.suggested(self.store, meta) else ""
+        return [("deep", "Deeper dive", hint, self._deep_pane(item, meta))]
+
+    def _deep_pane(self, item: dict, meta: dict) -> str:
+        """Before: what it will read and a button (over the call limit, it asks first). While it runs: where it is. After:
+        the overview, sections (click to jump), takeaways, quotes and the things named in each section."""
+        from magpiary import deepdive
+
+        here = f"/item/{item['id']}?tab=deep"
+        status = item.get("deep_status")
+        folder = Path(item["archive_dir"]) if item.get("archive_dir") else None
+        if status == "done":
+            result = (_read_json(folder / "deep.json") if folder else None) or {}
+            if result.get("overview"):
+                return self._deep_result(result)
+        if status in ("queued", "running"):
+            return ('<div class="pstate"><b>Deeper dive under way</b><p>It reads every part, then writes the whole. This tab '
+                    'fills in by itself; you can leave the page.</p></div>')
+        chosen = deepdive.engine(self.store)
+        if not chosen["kind"]:
+            return ('<div class="pstate"><b>No engine for a deeper dive</b><p>Add an AI key, or choose Claude Code or Codex, in '
+                    '<a class="link" href="/settings/ai#deepdive">Settings</a>.</p></div>')
+        guess = deepdive.estimate(meta)
+        long = deepdive.suggested(self.store, meta)
+        why = (f"This video runs {round((meta.get('duration') or 0) / 60)} minutes: the short summary covers only part of it. "
+               if long else "")
+        what = ("It reads every part of the video in sections, with many more frames, the creator's subtitles when there are "
+                "some, the comments and the pages it links to, and writes sections, takeaways and quotes."
+                if guess["calls"] > 1 else
+                "It reads every slide, many more frames, the full text, the comments, the pages it links to and the "
+                "creator's bio links, and writes sections, takeaways and quotes.")
+        cost = f'About {guess["calls"]} AI call{"s" if guess["calls"] != 1 else ""} · {guess["minutes"]} min · {chosen["label"]}'
+        confirm = (f"This deeper dive needs about {guess['calls']} AI calls on {chosen['label']} and takes about "
+                   f"{guess['minutes']} minutes. Start it?") if deepdive.needs_confirm(meta) else ""
+        failed = (f'<p class="small muted">Last try did not finish: {e(item.get("deep_detail") or "unknown reason")}.</p>'
+                  if status == "failed" else "")
+        button = (f'<form method="post" action="/hub/deep"{f" data-confirm={chr(34)}{e(confirm)}{chr(34)}" if confirm else ""}>'
+                  f'{ui.hidden(self.csrf, id=item["id"], next=here)}<button class="btn dark" type="submit">'
+                  f'{ui.icon("sparkle")}{"Try the deeper dive again" if status == "failed" else "Start the deeper dive"}</button></form>')
+        return (f'<div class="deepintro">{"<span class=" + chr(34) + "bd p" + chr(34) + ">Suggested</span>" if long else ""}'
+                f'<p class="it-sum">{e(why)}{e(what)}</p><p class="small muted">{e(cost)}. Once per post.</p>{failed}{button}</div>')
+
+    def _deep_result(self, result: dict) -> str:
+        from magpiary.deepdive import NAMED_KINDS  # noqa: F401  (kinds shown as written)
+
+        def secs(at: str) -> float:
+            try:
+                return sum(int(p) * 60 ** i for i, p in enumerate(reversed((at or "").split(":"))))
+            except ValueError:
+                return -1
+        out = [f'<p class="small muted">Made {e(ui.day((result.get("made_at") or "")[:10]))} from '
+               f'{e(result.get("text_from") or "the post")}'
+               + (f', in {result["parts"]} parts' if (result.get("parts") or 1) > 1 else "") + ".</p>",
+               "<h4>Overview</h4>" + "".join(f'<p class="it-sum">{e(p)}</p>' for p in (result.get("overview") or "").split("\n") if p.strip())]
+        sections = result.get("sections") or []
+        named = result.get("named") or []
+        if sections:
+            starts = [secs(s.get("at") or "") for s in sections]
+            groups: dict[int, list[dict]] = {}
+            for n in named:
+                t = secs(n.get("at") or "")
+                index = max((i for i, st in enumerate(starts) if 0 <= st <= t), default=0) if t >= 0 else 0
+                groups.setdefault(index, []).append(n)
+            rows = []
+            for i, s in enumerate(sections):
+                at = s.get("at") or ""
+                chips = "".join(f'<span class="chip sm">{e(n["name"])}</span>' for n in groups.get(i, []))
+                head = (f'<button type="button" class="kp" data-t="{e(at)}">' if at else '<div class="kp">')
+                rows.append(head + f'<b>{i + 1}</b><span><strong>{e(s.get("title") or "")}</strong> {e(s.get("summary") or "")}'
+                            + (f'<span class="deepnamed">{chips}</span>' if chips else "") + f'</span><small>{e(at)}</small>'
+                            + ("</button>" if at else "</div>"))
+            out.append("<h4>Sections <span>· click to jump</span></h4>" + "".join(rows))
+        elif named:
+            out.append("<h4>Named</h4><div class=\"chips\">" + "".join(f'<span class="chip sm">{e(n["name"])}</span>' for n in named) + "</div>")
+        if result.get("takeaways"):
+            out.append("<h4>Takeaways</h4><ul class=\"it-sum sm\">" + "".join(f"<li>{e(t)}</li>" for t in result["takeaways"]) + "</ul>")
+        if result.get("quotes"):
+            out.append("<h4>Quotes</h4>" + "".join(
+                f'<blockquote class="deepq"><p>{e(q["text"])}</p>' + (f'<button type="button" class="link" data-t="{e(q["at"])}">{e(q["at"])}</button>' if q.get("at") else "")
+                + "</blockquote>" for q in result["quotes"]))
+        return f'<div class="deep">{"".join(out)}</div>'
+
 
     def _summary_blocks(self, item: dict, record: dict | None) -> str:
         """Blocks a post type adds to the top of the Summary tab (a map for a place, a price list for a product…)."""

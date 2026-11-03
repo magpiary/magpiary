@@ -4264,3 +4264,12 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .understood > small { font: 700 11px var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--fg-3); }
 .uchip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 8px 5px 12px; border-radius: 999px; background: var(--chip); font-size: 13.5px; }
 .uchip i { font-style: normal; color: var(--fg-3); } .uchip:hover i { color: var(--fg); }
+
+/* Deeper dive tab */
+.deepintro { display: grid; gap: 10px; justify-items: start; padding: 4px 0; }
+.deepintro .btn .ico { width: 16px; height: 16px; margin-right: 6px; }
+.deep .kp span strong { display: block; font-weight: 650; margin-bottom: 2px; }
+.deep .deepnamed { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.deep .chip.sm { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--chip); color: var(--fg-2); }
+.deepq { margin: 10px 0; padding: 8px 14px; border-left: 3px solid var(--line); color: var(--fg-2); }
+.deepq p { margin: 0 0 4px; font-style: italic; }

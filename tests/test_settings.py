@@ -392,8 +392,17 @@ def test_restore_refuses_anything_that_is_not_a_sound_backup(mac):
     assert mac.store.get_item("https://example.com/stays")
 
 
-def test_long_videos_wait_after_the_minutes_set_in_settings(mac):
-    assert 'action="/hub/settings/long-video"' in page(mac, "/settings/ai")[2]
+def test_deeper_dive_settings_show_only_once_it_is_on(mac):
+    body = page(mac, "/settings/ai")[2]
+    assert 'id="deepdive"' in body and 'action="/hub/settings/long-video"' not in body  # off by default: just the switch
+    post(mac, "/hub/deep/on", enabled="1", next="/settings/ai")
+    body = page(mac, "/settings/ai")[2]
+    assert 'action="/hub/settings/long-video"' in body and 'action="/hub/deep/engine"' in body
+    post(mac, "/hub/deep/on", enabled="0", next="/settings/ai")
+    assert mac.store.get_setting("deep_on") == "0"
+
+
+def test_long_videos_get_a_deeper_dive_suggested_after_the_minutes_set(mac):
     post(mac, "/hub/settings/long-video", minutes="45")
     assert mac.store.get_setting("long_video_minutes") == "45"
     post(mac, "/hub/settings/long-video", minutes="0")  # 0 reads every video straight away

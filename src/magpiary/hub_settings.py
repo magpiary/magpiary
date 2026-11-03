@@ -44,7 +44,7 @@ SECTION_BLURBS = {"profile": "What friends see on a board, and what your AI know
                   "privacy": "The hub lock, what leaves this Mac, where your data lives, and how to delete it."}
 SAVED = {"key": "Key checked and saved.", "login": "Instagram connected.", "model": "Model changed.",
          "mode": "Saved. New summaries follow this mode.", "budget": "Saved.", "look": "Saved.", "phone": "Phone removed.",
-         "awake": "Saved.", "limit": "Search limit saved.", "longvideo": "Long video length saved.", "keys": "Keys removed.", "profile": "Profile saved.",
+         "awake": "Saved.", "limit": "Search limit saved.", "longvideo": "Saved.", "deep": "Deeper dive engine saved.", "keys": "Keys removed.", "profile": "Profile saved.",
          "photo": "Photo saved.", "nophoto": "Photo removed.", "bucket": "Bucket connected and checked.",
          "nobucket": "Bucket removed from this Mac.", "claude": "Claude Code settings saved.",
          "claudetest": "Test finished.", "claudeoff": "Claude Code disconnected. Your AI key writes the digest now.", "via": "New boards will sync there.", "joined": "You joined the board. It fills in as it syncs."}
@@ -106,7 +106,7 @@ SEARCH_INDEX = [
     ("Glass", "glass blur dark surfaces depth", "appearance", "glass"),
     ("Glass strength", "glass blur glow edge slider percent", "appearance", "glassstrength"),
     ("Page width", "wide full boxed", "appearance", "width"),
-    ("Long videos", "long video podcast minutes wait read it now transcribe length", "ai", "longvideo"),
+    ("Deeper dive", "deeper dive deep long video podcast minutes suggest sections chapters takeaways quotes engine model claude code codex", "ai", "deepdive"),
     ("Connections map (beta)", "beta map graph connections try early", "appearance", "betamap"),
     ("Interface size", "scale zoom smaller bigger laptop 14 inch size text", "appearance", "scale"),
     ("Your library folders", "storage media notes models size finder", "storage", "library"),
@@ -385,10 +385,9 @@ class SettingsPages:
                self._keys_group(q),
                self._digest_group(q),
                self._finding_group(),
-               self._long_video_group(),
-               _adv(_group("Pause summaries", _row("Pause or limit them", "The switches for summaries and transcribing are in the Nest, where you can see the work.",
+               _adv(self._deep_group() + _group("Pause summaries", _row("Pause or limit them", "The switches for summaries and transcribing are in the Nest, where you can see the work.",
                                                    '<a class="btn sm" href="/nest">Open the Nest</a>', lead=ui.icon("clock")), gid="pause")
-                    + self._keys_danger(), "Pausing summaries, removing keys")]
+                    + self._keys_danger(), "Deeper dive, pausing summaries, removing keys")]
         return "".join(out)
 
     # ---- Claude Code ---------------------------------------------------------------------
@@ -585,17 +584,59 @@ class SettingsPages:
 
     # ---- Finding links, the Instagram login -----------------------------------------------------
 
-    def _long_video_group(self) -> str:
-        """Videos longer than this wait for the owner's Read it now, so a two-hour podcast never holds up the queue."""
-        from magpiary.worker import LONG_VIDEO_MINUTES
+    def _deep_group(self) -> str:
+        """Deeper dive: off by default. On, it offers the engine, the model and when to suggest one for a long video."""
+        from magpiary import deepdive
 
-        minutes = self.store.get_setting("long_video_minutes", str(LONG_VIDEO_MINUTES)) or str(LONG_VIDEO_MINUTES)
-        return _group("Long videos", _row(
-            "Wait for me after", "Minutes. A longer video is saved but only transcribed and summarised when you press "
-            "Read it now on the post. 0 reads every video straight away.",
-            f'<form method="post" action="/hub/settings/long-video" class="iform">{ui.hidden(self.csrf)}'
-            f'<input type="number" min="0" max="600" name="minutes" value="{e(minutes)}" aria-label="Minutes">'
-            f'<button class="btn sm" type="submit">Save</button></form>', lead=ui.icon("clock"), sid="longvideo"), gid="longvideo")
+        on = deepdive.enabled(self.store)
+        back = "/settings/ai#deepdive"
+        rows = _row("Deeper dive", "An extra, deeper reading of a post when you ask for it: every part of a long video, "
+                    "more frames, comments and linked pages, with sections, takeaways and quotes. The normal summary stays as it is.",
+                    self._switch("/hub/deep/on", on, {"enabled": "0", "next": back}, {"enabled": "1", "next": back}, "Deeper dive"),
+                    lead=ui.icon("sparkle"), sid="deepdive",
+                    info="Off: nothing about it shows anywhere. It runs only when you press Deeper dive on a post, once per post. "
+                         f"Up to {deepdive.CONFIRM_ABOVE} AI calls it starts at once; more, and it asks first.")
+        if on:
+            chosen = deepdive.engine(self.store)
+            choices = deepdive.engines()
+            current = (f"key:{chosen['key'].id}" if chosen["kind"] == "key" else chosen["kind"])
+            options = "".join(f'<option value="{e(v)}"{" selected" if v == current else ""}>{e(label)}</option>' for v, label in choices)
+            model = self.store.get_setting(deepdive.MODEL, "")
+            hint = chosen["key"].model if chosen["kind"] == "key" else ("sonnet or opus" if chosen["kind"] == "claude_code" else "its default")
+            rows += _row("Engine", "Which AI reads it, and its model. Frames and text go to that AI; the video never leaves this Mac.",
+                         (f'<form method="post" action="/hub/deep/engine" class="iform">{ui.hidden(self.csrf)}'
+                          f'<select name="engine" aria-label="Engine">{options}</select>'
+                          f'<input type="text" name="model" value="{e(model)}" placeholder="{e(hint)}" aria-label="Model" spellcheck="false">'
+                          f'<button class="btn sm" type="submit">Save</button></form>') if choices else
+                         '<span class="small muted">Add an AI key above, or install Claude Code or Codex.</span>',
+                         lead=ui.icon("sliders"), sid="deepengine")
+            minutes = self.store.get_setting(deepdive.LONG, str(deepdive.LONG_DEFAULT)) or str(deepdive.LONG_DEFAULT)
+            waiting = self._deep_waiting()
+            rows += _row("Suggest it for videos longer than",
+                         "Minutes. Those posts show Deeper dive as suggested. 0 never suggests it."
+                         + (f" {waiting} long video{'s' if waiting != 1 else ''} could use one now." if waiting else ""),
+                         f'<form method="post" action="/hub/settings/long-video" class="iform">{ui.hidden(self.csrf)}'
+                         f'<input type="number" min="0" max="600" name="minutes" value="{e(minutes)}" aria-label="Minutes">'
+                         f'<button class="btn sm" type="submit">Save</button></form>', lead=ui.icon("clock"), sid="longvideo")
+        return _group("Deeper dive", rows, gid="deep", desc="Off unless you turn it on.")
+
+    def _deep_waiting(self) -> int:
+        """Long videos with no deeper dive yet."""
+        import json as _json
+
+        from magpiary import deepdive
+
+        limit = deepdive.long_after(self.store)
+        if not limit:
+            return 0
+        count = 0
+        for folder in self.store.deep_candidates():
+            try:
+                if (_json.loads((Path(folder) / "meta.json").read_text()).get("duration") or 0) > limit:
+                    count += 1
+            except (OSError, ValueError):
+                continue
+        return count
 
     def _finding_group(self) -> str:
         """Links work with no setup; a web search key only finds what the free directories miss."""
@@ -1388,6 +1429,11 @@ class SettingsPages:
 
             agent_log.clear()
             return True
+        if path == "/hub/deep/on":
+            from magpiary import deepdive
+
+            self.store.set_setting(deepdive.ON, "1" if form.get("enabled") == "1" else "0")
+            return True
         if path == "/hub/beta/map":
             from magpiary.hub_map import BETA_SETTING
 
@@ -1574,6 +1620,13 @@ class SettingsPages:
             identity.remove_photo()
             self._send_profile()
             return Response(303, b"", headers={"Location": "/settings/profile?saved=nophoto"})
+        if path == "/hub/deep/engine":
+            from magpiary import deepdive
+
+            if form.get("engine", "") in {v for v, _ in deepdive.engines()}:
+                self.store.set_setting(deepdive.ENGINE, form["engine"])
+            self.store.set_setting(deepdive.MODEL, re.sub(r"[^\w.:/\-]", "", form.get("model", ""))[:80])
+            return Response(303, b"", headers={"Location": "/settings/ai?saved=deep#deepengine"})
         if path == "/hub/settings/long-video":
             minutes = form.get("minutes", "").strip()
             if minutes.isdigit() and int(minutes) <= 600:

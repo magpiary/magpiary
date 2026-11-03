@@ -338,6 +338,9 @@ class Hub(
             url = item["canonical_url"] if item else form.get("url", "")
             if url and self.store.retry(url):
                 self.wake()
+        elif path == "/hub/deep":
+            if self.store.queue_deep(item_id):
+                self.wake()
         elif path == "/hub/again":
             if self.store.summarise_again(item_id):
                 self.store.allow_one_more_summary()
