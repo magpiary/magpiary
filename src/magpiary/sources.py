@@ -39,6 +39,8 @@ class Fetched:
     meta: dict
     video: bool = False  # True: yt-dlp downloads the post's media
     images: list[str] = field(default_factory=list)  # image URLs to download ourselves
+    videos: list[str] = field(default_factory=list)  # video file URLs to download ourselves (no yt-dlp)
+    poster: str = ""  # a video's cover picture, saved as thumbnail.jpg rather than as a media still
     discussion: list[dict] | None = None
     fetched_with: str = ""
 
@@ -189,7 +191,21 @@ def threads(url: str, get: Get, ytdlp: YtDlp) -> Fetched:
     match = re.match(r"(.*?)\s*\(@([\w.]+)\)", meta["title"])
     if match:
         meta["author"], meta["author_handle"] = match.group(1), match.group(2)
-    return Fetched(meta, images=[tags["og:image"]] if tags.get("og:image") else [], fetched_with="page")
+    image = [tags["og:image"]] if tags.get("og:image") else []
+    videos = threads_videos(url, get)
+    if videos:  # the page's picture is then the video's cover
+        return Fetched(meta, videos=videos, poster=image[0] if image else "", fetched_with="page + embed page")
+    return Fetched(meta, images=image, fetched_with="page")
+
+
+def threads_videos(url: str, get: Get) -> list[str]:
+    """A post's video files, from Threads' own embed page (logged out). The post page itself only has the cover."""
+    try:
+        body = _page(get, url.rstrip("/") + "/embed").decode("utf-8", "replace")
+    except FetchFailed:
+        return []
+    found = [html.unescape(src) for src in re.findall(r'<video[^>]*>\s*<source[^>]*\bsrc="(https://[^"]+)"', body)]
+    return list(dict.fromkeys(found))[:20]
 
 
 # ---- Reddit: the post's RSS feed (post first, then comments) -----------------------------

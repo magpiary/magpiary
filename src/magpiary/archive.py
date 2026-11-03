@@ -18,6 +18,7 @@ from magpiary.sources import FetchFailed, Get, Render, chrome_render, describe, 
 from magpiary.tools import Run, YtDlp, YtDlpError, default_run, video_seconds
 
 MAX_IMAGE_BYTES = 25_000_000
+MAX_VIDEO_BYTES = 400_000_000
 _MAGIC = [(b"\xff\xd8\xff", "jpg"), (b"\x89PNG", "png"), (b"GIF8", "gif")]
 
 
@@ -71,6 +72,33 @@ def _save_images(urls: list[str], folder: Path, get: Get, start: int) -> list[st
     return saved
 
 
+def _save_videos(urls: list[str], folder: Path, get: Get, start: int) -> list[str]:
+    """Video files a source page linked to directly; only MP4s are kept (checked by their bytes)."""
+    saved = []
+    for url in urls:
+        if urlsplit(url).scheme not in ("http", "https"):
+            continue
+        try:
+            status, data = get(url)
+        except OSError:
+            continue
+        if status == 200 and len(data) <= MAX_VIDEO_BYTES and data[4:8] == b"ftyp":
+            name = f"media-{start + len(saved):02d}.mp4"
+            (folder / name).write_bytes(data)
+            saved.append(name)
+    return saved
+
+
+def _save_cover(url: str, folder: Path, get: Get) -> None:
+    """A video's cover picture as thumbnail.jpg (other picture types are left out)."""
+    try:
+        status, data = get_image(get, url)
+    except OSError:
+        return
+    if status == 200 and len(data) <= MAX_IMAGE_BYTES and _image_type(data) == "jpg":
+        (folder / "thumbnail.jpg").write_bytes(data)
+
+
 def fetch_item(item: dict, library: Path, get: Get = http_get, ytdlp: YtDlp | None = None,
                run: Run = default_run, progress: Progress = NO_PROGRESS, render: Render | None = None) -> Path:
     """Fetch and archive one item. Returns its folder. Raises FetchFailed. A real fetch may draw a script-made page
@@ -94,6 +122,11 @@ def fetch_item(item: dict, library: Path, get: Get = http_get, ytdlp: YtDlp | No
                 if not fetched.images:
                     raise FetchFailed(err.reason, err.detail) from err
         media = sorted(p.name for p in work.glob("media-*"))
+        media += _save_videos(fetched.videos, work, lambda u: get_video(get, u), len(media) + 1)
+        if fetched.videos and not media and not fetched.images:  # the video could not be saved: keep its cover
+            fetched.images = [fetched.poster] if fetched.poster else []
+        elif fetched.poster:
+            _save_cover(fetched.poster, work, get)
         media += _save_images(fetched.images, work, lambda u: get_image(get, u), len(media) + 1)
         if not media and not fetched.meta.get("text"):
             raise FetchFailed("unknown", "nothing could be saved from this post")
@@ -125,4 +158,10 @@ def get_image(get: Get, url: str) -> tuple[int, bytes]:
     """Images may be larger than pages; the default getter takes a size limit."""
     if get is http_get:
         return http_get(url, MAX_IMAGE_BYTES + 1)
+    return get(url)
+
+
+def get_video(get: Get, url: str) -> tuple[int, bytes]:
+    if get is http_get:
+        return http_get(url, MAX_VIDEO_BYTES + 1)
     return get(url)

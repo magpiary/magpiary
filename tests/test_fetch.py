@@ -1,6 +1,7 @@
 """M2: source adapters, the archive writer and the fetch worker, against recorded (made-up) responses."""
 
 import json
+import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -22,6 +23,13 @@ THREADS_HTML = b"""<html><head><title>Threads</title>
 Line two.">
 <meta property="og:image" content="https://cdn.example/threads.jpg">
 </head></html>"""
+
+# Threads' embed page (recorded shape, fictional post): the post page has only the cover, the embed has the file.
+THREADS_EMBED_HTML = b"""<html><body><div class="SoloMediaContainer" id="u_0_2_he">
+<div class="SingleInnerMediaContainerVideo SingleInnerMediaContainer"><video controls="1" loop="1" class="">
+<source src="https://video.cdn.example/o1/v/t16/clip.mp4?_nc_cat=104&amp;_nc_sid=1d576d" /></video>
+<div class="VideoPlayOverlay"><div class="VideoPlayButton"></div></div></div></div></body></html>"""
+MP4 = b"\x00\x00\x00\x18ftypmp42" + b"0" * 100
 
 REDDIT_RSS = b"""<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
 <category term="ExampleWorkshop" label="r/ExampleWorkshop"/>
@@ -97,6 +105,32 @@ def test_threads_reads_text_author_and_image_from_one_page():
     assert got.meta["text"] == "Line one & more.\nLine two."
     assert (got.meta["author"], got.meta["author_handle"]) == ("Alex Example", "alex.example")
     assert got.images == ["https://cdn.example/threads.jpg"] and not got.video
+
+
+def test_threads_video_comes_from_the_embed_page_and_the_page_picture_is_its_cover():
+    url = "https://www.threads.com/@alex.example/post/Example0015/"
+    got = describe("threads", url, pages({url: THREADS_HTML, url.rstrip("/") + "/embed": THREADS_EMBED_HTML}), FakeYtDlp())
+    assert got.videos == ["https://video.cdn.example/o1/v/t16/clip.mp4?_nc_cat=104&_nc_sid=1d576d"]
+    assert got.images == [] and got.poster == "https://cdn.example/threads.jpg"
+
+
+def test_threads_video_post_archives_the_video_file(tmp_path):
+    url = "https://www.threads.com/@alex.example/post/Example0015/"
+    get = pages({url: THREADS_HTML, url.rstrip("/") + "/embed": THREADS_EMBED_HTML,
+                 "https://video.cdn.example/o1/v/t16/clip.mp4?_nc_cat=104&_nc_sid=1d576d": MP4,
+                 "https://cdn.example/threads.jpg": JPEG})
+    folder = fetch_item(item(url, "threads"), tmp_path, get, FakeYtDlp(),
+                        run=lambda cmd, timeout: subprocess.CompletedProcess(cmd, 0, "12.5\n", ""))
+    meta = json.loads((folder / "meta.json").read_text())
+    assert meta["media"] == ["media-01.mp4"] and meta["fetched_with"] == "page + embed page" and (folder / "media-01.mp4").read_bytes() == MP4
+    assert meta["thumbnail"] == "thumbnail.jpg" and (folder / "thumbnail.jpg").read_bytes() == JPEG
+
+
+def test_threads_video_that_cannot_be_downloaded_keeps_its_cover(tmp_path):
+    url = "https://www.threads.com/@alex.example/post/Example0015/"
+    get = pages({url: THREADS_HTML, url.rstrip("/") + "/embed": THREADS_EMBED_HTML, "https://cdn.example/threads.jpg": JPEG})
+    folder = fetch_item(item(url, "threads"), tmp_path, get, FakeYtDlp())
+    assert json.loads((folder / "meta.json").read_text())["media"] == ["media-01.jpg"]
 
 
 def test_threads_page_without_post_text_is_flagged():
