@@ -76,3 +76,16 @@ def test_text_read_on_the_mac_goes_into_the_evidence(tmp_path):
     text = parts[0]["text"]
     assert "TEXT READ FROM THE IMAGES AND FRAMES ON THE MAC" in text
     assert "[-] The Story of Blue Paint" in text and "[0:04] Paint Lab" in text
+
+
+def test_a_new_summary_finds_links_again(tmp_path):
+    from magpiary.store import Store
+
+    store = Store(tmp_path / "m.db")
+    url = "https://www.instagram.com/p/abc/"
+    store.add_link(url)
+    store.fetch_succeeded(url, str(tmp_path))
+    store.save_found_links(url, [])
+    record = {**tidy(RECORD), "engine": {}}
+    store.brain_succeeded(url, record, "", False)
+    assert any(i["canonical_url"] == url for i in store.due_for_links())  # queued for the link search with the new record's names

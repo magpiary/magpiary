@@ -1456,6 +1456,7 @@ class Store(ChatStore, StatsStore):
         with self._lock:
             self._db.execute(
                 "UPDATE items SET ai_status='done', ai_reason=NULL, ai_detail=NULL, ai_attempts=0, ai_next_at=NULL, ai_force=0, "
+                "links_status=NULL, "  # a new record names new things: find their links again
                 "ai_title=?, summary=?, ai_type=?, suggested_tags=?, entities_text=?, transcript_text=?, processed_at=? "
                 "WHERE canonical_url=?",
                 (record["title"], record["summary"], record["type"], json.dumps(record["suggested_tags"]),
