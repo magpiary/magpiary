@@ -177,6 +177,7 @@
 | 2026-11-02 | Release | **One hub per Mac account** (0.1.3 candidate): supersedes "one Magpiary per Mac for now" | Owner |
 | 2026-11-02 | Brand | **The disk image uses the logo the app and website show** (mark plus "magpiary" wordmark), not the lockup files | Owner |
 | 2026-11-03 | Brand | **One brand kit built on the app's logo (owner):** The Pair plus "magpiary" in Bricolage Grotesque 800, outlined; the older capital-M outlined wordmark is retired. The kit lives outside this repository; the repo keeps only the five images the app, the disk image and the README use, in `assets/`. Palette: Pink, Ink, Cream, plus Night, Deep Indigo, Blue, Purple and Spark Gold | Owner |
+| 2026-11-04 | Brain | **Deeper dive (owner):** every video, whatever its length, gets the normal 0.1.4 summary automatically (long videos are no longer held). A Deeper dive is an extra, opt-in pass, off by default in Advanced settings; spec in "Deeper dive" below | Owner |
 
 ---
 
@@ -1308,6 +1309,26 @@ A UX audit found Settings was arranged by when features were built. Decisions, e
 - The second new-user test of the 0.1.3 candidate, and shipping it.
 - Native clicks in every app state, updating by replacing the app, and a real friend's board test.
 - Anything else recorded as open in the sections above stays open until an entry here says otherwise.
+
+## Deeper dive (owner decisions, 4 Nov 2026; not built yet)
+
+**What it is.** An extra, deeper reading of one post, on top of its normal summary. The normal summary stays exactly as in 0.1.4 for every post, long videos included, and runs automatically; nothing is held back for length any more.
+
+**Turning it on.** Settings > Advanced > Deeper dive, **off by default**. While off, nothing about it shows anywhere (no button, no hint). Turning it on offers the engine: one of the owner's AI keys (and its model), or local Claude Code or Codex. Local engines read the transcript, text and frame images from the post's folder; the video itself never leaves the Mac.
+
+**When it is offered.** On every post once it is on. Videos longer than the threshold (Settings, "Long videos", default 20 minutes; 0 means never suggest) get it highlighted as suggested. Settings shows a count of long videos that could use one, with a link that filters the library to them.
+
+**Starting it.** The owner presses Deeper dive. Up to 4 AI calls it starts at once; above 4 it shows the estimate (calls and minutes) in a confirmation dialog first. It runs **once per post**: no re-run.
+
+**What it reads.**
+- Long videos: the whole video, any length, in sections (the creator's chapters, else sections found from the transcript). Each section is summarised, then the whole. Text comes from the creator's own uploaded subtitles when there are some, else Whisper on the Mac; YouTube's automatic subtitles are never used. The description under the video is always included. Many more frames than a normal summary, spread over every section.
+- Any other post (reels, carousels, articles, threads): every slide and many more frames at full size; the whole caption, transcript and on-screen text; the saved comments (answers, corrections, useful links); the pages the post links to; and the links in the creator's bio (the public profile is fetched logged out, only during a deeper dive, and remembered for that creator for a week).
+
+**What it gives.** Its own **Deeper dive** tab beside Summary, Links and Related: sections with titles, times (click to jump) and 2 to 4 sentence summaries; a longer overall summary of several paragraphs; takeaways and notable quotes with times; everything named, grouped by section and linked. Short posts get the same layout.
+
+**Where its text goes.** Search, Ask Magpiary, the post's Markdown note (a Deeper dive section), and the Links tab (things it names are looked up).
+
+**Replaces.** The 0.1.4 "long videos wait for Read it now" behaviour and its "held" state.
 
 ## Work kept outside this repository
 
