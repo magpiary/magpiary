@@ -178,6 +178,7 @@
 | 2026-11-02 | Brand | **The disk image uses the logo the app and website show** (mark plus "magpiary" wordmark), not the lockup files | Owner |
 | 2026-11-03 | Brand | **One brand kit built on the app's logo (owner):** The Pair plus "magpiary" in Bricolage Grotesque 800, outlined; the older capital-M outlined wordmark is retired. The kit lives outside this repository; the repo keeps only the five images the app, the disk image and the README use, in `assets/`. Palette: Pink, Ink, Cream, plus Night, Deep Indigo, Blue, Purple and Spark Gold | Owner |
 | 2026-11-04 | Brain | **Deeper dive (owner):** every video, whatever its length, gets the normal 0.1.4 summary automatically (long videos are no longer held). A Deeper dive is an extra, opt-in pass, off by default in Advanced settings; spec in "Deeper dive" below | Owner |
+| 2026-11-04 | AI | **Local Claude Code and Codex are off until allowed (owner):** one switch each in AI keys with a dialog and a test run; Digest, Ask and Deeper dive follow one rule (local or paid: on by themselves; free-tier only: off, Digest and Ask with a warning, Deeper dive not at all). Supersedes Deeper dive's "off by default" | Owner |
 
 ---
 
@@ -1329,6 +1330,33 @@ A UX audit found Settings was arranged by when features were built. Decisions, e
 **Where its text goes.** Search, Ask Magpiary, the post's Markdown note (a Deeper dive section), and the Links tab (things it names are looked up).
 
 **Replaces.** The 0.1.4 "long videos wait for Read it now" behaviour and its "held" state.
+
+## Local engines need permission; Digest, Ask and Deeper dive follow one rule (owner decisions, 4 Nov 2026; not built yet)
+
+**Why.** A friend's fresh install found Claude Code and Codex on his Mac and used them for the Digest and Ask without asking.
+
+**Where they are allowed.** Settings > AI & digest > AI keys lists the keys, then **Claude Code on this Mac** and **Codex on
+this Mac**, each with a switch, **off for everyone**, existing installs included (the owner's too). This is the only place
+they are allowed or stopped. Turning one on opens a dialog (what it is used for, that it spends the person's Claude or
+ChatGPT plan, what is sent), then a tiny test run; only a passing test turns it on. A failing test leaves it off and says why
+and how to fix it.
+
+**The rule for Digest, Ask and Deeper dive.** Engines in order of preference: allowed local engines (the first one allowed
+is the default when both are), then paid keys. Free-tier keys are last.
+- With a local engine allowed or a paid key: all three turn on by themselves (the allow dialog's last line says so) and
+  use it. When more than one usable engine exists, each feature has a picker; with one, no picker.
+- With only free-tier keys: all three start off.
+  - **Digest** can be turned on, with a warning: using it on a free plan spends a lot of the AI quota; allow local
+    Claude Code or Codex to run it on that plan instead.
+  - **Ask** likewise; its button stays visible and, while Ask is off, explains and offers "Allow Claude Code or Codex"
+    or "Use my free key anyway" (with the warning).
+  - **Deeper dive** never offers free-tier keys.
+- Turning a local engine off later: features using it move to the next allowed engine or paid key; with only free keys
+  left they turn off (Digest and Ask can be turned back on with the warning).
+- Digest gets a plain on/off switch, and its controls are simplified to: on/off, and the engine picker when there is a choice.
+
+**Deeper dive button.** In its own tab, and in the post's More actions (⋯) menu. "Suggested" is shown as coloured text,
+not a pill.
 
 ## Work kept outside this repository
 
