@@ -83,7 +83,7 @@ SEARCH_INDEX = [
     ("How summaries are made", "smart private mode ai", "ai", "mode"),
     ("AI keys", "gemini openrouter claude openai api key model", "ai", "keys"),
     ("Digest", "weekly monthly off wrapped summary schedule", "ai", "digest"),
-    ("Claude Code", "claude plan digest session disconnect test who writes", "ai", "claude"),
+    ("Claude Code and Codex on this Mac", "claude code codex allow local plan permission test", "ai", "local"),
     ("Web search key", "tavily brave search links finding directories wikidata limit", "ai", "search"),
     ("Pause summaries", "pause stop limit transcribing nest budget", "ai", "pause"),
     ("Remove all keys", "delete keys", "ai", "advanced"),
@@ -106,6 +106,7 @@ SEARCH_INDEX = [
     ("Glass", "glass blur dark surfaces depth", "appearance", "glass"),
     ("Glass strength", "glass blur glow edge slider percent", "appearance", "glassstrength"),
     ("Page width", "wide full boxed", "appearance", "width"),
+    ("Digest on or off", "digest on off switch written by who writes claude codex key", "ai", "digest-on"),
     ("Deeper dive", "deeper dive deep long video podcast minutes suggest sections chapters takeaways quotes engine model claude code codex", "ai", "deepdive"),
     ("Connections map (beta)", "beta map graph connections try early", "appearance", "betamap"),
     ("Interface size", "scale zoom smaller bigger laptop 14 inch size text", "appearance", "scale"),
@@ -402,76 +403,6 @@ class SettingsPages:
         state = claude_code.check()
         self._claude_cache = (time.monotonic(), state)
         return state
-
-    def claude_line(self) -> str:
-        """One status line for the digest, where Claude Code writes the story."""
-        use = claude_code.mode(self.store)
-        if modes.current(self.store) == "private":
-            return ""
-        if use == "key":
-            return _status("Written by your AI key. Claude Code is off.", "idle")
-        st = self._claude_state()
-        if not st["installed"]:
-            return _status("Claude Code isn't installed, so " + ("your AI key writes the digest." if use == "first" else "the digest waits."), "warn")
-        if st["signed_in"] is False:
-            return _status("Claude Code isn't signed in.", "warn")
-        run = claude_code.last_run(self.store)
-        if run["err"] and use == "first":
-            return _status("Claude Code had trouble last time; your AI key steps in after the wait.", "warn")
-        return _status("Written by Claude Code on your Claude plan.", "ok")
-
-    def _claude_rows(self) -> str:
-        """Claude Code only writes the digest, so its controls fold under the Digest."""
-        use = claude_code.mode(self.store)
-        st = self._claude_state()
-        hide = '<input type="hidden" name="next" value="/settings/ai#claude">'
-        if not st["installed"]:
-            stat = _stat("Not installed", "warn")
-        elif st["signed_in"] is False:
-            stat = _stat("Not signed in", "bad")
-        elif use == "key":
-            stat = _stat("Off", "idle")
-        else:
-            stat = _stat("Ready", "ok")
-        facts = []
-        if st["installed"]:
-            facts.append(f'Version {e(st["version"])}')
-            if st["signed_in"]:
-                facts.append("signed in" + (f' · {e(st["plan"].title())} plan' if st["plan"] else ""))
-        if st["why"]:
-            facts.append(e(st["why"]))
-        run = claude_code.last_run(self.store)
-        last = ""
-        if run["ok"]:
-            last += f'Last digest written {e(ui.day(run["ok"][:10]))}. '
-        if run["err"]:
-            last += f'Last problem {e(ui.day(run["err"][0][:10]))}: {e(run["err"][1])}'
-        test = claude_code.last_test(self.store)
-        test_line = (f'Test {e(ui.day(test["at"][:10]))}: ' + ("passed." if test["ok"] else f'failed. {e(test["text"])}')) if test else ""
-        status = _row("Claude Code", " · ".join(facts) + ((" " if facts else "") + last if last else ""), stat, lead=ui.icon("sparkle"),
-                      info="It runs on your Claude plan from this Mac, with no tools and no saved session. Only the digest's "
-                           "summaries and the first 300 words of what was said are sent.", sid="claude-status")
-        wait = ('<select name="wait" aria-label="Wait before my key steps in">' + "".join(
-            f'<option value="{h}"{" selected" if h == claude_code.wait_hours(self.store) else ""}>{label}</option>'
-            for h, label in claude_code.WAIT_CHOICES.items()) + "</select>")
-        modes_html = "".join(
-            f'<label class="seg{" on" if k == use else ""}"><input type="radio" name="use" value="{k}"{" checked" if k == use else ""}>'
-            f'<b>{e(name)}</b><span>{e(text)}</span>'
-            + (f'<span class="cwaitin"><em>Wait</em>{wait}<em>before my key steps in</em></span>' if k == "first" else "") + "</label>"
-            for k, (name, text) in claude_code.CHOICES.items())
-        form = (f'<form method="post" action="/hub/claude/mode" class="cmodes" data-autosubmit>{ui.hidden(self.csrf)}{hide}'
-                f'<div class="segs">{modes_html}</div></form>')
-        use_row = _row("How the digest is written", "", form, cls="rstack", sid="claude-use",
-                       info="Claude Code first, then your key, is how it works by default.")
-        test_btn = ui.button_form(self.csrf, "/hub/claude/test", {"next": "/settings/ai#claude"}, "Send a tiny test",
-                                  "btn sm", busy="Testing…") if st["installed"] else ""
-        check = _row("Check it", (test_line + " " if test_line else "") + "The status above is checked for free. The test sends one short "
-                     "message and uses a few tokens of your plan.", test_btn, cls="small")
-        remove = _row("Disconnect Claude Code", "Switches to your AI key and deletes Magpiary's working folder for it. "
-                      "To uninstall Claude Code itself, run <code>claude uninstall</code> in Terminal or delete it as you installed it.",
-                      ui.button_form(self.csrf, "/hub/claude/remove", {"next": "/settings/ai#claude"}, "Disconnect", "btn sm danger",
-                                     confirm="Stop using Claude Code? Your AI key writes the digest from now on."), cls="small danger")
-        return status + use_row + check + remove
 
     def _keys_danger(self) -> str:
         if not keyring.load():
@@ -1062,11 +993,38 @@ class SettingsPages:
         goals_row = _row("Your goals", (f"Its “Worth doing” picks lean toward: {e(goals[:90])}{'…' if len(goals) > 90 else ''}" if goals
                                         else "None yet, so its “Worth doing” picks are guessed from your saves."),
                          '<a class="btn sm" href="/settings/profile#goals">Edit</a>', lead=ui.icon("sparkle"), sid="digest-goals")
+        from magpiary import engines
+
         private = modes.current(self.store) == "private"
-        intro = '<p class="sinfo">Private mode: digests show the words, numbers and piles, with no written summary.</p>' if private else ""
-        writer = "" if private else _fold("Who writes it", "Claude Code on your Claude plan, or your AI key", self._claude_rows(), gid="claude")
-        return _group("Digest", f'<div class="dgset">{when}</div>' + goals_row + writer,
-                      gid="digest", cls="feat dgfeat hero gold", status=self.claude_line() + intro,
+        if private:
+            intro = '<p class="sinfo">Private mode: digests show the words, numbers and piles, with no written summary.</p>'
+            return _group("Digest", f'<div class="dgset">{when}</div>' + goals_row, gid="digest", cls="feat dgfeat hero gold", status=intro)
+        on = engines.is_on(self.store, "digest")
+        free = engines.only_free(self.store)
+        switch = self._switch("/hub/digest/on", on, {"enabled": "0", "next": back}, {"enabled": "1", "next": back}, "Digest",
+                              confirm=(engines.warning("digest") + " Turn it on with your free key anyway?") if (free and not on) else "")
+        more = ""
+        if not on and free:
+            more = (f'<p class="small">{e(engines.warning("digest"))}</p>'
+                    '<a class="btn sm dark" href="/settings/ai#local">Allow Claude Code or Codex</a>')
+        elif not on and not engines.options(self.store):
+            more = '<p class="small">It needs Claude Code or Codex allowed in AI keys, or an AI key.</p>'
+        rows = _row("Digest", "What your saves were about and what's worth acting on, written for you each week or month. "
+                    "On by itself once Claude Code or Codex is allowed or a paid key is saved.", switch,
+                    lead=ui.icon("digest"), sid="digest-on", more=more)
+        if on:
+            usable = engines.options(self.store)
+            chosen = engines.choice(self.store, "digest")
+            writer = (f'<form method="post" action="/hub/digest/engine" class="deepengine" data-autosubmit>{ui.hidden(self.csrf)}'
+                      f'<label class="deeppick"><span>Written by</span><select name="engine" aria-label="Written by">'
+                      + "".join(f'<option value="{e(o["id"])}"{" selected" if chosen and o["id"] == chosen["id"] else ""}>'
+                                f'{e(o["label"])}{" (free)" if o["free"] else ""}</option>' for o in usable)
+                      + "</select></label></form>") if len(usable) > 1 else ""
+            rows += (f'<div class="dgset">{when}</div>' + goals_row
+                     + _row("Written by", (f"{e(chosen['label'])}." if chosen and len(usable) == 1 else
+                                           "Pick who writes it. It never moves to another one without you."), writer,
+                            lead=ui.icon("sparkle"), sid="digest-writer"))
+        return _group("Digest", rows, gid="digest", cls="feat dgfeat hero gold",
                       info="Each save's summary, the first 300 words of what was said and your goals are sent to write it. Videos never leave this Mac.")
 
     # ---- Shared boards -------------------------------------------------------------------
@@ -1450,6 +1408,16 @@ class SettingsPages:
 
             agent_log.clear()
             return True
+        if path == "/hub/digest/on":
+            from magpiary import engines
+
+            engines.set_on(self.store, "digest", form.get("enabled") == "1")
+            return True
+        if path == "/hub/digest/engine":
+            from magpiary import engines
+
+            engines.choose(self.store, "digest", form.get("engine", ""))
+            return True
         if path == "/hub/deep/on":
             from magpiary import engines as eng
 
@@ -1573,24 +1541,6 @@ class SettingsPages:
             ok = form.get("retry_wait", "").isdigit() and self.store.set_retry_wait(form.get("name", "").strip(), int(form["retry_wait"]))
             note = "Saved. Make a new install code so the phone gets it." if ok else ""
             return Response(303, b"", headers={"Location": "/settings/phones" + (f"?note={quote(note)}" if note else "")})
-        if path == "/hub/claude/mode":
-            if form.get("use") in claude_code.CHOICES:
-                self.store.set_setting(claude_code.USE, form["use"])
-            if form.get("wait", "").isdigit() and int(form["wait"]) in claude_code.WAIT_CHOICES:
-                self.store.set_setting(claude_code.WAIT, form["wait"])
-            self._claude_cache = None
-            self.wake()
-            return Response(303, b"", headers={"Location": "/settings/ai?saved=claude#claude"})
-        if path == "/hub/claude/test":
-            claude_code.tiny_test(self.store)
-            self._claude_cache = None
-            return Response(303, b"", headers={"Location": "/settings/ai?saved=claudetest#claude"})
-        if path == "/hub/claude/remove":
-            self.store.set_setting(claude_code.USE, "key")
-            claude_code.clear_folder()
-            self._claude_cache = None
-            self.wake()
-            return Response(303, b"", headers={"Location": "/settings/ai?saved=claudeoff#claude"})
         if path == "/hub/keys/add":
             error = keyring.add(form.get("provider", ""), form.get("tier", ""), form.get("key", ""),
                                 form.get("label", ""), self.call, model=form.get("model", ""))
@@ -1745,17 +1695,18 @@ class SettingsPages:
         return Response(200, json.dumps(body).encode(), "application/json", headers={"Cache-Control": "no-store"})
 
     def _claude_check(self):
+        """Claude Code and Codex for the health check: allowed or not, and whether an allowed one can still run."""
         from magpiary import doctor
+        from magpiary import engines
 
-        st = claude_code.check()
-        if claude_code.mode(self.store) == "key":
-            return doctor.Check("Claude Code", "Digest writer", doctor.OK, "Turned off in Settings. Your AI key writes the digest.")
-        if not st["installed"]:
-            return doctor.Check("Claude Code", "Digest writer", doctor.WARN, "Not installed, so your AI key writes the digest.",
-                                "Install Claude Code, or leave it: the digest still works.")
-        if st["signed_in"] is False:
-            return doctor.Check("Claude Code", "Digest writer", doctor.WARN, "Installed but not signed in.", "Run claude in Terminal and sign in.")
-        return doctor.Check("Claude Code", "Digest writer", doctor.OK, f'Version {st["version"]}, signed in' + (f' ({st["plan"].title()} plan).' if st["plan"] else "."))
+        allowed = engines.allowed(self.store)
+        if not allowed:
+            return doctor.Check("Claude Code and Codex", "On this Mac", doctor.OK, "Not allowed, so Magpiary does not use them.")
+        missing = [engines.SHORT[k] for k in allowed if not engines.installed(k)]
+        if missing:
+            return doctor.Check("Claude Code and Codex", "On this Mac", doctor.WARN, f"Allowed but not found: {', '.join(missing)}.",
+                                "Set it up again from Ask Magpiary's settings, or stop it in AI keys.")
+        return doctor.Check("Claude Code and Codex", "On this Mac", doctor.OK, "Allowed: " + ", ".join(engines.SHORT[k] for k in allowed) + ".")
 
     def _offline_checks(self):
         """Everything that needs no outside request. The page and the live run both start from this, so they never disagree."""

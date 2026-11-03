@@ -24,6 +24,14 @@ def fake_run(answers):
     return run
 
 
+def digest_on(mac, monkeypatch):
+    """Claude Code allowed: the Digest is on and Claude Code writes it (new installs start with neither)."""
+    from magpiary import engines
+
+    monkeypatch.setattr(engines, "installed", lambda kind: True)
+    mac.store.set_setting(engines.ALLOWED, '["claude_code"]')
+
+
 def test_every_page_with_technical_settings_ends_in_a_folded_advanced_block(mac):
     for path in ("ai", "storage", "boards", "profile", "privacy"):  # (Phones keeps its Advanced inside each phone)
         body = page(mac, f"/settings/{path}")[2]
@@ -62,9 +70,10 @@ def test_the_list_is_grouped_in_the_agreed_order_and_opens_where_a_look_is_neede
     assert "How summaries are made" in page(mac, "/settings")[2]  # nothing needs a look: AI & digest
 
 
-def test_goals_live_in_the_profile_marked_private_and_every_ai_can_read_them(mac):
+def test_goals_live_in_the_profile_marked_private_and_every_ai_can_read_them(mac, monkeypatch):
     from magpiary import ask_open, library
 
+    digest_on(mac, monkeypatch)
     body = page(mac, "/settings/profile")[2]
     assert 'id="goals"' in body and "never shared with friends" in body and "never go to a board" in body
     post(mac, "/hub/digest/goals", goals="Learn to bake", next="/settings/profile#goals")
@@ -86,10 +95,13 @@ def test_goals_sit_just_above_topics_and_the_proxy_field_is_our_own(mac):
     assert 'class="proxyline"' in page(mac, "/settings/storage")[2]
 
 
-def test_the_digest_can_be_turned_off(mac, tmp_path):
+def test_the_digest_can_be_turned_off(mac, tmp_path, monkeypatch):
+    from magpiary import engines
+
+    digest_on(mac, monkeypatch)
     stocked(mac, tmp_path)
-    post(mac, "/hub/digest/when", every="off", next="/settings/ai#digest")
-    assert 'value="off" checked' in page(mac, "/settings/ai")[2]
+    post(mac, "/hub/digest/on", enabled="0", next="/settings/ai#digest")
+    assert not engines.is_on(mac.store, "digest") and "How often" not in page(mac, "/settings/ai")[2]
     later = now_of(mac.store) + timedelta(days=60)
     assert dg.weekly_due(mac.store, later, None, alert=lambda *a: None) is None
 
@@ -137,7 +149,8 @@ def test_the_version_check_can_be_turned_off(mac):
     assert len(asked) == 1
 
 
-def test_digest_schedule_uses_pills_and_goals_a_full_width_box(mac):
+def test_digest_schedule_uses_pills_and_goals_a_full_width_box(mac, monkeypatch):
+    digest_on(mac, monkeypatch)
     body = page(mac, "/settings/ai")[2]
     assert 'class="pillbar"' in body and 'name="every" value="monthly" checked' in body and 'data-autosubmit' in body
     assert body.count('name="day"') == 7 and '<select name="hour"' in body
@@ -213,36 +226,8 @@ def test_the_tiny_test_is_remembered_and_never_runs_by_itself(mac, tmp_path, mon
     assert not failed["ok"] and "Check that it is signed in" in failed["text"]
 
 
-def test_use_mode_changes_who_writes_the_digest(mac, tmp_path):
-    stocked(mac, tmp_path)
-    mac.store.set_setting("ai_mode", "smart")
-    now = now_of(mac.store)
-
-    class Keys:
-        @staticmethod
-        def usable():
-            return [SimpleNamespace(name="Gemini key")]
-    calls = []
-    claude = lambda p: calls.append("claude") or story("C")
-    writer = lambda p, key: calls.append("key") or story("K")
-    mac.store.set_setting(claude_code.USE, "key")
-    d = dg.make(mac.store, now - timedelta(days=7), now + timedelta(seconds=1), "manual")
-    assert dg.story_due(mac.store, now, Keys, claude, writer) == 1 and calls == ["key"]  # at once, Claude Code is not asked
-    assert mac.store.digest(d)["data"]["story_by"] == "Gemini key"
-
-    calls.clear()
-    mac.store.set_setting(claude_code.USE, "only")
-    down = lambda p: calls.append("claude") or (_ for _ in ()).throw(ValueError("down"))
-    dg.make(mac.store, now - timedelta(days=8), now + timedelta(seconds=2), "manual")
-    assert dg.story_due(mac.store, now + timedelta(days=5), Keys, down, writer) == 0 and "key" not in calls  # never the key
-
-    calls.clear()
-    mac.store.set_setting(claude_code.USE, "first")
-    mac.store.set_setting(claude_code.WAIT, "6")
-    assert dg.story_due(mac.store, now + timedelta(hours=7), Keys, down, writer) == 1 and calls == ["claude", "key"]  # the owner's 6 hours
-
-
-def test_a_digest_written_by_claude_code_records_when(mac, tmp_path):
+def test_a_digest_written_by_claude_code_records_when(mac, tmp_path, monkeypatch):
+    digest_on(mac, monkeypatch)
     stocked(mac, tmp_path)
     mac.store.set_setting("ai_mode", "smart")
     now = now_of(mac.store)
@@ -251,35 +236,6 @@ def test_a_digest_written_by_claude_code_records_when(mac, tmp_path):
     assert mac.store.digest(d)["data"]["story_at"] == now.isoformat(timespec="seconds")
     assert claude_code.last_run(mac.store)["ok"] == now.isoformat(timespec="seconds")
 
-
-def test_settings_shows_the_group_saves_the_mode_and_disconnects(mac, tmp_path, monkeypatch):
-    monkeypatch.setenv("MAGPIARY_HOME", str(tmp_path / "home"))
-    monkeypatch.setattr(claude_code, "check", lambda run=None: {"installed": True, "version": "2.1.299", "signed_in": True, "plan": "pro", "why": ""})
-    body = page(mac, "/settings/ai")[2]
-    assert "Who writes it" in body and 'id="claude"' in body and "What uses it" not in body and "Version 2.1.299" in body and "Send a tiny test" in body
-    assert "Claude Code first, then my key" in body and "My key only" in body
-    status, headers, _ = post(mac, "/hub/claude/mode", use="only", wait="48")
-    assert status == 303 and mac.store.get_setting(claude_code.USE, "") == "only" and mac.store.get_setting(claude_code.WAIT, "") == "48"
-    post(mac, "/hub/claude/mode", use="nonsense", wait="5")
-    assert claude_code.mode(mac.store) == "only" and claude_code.wait_hours(mac.store) == 48  # not allowed: ignored
-    claude_code.folder().mkdir(parents=True)
-    (claude_code.folder() / "x").write_text("1")
-    status, headers, _ = post(mac, "/hub/claude/remove")
-    assert claude_code.mode(mac.store) == "key" and not claude_code.folder().exists()
-    assert "AI key writes the digest" in page(mac, "/settings/ai?saved=claudeoff")[2]
-
-
-def test_the_digest_group_says_how_claude_code_stands(mac, monkeypatch):
-    mac.store.set_setting("ai_mode", "smart")
-    for state, text in (({"installed": False, "version": "", "signed_in": None, "plan": "", "why": "x"}, "isn't installed"),
-                        ({"installed": True, "version": "1", "signed_in": False, "plan": "", "why": "x"}, "isn't signed in"),
-                        ({"installed": True, "version": "1", "signed_in": True, "plan": "max", "why": ""}, "Written by Claude Code")):
-        monkeypatch.setattr(claude_code, "check", lambda run=None, s=state: s)
-        mac.server.hub._claude_cache = None
-        assert text in page(mac, "/settings/ai")[2]
-
-
-# ---- the health check as it runs ------------------------------------------------------------------------------
 
 def test_the_health_check_streams_its_results_and_ends_with_a_summary(mac, monkeypatch):
     monkeypatch.setattr(claude_code, "check", lambda run=None: {"installed": False, "version": "", "signed_in": None, "plan": "", "why": "x"})
@@ -295,8 +251,8 @@ def test_the_health_check_streams_its_results_and_ends_with_a_summary(mac, monke
             break
         time.sleep(0.05)
     assert last["done"] and last["phase"] == "offline" and "problems" in last and "warnings" in last
-    assert any(c["name"] == "Digest writer" and c["state"] == doctor.WARN for c in seen)
-    assert {c["area"] for c in seen} >= {"Claude Code"}
+    assert any(c["name"] == "On this Mac" and c["state"] == doctor.OK for c in seen)  # nothing allowed: nothing to warn about
+    assert {c["area"] for c in seen} >= {"Claude Code and Codex"}
 
 
 def test_a_live_health_check_reports_each_site_as_it_finishes(mac, monkeypatch):
