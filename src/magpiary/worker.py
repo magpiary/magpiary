@@ -139,8 +139,8 @@ def transcript_text(folder: Path) -> str:
 def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brain_pause, process=None,
               log: Callable[[str], None] = lambda m: None, key_source=None, activity=None, prepare=None) -> int:
     """For each archived item: first the transcript and frames (on the Mac, saved right away), then the summary
-    with the first usable key (moving to the next key on a limit or refusal). Each part can be paused; an
-    item the owner asked to "Try again" goes even while paused. Returns how many summaries were made."""
+    with the first usable key (moving to the next key on a limit, a refusal or a busy service). Each part can be
+    paused; an item the owner asked to "Try again" goes even while paused. Returns how many summaries were made."""
     from magpiary import keys as keyring
     from magpiary import modes
     from magpiary.brain import BrainFailed
@@ -174,10 +174,13 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
             continue
         if not forced and (store.paused("summary") or not store.take_summary_turn()):
             continue
-        record, repicked = None, False
+        record, busy, repicked, last_busy = None, set(), set(), None
         while record is None:
-            usable = modes.summarisers(store, key_source)  # Smart: the keys; Private: nobody
+            # Smart: the keys; Private: nobody. A key that was busy for this item is skipped for it, not for the next one.
+            usable = [k for k in modes.summarisers(store, key_source) if k.id not in busy]
             if not usable:
+                if last_busy:  # every key was busy: wait for the next try
+                    store.brain_failed(url, last_busy.reason, last_busy.detail, retry=True)
                 break  # no summary now; later items still need their local transcript
             key = usable[0]
             if asked:
@@ -195,11 +198,18 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
                     key_source.mark(key.id, limit=True)
                     log(f"key '{key.name}' reached its limit for today; trying the next key")
                     continue
-                if err.reason == "busy" and not repicked and hasattr(key_source, "repick"):
-                    repicked = True
-                    if key_source.repick(key):  # that model is slow or overloaded: pick another, try once more
-                        log(f"switched key '{key.name}' to a less busy model")
-                        continue
+                if err.reason == "busy":
+                    last_busy = err
+                    if key.id not in repicked and hasattr(key_source, "repick"):
+                        repicked.add(key.id)
+                        if key_source.repick(key):  # that model is slow or overloaded: pick another for later
+                            log(f"switched key '{key.name}' to a less busy model")
+                            if len(usable) == 1:
+                                continue  # no other key: try this one once more on its new model
+                    busy.add(key.id)
+                    if len(usable) > 1:
+                        log(f"key '{key.name}' is busy; trying the next key")
+                    continue
                 store.brain_failed(url, err.reason, err.detail, retry=err.reason in BRAIN_RETRYABLE)
                 break
             except Exception as err:
