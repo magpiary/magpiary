@@ -2,8 +2,8 @@
 #   brew install --cask magpiary/tap/magpiary
 # installs the app. At each release, `version` and `sha256` change (the sha256 is the disk image's line in SHA256SUMS).
 cask "magpiary" do
-  version "0.1.3"
-  sha256 "43f962ca89dfe7d6310a14363f125ce576a03886e613d52103e6503631e44fb5"
+  version "0.1.4"
+  sha256 "95381933ed52cb5045f22e0ca3d9f41035946624d9493ba7a15334bf266d7d19"
 
   url "https://github.com/magpiary/magpiary/releases/download/v#{version}/Magpiary-#{version}.dmg"
   name "Magpiary"
