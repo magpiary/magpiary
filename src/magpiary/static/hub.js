@@ -280,6 +280,10 @@
     if (dg && fdg) dg.replaceWith(document.importNode(fdg, true));
     else if (fdg) $("#t-nest")?.before(document.importNode(fdg, true));
     else dg?.remove();
+    const mp = document.getElementById("t-map"), fmp = doc.getElementById("t-map");  // the Map beta: its button comes and goes with the switch
+    if (mp && fmp) mp.replaceWith(document.importNode(fmp, true));
+    else if (fmp) $("#t-nest")?.before(document.importNode(fmp, true));
+    else mp?.remove();
     const q = $("#q"), fq = doc.getElementById("q");
     if (q && fq && document.activeElement !== q) { q.value = fq.value; $("#sclear").hidden = !q.value; }
   }
