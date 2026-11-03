@@ -291,7 +291,7 @@ class WallPages:
             body, tabs = self.boards_view(q), self._views("boards", f'<div class="tools">{self.size_control()}</div>')
         else:
             body, tabs = self._everything(q, items, ctx)
-        if not items and view == "everything" and not any(q.get(k) for k in ("source", "tag", "type", "links", "attention", "author")):
+        if not items and view == "everything" and not any(q.get(k) for k in ("source", "tag", "type", "links", "attention", "author", "deep")):
             body = empty_state("Your library is empty", "Share a post from your iPhone with <b>Share → Magpiary</b>, or "
                                "paste a link.", '<a class="btn dark" href="/add">Add a post</a>'
                                '<a class="btn" href="/welcome">Open the setup guide</a>')
@@ -333,10 +333,11 @@ class WallPages:
         source, tag, kind = q.get("source", ""), q.get("tag", ""), q.get("type", "")
         author = q.get("author", "")
         links, attention = q.get("links") == "1", q.get("attention") == "1"
+        deep = q.get("deep") == "suggested"  # long videos that could use a deeper dive (Settings links here)
         trend = q.get("sort") == "trending"
         popular = q.get("sort") == "popular" or trend  # trending is a popularity order too: same layout, different ranking
         state = {"source": source, "tag": tag, "author": author, "type": kind, "links": "1" if links else "", "attention": "1" if attention else "",
-                 "sort": "trending" if trend else "popular" if popular else ""}
+                 "deep": "suggested" if deep else "", "sort": "trending" if trend else "popular" if popular else ""}
 
         def link(**change) -> str:
             params = {k: v for k, v in {**state, **change}.items() if v}
@@ -362,7 +363,7 @@ class WallPages:
         toggles = (chip(link(links="" if links else "1"), links, "Has links", "", n_links)
                    + (chip(link(attention="" if attention else "1"), attention, "Needs you", "var(--bad)", counts["attention"])
                       if counts["attention"] or attention else ""))
-        active = sum(bool(x) for x in (source, kind, links, attention, tag, author))
+        active = sum(bool(x) for x in (source, kind, links, attention, tag, author, deep))
         panel = (f'<div class="pop fpanel" role="dialog" aria-label="Filters"><div class="fgroup"><h5>Sources</h5>'
                  f'<div class="fchips">{src_chips}</div></div>'
                  + (f'<div class="fgroup"><h5>Types</h5><div class="fchips">{type_chips}</div></div>' if type_chips else "")
@@ -384,6 +385,8 @@ class WallPages:
             actives.append(chip(link(links=""), True, "Has links"))
         if attention:
             actives.append(chip(link(attention=""), True, "Needs you", "var(--bad)"))
+        if deep:
+            actives.append(chip(link(deep=""), True, "Could use a deeper dive"))
         if tag:
             actives.append(chip(link(tag=""), True, f"#{tag}"))
         if author:
@@ -394,12 +397,16 @@ class WallPages:
                                f'In {n_boards} board{"" if n_boards == 1 else "s"} →</a>')
         chips = (f'<div class="activef" aria-label="Active filters">{"".join(actives)}</div>' if actives else "")
         tag_on = ""
+        from magpiary import deepdive
+
+        deep_urls = deepdive.suggested_urls(self.store) if deep else set()
         shown = [i for i in items if (not source or i["source"] == source)
                  and (not kind or (i.get("ai_status") == "done" and (i.get("ai_type") or "other") == kind))
                  and (not links or i["canonical_url"] in with_links)
                  and (not attention or i["status"] == "needs_attention")
                  and (not tag or tag in i["tags"])
-                 and (not author or i.get("author") == author)]
+                 and (not author or i.get("author") == author)
+                 and (not deep or i["canonical_url"] in deep_urls)]
         controls = self._views("everything", filters) + chips + tag_on
         if not shown:
             return (empty_state("Nothing matches these filters", "Try another source or type, or clear them all.",

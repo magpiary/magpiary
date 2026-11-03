@@ -24,7 +24,9 @@ from pathlib import Path
 
 from magpiary.brain import BrainFailed, _clock
 
-ON, ENGINE, MODEL = "deep_on", "deep_engine", "deep_model"
+ON, ENGINE, MODEL, EFFORT = "deep_on", "deep_engine", "deep_model", "deep_effort"
+EFFORTS = {"low": "Low", "medium": "Medium", "high": "High"}
+DEFAULT_EFFORT = "medium"
 LONG = "long_video_minutes"
 LONG_DEFAULT = 20
 CONFIRM_ABOVE = 4  # AI calls: more than this asks first
@@ -92,6 +94,18 @@ def suggested(store, meta: dict) -> bool:
     return bool(limit) and (meta.get("duration") or 0) > limit
 
 
+def suggested_urls(store) -> set[str]:
+    """Videos longer than the setting with no deeper dive yet: what Settings counts and the library's filter shows."""
+    limit = long_after(store)
+    if not limit:
+        return set()
+    out = set()
+    for url, folder in store.deep_candidates():
+        if ((_read(Path(folder) / "meta.json", {}) or {}).get("duration") or 0) > limit:
+            out.add(url)
+    return out
+
+
 def engines(keys=None) -> list[tuple[str, str]]:
     """(value, label) of every engine this Mac can use: the AI keys, then Claude Code and Codex when installed."""
     from magpiary import ask, ask_codex
@@ -106,22 +120,64 @@ def engines(keys=None) -> list[tuple[str, str]]:
     return out
 
 
+def models_for(kind: str, key=None) -> dict[str, str]:
+    """The models offered for an engine, as {name the engine knows: label}; the first is the default."""
+    from magpiary import askconfig
+    from magpiary.providers import SUGGESTED_MODELS
+
+    if kind == "claude_code":
+        return {"sonnet": askconfig.CLAUDE_MODELS["sonnet"], "opus": askconfig.CLAUDE_MODELS["opus"],
+                "haiku": askconfig.CLAUDE_MODELS["haiku"]}
+    if kind == "codex":
+        return {"gpt-6-sol": askconfig.CODEX_MODELS["gpt-6-sol"], "gpt-6-luna": askconfig.CODEX_MODELS["gpt-6-luna"]}
+    if kind != "key" or key is None:
+        return {}
+    names = [key.model]
+    if key.provider == "gemini":  # the same Gemini generation as the key's own model: lighter to stronger
+        version = re.search(r"gemini-(\d+(?:\.\d+)?)", key.model or "")
+        if version:
+            names += [f"gemini-{version.group(1)}-{tier}" for tier in ("flash-lite", "flash", "pro")]
+    elif key.provider == "claude":
+        names += [*SUGGESTED_MODELS["claude"], "claude-opus-5-5"]
+    else:
+        names += SUGGESTED_MODELS.get(key.provider, [])
+    out = {}
+    for n in names:
+        if n and n not in out:
+            out[n] = n + (" (this key's model)" if n == key.model else "")
+    return out
+
+
+def efforts_for(kind: str, key=None) -> dict[str, str]:
+    """Effort levels the engine takes; empty when the service does not offer a safe way to set it (Gemini, OpenRouter,
+    OpenAI): their models think as they are built to."""
+    if kind in ("claude_code", "codex") or (kind == "key" and key is not None and key.provider == "claude"):
+        return EFFORTS
+    return {}
+
+
 def engine(store, keys=None) -> dict:
-    """The chosen engine: {"kind": key, claude_code or codex, "key": the Key or None, "model", "label"}. Without a choice,
-    the first AI key. kind is "" when nothing is usable."""
+    """The chosen engine: {"kind": key, claude_code or codex, "key": the Key or None, "model", "effort", "label"}. Without
+    a choice, the first AI key. A model or effort the engine does not offer falls back to its default. kind is "" when
+    nothing is usable."""
     from magpiary import keys as keyring
 
     keys = keys if keys is not None else keyring.load()
     choice = store.get_setting(ENGINE, "")
-    model = store.get_setting(MODEL, "").strip()
     ai = [k for k in keys if keyring.PROVIDERS.get(k.provider, {}).get("kind") == "ai"]
     if choice in ("claude_code", "codex"):
-        label = "Claude Code" if choice == "claude_code" else "Codex"
-        return {"kind": choice, "key": None, "model": model, "label": label}
-    key = next((k for k in ai if f"key:{k.id}" == choice), ai[0] if ai else None)
-    if key is None:
-        return {"kind": "", "key": None, "model": "", "label": ""}
-    return {"kind": "key", "key": key, "model": model or key.model, "label": key.name}
+        kind, key, label = choice, None, "Claude Code" if choice == "claude_code" else "Codex"
+    else:
+        key = next((k for k in ai if f"key:{k.id}" == choice), ai[0] if ai else None)
+        if key is None:
+            return {"kind": "", "key": None, "model": "", "effort": "", "label": ""}
+        kind, label = "key", key.name
+    models, efforts = models_for(kind, key), efforts_for(kind, key)
+    model = store.get_setting(MODEL, "")
+    effort = store.get_setting(EFFORT, DEFAULT_EFFORT)
+    return {"kind": kind, "key": key, "label": label,
+            "model": model if model in models else next(iter(models), ""),
+            "effort": (effort if effort in efforts else DEFAULT_EFFORT) if efforts else ""}
 
 
 # ---- what it will read ------------------------------------------------------------------------
@@ -300,7 +356,7 @@ def _image_part(path: Path) -> dict:
         return {}
 
 
-def key_asker(key, model: str) -> Ask:
+def key_asker(key, model: str, effort: str = "") -> Ask:
     """An AI key: the same services as the summary, with the deeper dive's instructions and answer format."""
     from magpiary import providers
     from magpiary.brain import ask_gemini, http_call
@@ -310,7 +366,7 @@ def key_asker(key, model: str) -> Ask:
         if key.provider == "gemini":
             return ask_gemini(full, [], key.secret, model, http_call, None, system=system, schema=schema)
         if key.provider == "claude":
-            return providers.ask_claude(full, [], key.secret, model, system=system, schema=schema)
+            return providers.ask_claude(full, [], key.secret, model, system=system, schema=schema, effort=effort or "low")
         return providers.ask_chat(key.provider, full, [], key.secret, model, system=system, schema=schema)
     return ask
 
@@ -319,7 +375,7 @@ def _evidence_text(parts: list[dict]) -> str:
     return "\n\n".join(p["text"] for p in parts if "text" in p)
 
 
-def claude_code_asker(model: str = "", run=subprocess.run) -> Ask:
+def claude_code_asker(model: str = "", effort: str = "", run=subprocess.run) -> Ask:
     """Claude Code on the owner's plan, headless: it may only read the frames copied into an empty folder for this call."""
     from magpiary import claude_code
     from magpiary.config import data_dir
@@ -337,7 +393,8 @@ def claude_code_asker(model: str = "", run=subprocess.run) -> Ask:
                 names.append(name)
             prompt = (_evidence_text(parts) + ("\n\nIMAGES (read each file in this folder with the Read tool): "
                                                + ", ".join(names) if names else ""))
-            done = run([claude_code.command(), "-p", "--model", model or "sonnet", "--system-prompt", system,
+            done = run([claude_code.command(), "-p", "--model", model or "sonnet", "--effort", effort or DEFAULT_EFFORT,
+                        "--system-prompt", system,
                         "--tools", "Read", "--allowedTools", "Read", "--strict-mcp-config", "--setting-sources", "project",
                         "--no-session-persistence", "--output-format", "json", "--json-schema", json.dumps(json_schema(schema))],
                        input=prompt, capture_output=True, text=True, timeout=1800, cwd=work)
@@ -358,7 +415,7 @@ def claude_code_asker(model: str = "", run=subprocess.run) -> Ask:
     return ask
 
 
-def codex_asker(model: str = "", run=subprocess.run) -> Ask:
+def codex_asker(model: str = "", effort: str = "", run=subprocess.run) -> Ask:
     """Codex on the owner's plan, headless and confined: the frames are attached as images; it reads nothing else."""
     from magpiary import ask_codex
     from magpiary.config import data_dir
@@ -377,7 +434,7 @@ def codex_asker(model: str = "", run=subprocess.run) -> Ask:
             (work / "schema.json").write_text(json.dumps(json_schema(schema)))
             command = [codex, "exec", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config",
                        *ask_codex.profile_config(work), "-c", 'web_search="disabled"',
-                       *(["-m", model] if model else []), "--output-schema", str(work / "schema.json"),
+                       *(["-m", model] if model else []), "-c", f"model_reasoning_effort={effort or DEFAULT_EFFORT}", "--output-schema", str(work / "schema.json"),
                        "-o", str(work / "answer.json"), *(a for img in images for a in ("-i", str(img))), "-"]
             done = run(command, input=system + "\n\n" + _evidence_text(parts), capture_output=True, text=True,
                        timeout=1800, cwd=work)
@@ -394,11 +451,11 @@ def codex_asker(model: str = "", run=subprocess.run) -> Ask:
 
 def asker_for(chosen: dict) -> Ask:
     if chosen["kind"] == "claude_code":
-        return claude_code_asker(chosen["model"])
+        return claude_code_asker(chosen["model"], chosen["effort"])
     if chosen["kind"] == "codex":
-        return codex_asker(chosen["model"])
+        return codex_asker(chosen["model"], chosen["effort"])
     if chosen["kind"] == "key":
-        return key_asker(chosen["key"], chosen["model"])
+        return key_asker(chosen["key"], chosen["model"], chosen["effort"])
     raise BrainFailed("no_key", "no engine is chosen for the deeper dive (Settings)")
 
 

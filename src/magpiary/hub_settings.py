@@ -600,43 +600,29 @@ class SettingsPages:
             chosen = deepdive.engine(self.store)
             choices = deepdive.engines()
             current = (f"key:{chosen['key'].id}" if chosen["kind"] == "key" else chosen["kind"])
-            options = "".join(f'<option value="{e(v)}"{" selected" if v == current else ""}>{e(label)}</option>' for v, label in choices)
-            model = self.store.get_setting(deepdive.MODEL, "")
-            hint = chosen["key"].model if chosen["kind"] == "key" else ("sonnet or opus" if chosen["kind"] == "claude_code" else "its default")
-            rows += _row("Engine", "Which AI reads it, and its model. Frames and text go to that AI; the video never leaves this Mac.",
-                         (f'<form method="post" action="/hub/deep/engine" class="iform">{ui.hidden(self.csrf)}'
-                          f'<select name="engine" aria-label="Engine">{options}</select>'
-                          f'<input type="text" name="model" value="{e(model)}" placeholder="{e(hint)}" aria-label="Model" spellcheck="false">'
-                          f'<button class="btn sm" type="submit">Save</button></form>') if choices else
-                         '<span class="small muted">Add an AI key above, or install Claude Code or Codex.</span>',
-                         lead=ui.icon("sliders"), sid="deepengine")
+            pick = lambda name, label, items, now: (  # noqa: E731
+                f'<label class="deeppick"><span>{label}</span><select name="{name}" aria-label="{label}">'
+                + "".join(f'<option value="{e(v)}"{" selected" if v == now else ""}>{e(t)}</option>' for v, t in items) + "</select></label>")
+            efforts = deepdive.efforts_for(chosen["kind"], chosen["key"])
+            control = (f'<form method="post" action="/hub/deep/engine" class="deepengine" data-autosubmit>{ui.hidden(self.csrf)}'
+                       + pick("engine", "Engine", choices, current)
+                       + pick("model", "Model", deepdive.models_for(chosen["kind"], chosen["key"]).items(), chosen["model"])
+                       + (pick("effort", "Effort", efforts.items(), chosen["effort"]) if efforts else
+                          '<span class="deeppick"><span>Effort</span><em>Set by the model</em></span>')
+                       + "</form>") if choices else '<span class="small muted">Add an AI key above, or install Claude Code or Codex.</span>'
+            rows += _row("Engine", "Which AI reads it. Frames and text go to that AI; the video never leaves this Mac. "
+                         "A stronger model and higher effort read more closely and use more of your plan or quota.",
+                         control, lead=ui.icon("sliders"), sid="deepengine", cls="rstack")
             minutes = self.store.get_setting(deepdive.LONG, str(deepdive.LONG_DEFAULT)) or str(deepdive.LONG_DEFAULT)
-            waiting = self._deep_waiting()
+            waiting = len(deepdive.suggested_urls(self.store))
             rows += _row("Suggest it for videos longer than",
-                         "Minutes. Those posts show Deeper dive as suggested. 0 never suggests it."
-                         + (f" {waiting} long video{'s' if waiting != 1 else ''} could use one now." if waiting else ""),
+                         "Minutes. Those posts show Deeper dive as suggested. 0 never suggests it.",
                          f'<form method="post" action="/hub/settings/long-video" class="iform">{ui.hidden(self.csrf)}'
                          f'<input type="number" min="0" max="600" name="minutes" value="{e(minutes)}" aria-label="Minutes">'
-                         f'<button class="btn sm" type="submit">Save</button></form>', lead=ui.icon("clock"), sid="longvideo")
+                         f'<button class="btn sm" type="submit">Save</button></form>', lead=ui.icon("clock"), sid="longvideo",
+                         more=(f'<a class="link" href="/?deep=suggested">{waiting} long video{"s" if waiting != 1 else ""} '
+                               f'could use one now →</a>') if waiting else "")
         return _group("Deeper dive", rows, gid="deep", desc="Off unless you turn it on.")
-
-    def _deep_waiting(self) -> int:
-        """Long videos with no deeper dive yet."""
-        import json as _json
-
-        from magpiary import deepdive
-
-        limit = deepdive.long_after(self.store)
-        if not limit:
-            return 0
-        count = 0
-        for folder in self.store.deep_candidates():
-            try:
-                if (_json.loads((Path(folder) / "meta.json").read_text()).get("duration") or 0) > limit:
-                    count += 1
-            except (OSError, ValueError):
-                continue
-        return count
 
     def _finding_group(self) -> str:
         """Links work with no setup; a web search key only finds what the free directories miss."""
@@ -1623,9 +1609,16 @@ class SettingsPages:
         if path == "/hub/deep/engine":
             from magpiary import deepdive
 
+            before = self.store.get_setting(deepdive.ENGINE, "")
             if form.get("engine", "") in {v for v, _ in deepdive.engines()}:
                 self.store.set_setting(deepdive.ENGINE, form["engine"])
-            self.store.set_setting(deepdive.MODEL, re.sub(r"[^\w.:/\-]", "", form.get("model", ""))[:80])
+            chosen = deepdive.engine(self.store)
+            if self.store.get_setting(deepdive.ENGINE, "") != before:  # a new engine starts on its own defaults
+                self.store.set_setting(deepdive.MODEL, "")
+            elif form.get("model", "") in deepdive.models_for(chosen["kind"], chosen["key"]):
+                self.store.set_setting(deepdive.MODEL, form["model"])
+            if form.get("effort", "") in deepdive.efforts_for(chosen["kind"], chosen["key"]):
+                self.store.set_setting(deepdive.EFFORT, form["effort"])
             return Response(303, b"", headers={"Location": "/settings/ai?saved=deep#deepengine"})
         if path == "/hub/settings/long-video":
             minutes = form.get("minutes", "").strip()

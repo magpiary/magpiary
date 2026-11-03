@@ -184,3 +184,38 @@ def test_the_tab_shows_only_when_on_and_asks_first_for_big_ones(mac, tmp_path):
     post(mac, "/hub/deep", id=str(item_id), next=f"/item/{item_id}?tab=deep")
     assert mac.store.item_by_id(item_id)["deep_status"] == "queued"
     assert "Deeper dive under way" in page(mac, f"/item/{item_id}?tab=deep")[2]
+
+
+def test_each_engine_offers_its_own_models_and_efforts_and_a_new_engine_starts_on_defaults(mac):
+    from magpiary.keys import Key
+
+    gemini = Key("g1", "gemini", "free", "secret", "", "gemini-3.5-flash-lite", "")
+    assert list(deepdive.models_for("key", gemini)) == ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.5-pro"]
+    assert deepdive.efforts_for("key", gemini) == {}  # Gemini: set by the model
+    assert list(deepdive.models_for("claude_code")) == ["sonnet", "opus", "haiku"] and deepdive.efforts_for("codex") == deepdive.EFFORTS
+    mac.store.set_setting(deepdive.ON, "1")
+    mac.store.set_setting(deepdive.ENGINE, "claude_code")
+    post(mac, "/hub/deep/engine", model="opus", effort="high")
+    chosen = deepdive.engine(mac.store)
+    assert (chosen["model"], chosen["effort"]) == ("opus", "high")
+    post(mac, "/hub/deep/engine", model="nonsense", effort="extreme")
+    assert deepdive.engine(mac.store)["model"] == "opus"  # nonsense is ignored
+    mac.store.set_setting(deepdive.ENGINE, "codex")
+    assert deepdive.engine(mac.store)["model"] == "gpt-6-sol"  # opus is not a Codex model: Codex's default
+    body = page(mac, "/settings/ai")[2]
+    assert 'class="deepengine" data-autosubmit' in body and 'name="effort"' in body
+
+
+def test_the_count_in_settings_opens_the_library_filtered_to_those_videos(mac, tmp_path):
+    long_url, folder = saved(mac.store, tmp_path, "dvlong", meta={"duration": 3600})
+    short_url, _ = saved(mac.store, tmp_path, "dvshort", meta={"duration": 60})
+    with mac.store._lock:
+        mac.store._db.execute("UPDATE items SET media_kind='video', status='archived'")
+    mac.store.set_setting(deepdive.ON, "1")
+    assert deepdive.suggested_urls(mac.store) == {long_url}
+    assert 'href="/?deep=suggested">1 long video could use one now' in page(mac, "/settings/ai")[2]
+    body = page(mac, "/?deep=suggested")[2]
+    assert "Could use a deeper dive" in body
+    ids = {mac.store.id_for(long_url), mac.store.id_for(short_url)}
+    shown = {int(x) for x in __import__("re").findall(r'data-id="(\d+)"', body)} & ids
+    assert shown == {mac.store.id_for(long_url)}

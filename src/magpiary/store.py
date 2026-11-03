@@ -1641,11 +1641,11 @@ class Store(ChatStore, StatsStore):
                 "UPDATE items SET ai_status='needs_attention', ai_reason=?, ai_detail=?, ai_attempts=?, ai_next_at=?, "
                 "ai_force=0 WHERE canonical_url=?", (reason, detail[:200], attempts, retry_at, url))
 
-    def deep_candidates(self) -> list[str]:
-        """Folders of summarised videos with no deeper dive yet (the caller checks their length)."""
+    def deep_candidates(self) -> list[tuple[str, str]]:
+        """(url, folder) of saved videos with no deeper dive yet (the caller checks their length)."""
         with self._lock:
-            return [r[0] for r in self._db.execute(
-                "SELECT archive_dir FROM items WHERE status='archived' AND archive_dir IS NOT NULL AND shelf != 'trash' "
+            return [(r[0], r[1]) for r in self._db.execute(
+                "SELECT canonical_url, archive_dir FROM items WHERE status='archived' AND archive_dir IS NOT NULL AND shelf != 'trash' "
                 "AND deep_status IS NULL AND media_kind='video'").fetchall()]
 
     def queue_deep(self, item_id: int) -> bool:

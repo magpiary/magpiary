@@ -182,7 +182,7 @@ def _claude_failure(err: Exception) -> BrainFailed:
 
 
 def ask_claude(parts: list[dict], history: list[tuple[str, str]], secret: str, model: str, client=None,
-               system: str = PROMPT, schema: dict = SCHEMA) -> str:
+               system: str = PROMPT, schema: dict = SCHEMA, effort: str = "low") -> str:
     content = [{"type": "text", "text": v} if kind == "text" else
                {"type": "image", "source": {"type": "base64", "media_type": v[0], "data": v[1]}}
                for kind, v in _images(parts)]
@@ -191,7 +191,7 @@ def ask_claude(parts: list[dict], history: list[tuple[str, str]], secret: str, m
     try:
         response = (client or _claude_client(secret)).messages.create(
             model=model, max_tokens=16000, system=system, messages=messages,
-            output_config={"effort": "low", "format": {"type": "json_schema", "schema": json_schema(schema)}})
+            output_config={"effort": effort, "format": {"type": "json_schema", "schema": json_schema(schema)}})
     except Exception as err:  # the library's errors, mapped to the shared reasons
         raise _claude_failure(err) from err
     if response.stop_reason == "refusal":

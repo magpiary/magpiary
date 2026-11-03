@@ -4273,3 +4273,8 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .deep .chip.sm { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--chip); color: var(--fg-2); }
 .deepq { margin: 10px 0; padding: 8px 14px; border-left: 3px solid var(--line); color: var(--fg-2); }
 .deepq p { margin: 0 0 4px; font-style: italic; }
+.deepengine { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px; }
+.deepengine .deeppick { display: grid; gap: 4px; min-width: 170px; }
+.deepengine .deeppick > span { font: 700 11px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); }
+.deepengine select { font: inherit; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+.deepengine .deeppick em { font-style: normal; color: var(--fg-3); padding: 7px 0; }
