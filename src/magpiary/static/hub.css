@@ -4152,3 +4152,98 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .guide2 .g2steps li { counter-increment: g2; position: relative; margin: 0; padding: 2px 0 2px 38px; font-size: 14px; line-height: 1.5; color: var(--fg); }
 .guide2 .g2steps li::before { content: counter(g2); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; background: var(--pink, #ff2e93); color: #fff; }
 .guide2 .g2note { margin: 12px 0 0; padding: 9px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.5; background: color-mix(in srgb, var(--fg) 7%, transparent); color: var(--fg-2); }
+
+/* ---- 0.1.4 Welcome: green next buttons, the Chrome and iPhone cards, the key picker (approved preview, 3 Nov 2026) ---- */
+.wel { --go: #0e8f55; --go-ink: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .wel { --go: #1ec27a; --go-ink: #04210f; } }
+:root[data-theme="dark"] .wel { --go: #1ec27a; --go-ink: #04210f; }
+:root[data-theme] .wel a.btn.next, :root[data-theme] .wel button.btn.next { background: var(--go); color: var(--go-ink); border: 0; box-shadow: none; }
+:root[data-theme] .wel a.btn.next:hover { background: color-mix(in srgb, var(--go) 88%, #000); }
+.wel .btn.next span { font-weight: 500; opacity: .85; }
+.wel .btn[aria-disabled=true] { opacity: .45; pointer-events: none; }
+.wel .w-link, .wel button.w-link { background: none; border: 0; padding: 0 6px; font: inherit; font-weight: 600; font-size: 15px; color: var(--fg-3); cursor: pointer; }
+.wel .w-link:hover { color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px; }
+.wel .w-cta form { margin: 0; }
+.wel .ws > div > b.t { font: 700 17px var(--display); display: block; }
+.wel .ws.fold { opacity: .55; padding: 11px 16px; align-items: center; }
+.wel .ws.fold b.t { font-size: 15px; font-weight: 600; }
+.wel .wp.hero { background: linear-gradient(135deg, color-mix(in srgb, var(--t-design) 13%, var(--bg)), color-mix(in srgb, var(--blue, #2a62f0) 13%, var(--bg))); border-color: color-mix(in srgb, var(--t-design) 38%, var(--line)); }
+.wel .wp.hero.on { border-color: var(--fg); }
+.wel .wpre form { margin: 0; }
+.wel .field { display: grid; gap: 6px; margin-bottom: 12px; }
+.wel .field label { font-weight: 700; font-size: 13px; }
+.wel .field input { height: 44px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 0 14px; font: inherit; width: 100%; box-sizing: border-box; }
+.wel .code { display: inline-flex; align-items: center; gap: 12px; margin-top: 10px; padding: 8px 8px 8px 16px; border-radius: 14px; background: var(--bg); border: 1.5px solid var(--line); }
+.wel .code b { font: 700 24px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; }
+.wel .mini { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.wel .mini li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 14px; color: var(--fg-2); align-items: start; margin: 0; }
+.wel .mini li > span { width: 22px; height: 22px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font: 800 12px var(--display); color: var(--fg); }
+.wel .mini .inl { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.wel .mini code { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font: 600 13.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg); }
+.wel .ws .btn:not(.next):not(.dark) { background: var(--bg); }
+.wel .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.wel .card { border-radius: 28px; background: var(--chip); padding: clamp(18px, 3vw, 28px); display: grid; gap: 14px; }
+.wel .card h3 { font: 700 22px var(--display); margin: 0; }
+.wel .card .ws { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 14px; row-gap: 8px; padding: 0; background: none; border-radius: 0; align-items: center; }
+.wel .card .ws > div { display: contents; }
+.wel .card .ws .n { grid-column: 1; grid-row: 1; }
+.wel .card .ws b.t { grid-column: 2; grid-row: 1; }
+.wel .card .ws .st { grid-column: 3; grid-row: 1; }
+.wel .card .ws small { grid-column: 1 / -1; grid-row: 2; margin: 0; }
+.wel .card .ws.ok { background: none; }
+.wel .qr { width: min(220px, 100%); aspect-ratio: 1; background: #fff; border-radius: 18px; padding: 12px; justify-self: start; box-sizing: border-box; }
+.wel .qr svg { width: 100%; height: 100%; display: block; }
+.wel .note { border-radius: 18px; padding: 16px 18px; background: color-mix(in srgb, #b36b00 13%, var(--bg)); border: 1.5px solid color-mix(in srgb, #b36b00 45%, var(--bg)); }
+.wel .note b { font: 700 16px var(--display); display: block; margin-bottom: 4px; }
+.wel .note p { margin: 0 0 12px; font-size: 14.5px; color: var(--fg-2); }
+.wel .art { border-radius: 28px; background: var(--chip); padding: clamp(18px, 3vw, 30px); min-height: 340px; display: grid; align-content: center; gap: 16px; }
+.wel .chrome { border-radius: 14px; background: #fff; color: #222; overflow: hidden; box-shadow: 0 18px 40px rgba(0, 0, 0, .25); }
+.wel .chrome .bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #e9eaee; }
+.wel .chrome .dots i { width: 10px; height: 10px; border-radius: 50%; background: #bbb; display: inline-block; margin-right: 4px; }
+.wel .chrome .url { flex: 1; background: #fff; border-radius: 999px; padding: 5px 12px; font-size: 12px; color: #666; }
+.wel .chrome .tbtn { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: #d9dbe1; }
+.wel .chrome .tbtn.me { background: #fff; box-shadow: 0 0 0 2px var(--t-design); }
+.wel .chrome .tbtn svg { width: 18px; height: 18px; }
+.wel .pop { margin: 12px 12px 14px auto; width: min(250px, calc(100% - 24px)); border-radius: 14px; background: #fff; box-shadow: 0 8px 28px rgba(0, 0, 0, .28); padding: 12px 14px; font-size: 13px; border: 1px solid #e2e2e2; box-sizing: border-box; }
+.wel .pop b { display: block; font: 700 14px var(--display); margin-bottom: 6px; }
+.wel .pop .ok { color: #0b8a50; font-weight: 700; }
+.wel .pg { padding: 16px 18px; }
+.wel .pg i { display: block; height: 9px; border-radius: 5px; background: #e7e7ea; margin-bottom: 8px; }
+.wel .wphone { width: min(230px, 70%); margin: 0 auto; border-radius: 34px; background: #111; padding: 10px; box-shadow: 0 18px 40px rgba(0, 0, 0, .3); }
+.wel .wphone .wscr { border-radius: 26px; background: #f2f2f7; color: #222; padding: 14px 12px 18px; min-height: 250px; display: grid; align-content: end; }
+.wel .wphone .wshr { background: #fff; border-radius: 18px; padding: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 9.5px; text-align: center; }
+.wel .wphone .wshr span { display: grid; gap: 4px; justify-items: center; }
+.wel .wphone .wshr i { width: 34px; height: 34px; border-radius: 9px; background: #ccc; display: block; }
+.wel .wphone .wshr .mg i { background: linear-gradient(160deg, #ff2e93, #2f6bff); }
+.wel .ways { display: grid; gap: 10px; margin-bottom: 14px; }
+.wel .way { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--chip); }
+.wel .way .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font: 800 15px var(--display); background: var(--bg); }
+.wel .way b { font: 700 15.5px var(--display); display: block; }
+.wel .way small { color: var(--fg-2); font-size: 13.5px; }
+.wel .listen { display: flex; border-radius: 16px; padding: 12px 16px; }
+.wel .listen i { background: var(--t-design); }
+.wel .listen.ok i { background: var(--ok); }
+/* the provider picker: our own list, not the browser's */
+.wel .dd { position: relative; }
+.wel .dd-btn { width: 100%; height: 44px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font: inherit; text-align: left; cursor: pointer; }
+.wel .dd-btn[aria-expanded="true"] { border-color: var(--fg-3); }
+.wel .dd-btn svg { flex: none; width: 14px; height: 14px; color: var(--fg-3); transition: transform .15s; transform: rotate(90deg); }
+.wel .dd-btn[aria-expanded="true"] svg { transform: rotate(-90deg); }
+.wel .dd-list { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px); margin: 0; padding: 6px; list-style: none; border-radius: 16px; background: var(--bg); border: 1.5px solid var(--line); box-shadow: 0 14px 34px rgba(0, 0, 0, .28); outline: none; }
+.wel .dd-list[hidden] { display: none; }
+.wel .dd-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+.wel .dd-list li b { display: block; font: 700 15px var(--display); }
+.wel .dd-list li small { display: block; font-size: 12.5px; color: var(--fg-3); }
+.wel .dd-list li i { font-style: normal; font-weight: 800; color: var(--ok); visibility: hidden; }
+.wel .dd-list li[aria-selected="true"] i { visibility: visible; }
+.wel .dd-list li.act { background: var(--chip); }
+.wel .helpbtn { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-weight: 700; font-size: 14px; color: var(--fg-2); padding: 4px 0; background: none; border: 0; cursor: pointer; font-family: inherit; }
+.wel .helpbtn:hover { color: var(--fg); }
+.wel .helpbtn svg { width: 14px; height: 14px; transition: transform .15s; transform: rotate(90deg); }
+.wel .helpbtn[aria-expanded="true"] svg { transform: rotate(-90deg); }
+.wel #guidewrap { margin-top: 10px; }
+.wel #guidewrap[hidden] { display: none; }
+/* every screen: the right column starts where the first card on the left starts (hub.js splits .w-body into head / main / side) */
+.wel .w-body.al { grid-template-areas: "head ." "main side"; align-items: start; row-gap: 0; }
+.wel .w-body.al > .head { grid-area: head; } .wel .w-body.al > .main { grid-area: main; } .wel .w-body.al > .side { grid-area: side; }
+@media (max-width: 860px) { .wel .w-body.al { grid-template-areas: "head" "main" "side"; row-gap: 20px; } }

@@ -264,7 +264,7 @@ def test_the_hub_pairs_a_phone_with_a_qr_code_and_can_renew_or_remove_it(env):
     status, headers, _ = env.request("POST", "/hub/phones/add", form)
     assert status == 303 and headers["Location"].startswith("/welcome/phone?qr=http%3A%2F%2Ftest-mac.local%3A")
     status, _, body = env.request("GET", headers["Location"])
-    assert status == 200 and b"<svg" in body and b"Scan with <em>Hub iPhone</em>" in body
+    assert status == 200 and b'class="qr"' in body and b"<svg" in body and b"Paired: Hub iPhone" not in body
     assert env.mac.store.get_phone("Hub iPhone")["home_wifi"] == "Example Net"
     token = re.search(r"t%3D([\w-]+)", headers["Location"]).group(1)
     assert env.request("GET", f"/install?t={token}")[0] == 200          # the code in the QR works
@@ -512,6 +512,7 @@ def test_an_icloud_reason_from_the_signer_gets_its_own_wording(env):
 def test_the_welcome_key_form_has_a_guide_for_every_provider_and_shows_only_the_first(env):
     from magpiary import keys as keyring
 
+    env.request("POST", "/hub/settings/mode", {"csrf": env.mac.server.hub.csrf, "mode": "smart", "next": "/welcome/reading"})
     body = env.request("GET", "/welcome/reading")[2].decode()
     for provider, info in keyring.PROVIDERS.items():
         if info["kind"] == "ai":

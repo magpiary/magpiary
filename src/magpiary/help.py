@@ -494,6 +494,9 @@ PAGE_TOPIC = {"wall": "library", "search": "library", "shelf": "library", "add":
 
 # What's new, shown once after an update (newest first). Plain words; one line each.
 CHANGES = [
+    ("0.1.4", ["A new welcome guide: save from Chrome or your iPhone, skip any step, and watch each step tick off as Magpiary sees it happen.",
+               "Chrome can tell Magpiary it is installed and pinned (with the newer extension), and the iPhone step now ticks only when the phone has really reached your Mac.",
+               "“Send when I get home” moved to Settings."]),
     ("0.1.3", ["Each Mac account now has its own Magpiary and its own library, so two accounts on one Mac no longer meet.",
                "The steps for getting an AI key are bigger and clearer, with the link first."]),
     ("0.1.2", ["The library opens only after setup has finished; clicking the Dock icon during setup shows the download again.",

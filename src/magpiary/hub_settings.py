@@ -530,7 +530,7 @@ class SettingsPages:
                                  "back to the first the next day. Each post records which key wrote it. Free keys are paced "
                                  "to stay within their limits.</p>"))
 
-    GUIDE_CHIP = {"gemini": "Free · about 2 minutes", "openrouter": "Free models · about 3 minutes", "claude": "Paid · needs credits",
+    GUIDE_CHIP = {"gemini": "Free", "openrouter": "Free models", "claude": "Paid · needs credits",
                   "openai": "Paid · needs a card", "tavily": "Free · no card", "brave": "Needs a card · $5 free each month"}
     GUIDE_NOTES = ("Free or paid", "Recommended", "Magpiary ", "Brave reportedly")   # advice after the numbered steps
 
@@ -638,6 +638,16 @@ class SettingsPages:
                 f'<p class="hint">Type it exactly as it appears in Settings → Wi-Fi. The phone then sends only on that Wi-Fi, and keeps '
                 f'everything else until it is back.</p></div></details>')
 
+    def _home_group(self) -> str:
+        """The "Send when I get home" automation (an advanced step that used to be in the first-run guide)."""
+        steps = ("<ol class=\"small\"><li>In Shortcuts open <b>Automation</b>, then <b>+</b>, then <b>Wi-Fi</b>.</li>"
+                 "<li>Choose your home network and tick <b>Is Joined</b> only.</li><li>Pick <b>Run Immediately</b>.</li>"
+                 "<li>Add the action <b>Run Shortcut</b>, then <b>Magpiary</b>.</li><li>Switch <b>Notify When Run</b> off.</li></ol>"
+                 "<p class=\"hint\">iPhones don't let a program create this part, so it's done by hand once.</p>")
+        row = _row("Send when I get home", "Shares made away from home then arrive by themselves when your iPhone joins your home Wi-Fi.",
+                   lead=ui.icon("wifi"), cls="phone2", more=steps)
+        return _group("Send when I get home", row, gid="home", desc="Optional. Set it up once in the Shortcuts app on your iPhone.")
+
     def _chrome_group(self, q: dict) -> str:
         """The Chrome extension, apart from the phones: one browser only. Unpaired: a Pair button. Paired: one row, a green
         Paired pill on the right, and a menu with a new code and Remove."""
@@ -729,6 +739,7 @@ class SettingsPages:
                       more=_more('<p>A phone sends links on any Wi-Fi your Mac is on (or only on a home Wi-Fi, if you gave one), and deletes them once this Mac '
                                  'confirms. <a class="link" href="/welcome/phone">Open the setup guide</a> for the Shortcut, '
                                  'the “allow” prompts and the Wi-Fi automation, step by step.</p>')),
+               self._home_group(),
                self._chrome_group(q),
                self._instagram_group(),
                qr]

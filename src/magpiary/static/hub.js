@@ -3218,10 +3218,51 @@
     let f = 0;
     setInterval(() => { f = (f + 1) % 3; demo.dataset.f = f; $$("#dcap span").forEach((s, i) => s.classList.toggle("on", i === f)); }, calm ? 5000 : 2800);
   }
-  if ($("[data-listen]")) {
-    const t = setInterval(async () => {
-      try { const d = await (await fetch("/welcome.json", { cache: "no-store" })).json(); if (d.delivered) { clearInterval(t); location.reload(); } } catch (e) { /* again */ }
-    }, 3000);
+  // The Welcome guide ticks itself: when the Mac sees a step happen (/welcome.json changes), the open page reloads, unless something is being typed.
+  const wel = $(".wel[data-wsig]");
+  if (wel) {
+    setInterval(async () => {
+      if (document.hidden) return;
+      const typing = document.activeElement?.matches?.("input:not([type=hidden]), textarea") && document.activeElement.value;
+      if (typing) return;
+      try { const d = await (await fetch("/welcome.json", { cache: "no-store" })).json(); if (d.sig && d.sig !== wel.dataset.wsig) location.reload(); } catch (e) { /* again */ }
+    }, 2500);
+    // the right column starts where the first card on the left starts (not on Hello, whose tile stays centred)
+    $$(".wel .w-body").forEach((b) => {
+      if (b.classList.contains("al") || b.children.length !== 2 || $(".priv", b)) return;
+      const [L, R] = b.children, head = document.createElement("div"), main = document.createElement("div");
+      head.className = "head"; main.className = "main";
+      let inHead = true;
+      [...L.children].forEach((c) => { if (inHead && !c.matches(".w-kick,.w-h,.w-p")) inHead = false; (inHead ? head : main).append(c); });
+      R.classList.add("side"); b.classList.add("al"); b.replaceChildren(head, main, R);
+    });
+    // the provider picker (our own list) and the folded key guide
+    const btn = $("#provbtn");
+    if (btn) {
+      const list = $("#provlist"), opts = $$("[role=option]", list), input = $("input[name=provider]", btn.closest(".dd"));
+      let cur = Math.max(0, opts.findIndex((o) => o.dataset.v === input.value));
+      const mark = (i) => { cur = (i + opts.length) % opts.length; opts.forEach((o, n) => o.classList.toggle("act", n === cur)); list.setAttribute("aria-activedescendant", opts[cur].id); opts[cur].scrollIntoView({ block: "nearest" }); };
+      const open = () => { list.hidden = false; btn.setAttribute("aria-expanded", "true"); mark(cur); list.focus(); };
+      const close = (back) => { list.hidden = true; btn.setAttribute("aria-expanded", "false"); list.removeAttribute("aria-activedescendant"); if (back) btn.focus(); };
+      const pick = (i) => {
+        input.value = opts[i].dataset.v; btn.firstElementChild.textContent = $("b", opts[i]).textContent;
+        opts.forEach((o) => o.setAttribute("aria-selected", String(o === opts[i])));
+        $$(".guide2").forEach((g) => { g.hidden = g.dataset.provider !== input.value; });
+        close(true);
+      };
+      btn.addEventListener("click", () => (list.hidden ? open() : close(true)));
+      btn.addEventListener("keydown", (ev) => { if (["ArrowDown", "ArrowUp", "Enter", " "].includes(ev.key)) { ev.preventDefault(); open(); } });
+      list.addEventListener("keydown", (ev) => {
+        if (ev.key === "ArrowDown") { ev.preventDefault(); mark(cur + 1); } else if (ev.key === "ArrowUp") { ev.preventDefault(); mark(cur - 1); }
+        else if (ev.key === "Home") { ev.preventDefault(); mark(0); } else if (ev.key === "End") { ev.preventDefault(); mark(opts.length - 1); }
+        else if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(cur); } else if (ev.key === "Escape") { ev.preventDefault(); close(true); } else if (ev.key === "Tab") close(false);
+      });
+      list.addEventListener("click", (ev) => { const o = ev.target.closest("[role=option]"); if (o) pick(opts.indexOf(o)); });
+      list.addEventListener("mousemove", (ev) => { const o = ev.target.closest("[role=option]"); if (o) mark(opts.indexOf(o)); });
+      document.addEventListener("pointerdown", (ev) => { if (!list.hidden && !ev.target.closest("#prov")) close(false); }, true);
+    }
+    const hb = $("[data-helpbtn]");
+    if (hb) hb.addEventListener("click", () => { const open = hb.getAttribute("aria-expanded") !== "true"; hb.setAttribute("aria-expanded", String(open)); $("#guidewrap").hidden = !open; });
   }
 
   // ---- first arrival ------------------------------------------------------------------------------------------------------------------

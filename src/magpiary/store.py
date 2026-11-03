@@ -229,6 +229,10 @@ class Store(ChatStore, StatsStore):
         if "kind" not in {r["name"] for r in self._db.execute("PRAGMA table_info(phones)")}:
             # what this device is: "phone" (the Shortcut), "browser" (the Chrome extension on this Mac) or "agent" (`magpiary add` / `note` for AI agents)
             self._db.execute("ALTER TABLE phones ADD COLUMN kind TEXT NOT NULL DEFAULT 'phone'")
+        for column in ("first_seen_at", "last_seen_at"):
+            # when this device first and last reached the Mac with its key (the Welcome guide ticks "paired" from the first)
+            if column not in {r["name"] for r in self._db.execute("PRAGMA table_info(phones)")}:
+                self._db.execute(f"ALTER TABLE phones ADD COLUMN {column} TEXT")
         for column, ddl in (("shared", "INTEGER NOT NULL DEFAULT 1"), ("archived_at", "TEXT NOT NULL DEFAULT ''"),
                             ("ended", "INTEGER NOT NULL DEFAULT 0")):
             # a board is solo (local only) until its owner shares it; deleted boards wait 30 days archived; ended = its
@@ -552,7 +556,18 @@ class Store(ChatStore, StatsStore):
         for row in rows:  # compare every row so timing does not reveal a near match
             if hmac.compare_digest(row["key_hash"], digest):
                 found = Phone(row["id"], row["name"])
+        if found:
+            self._touch_phone(found.id)
         return found
+
+    def _touch_phone(self, phone_id: int) -> None:
+        """Note that this device reached the Mac with its key. Written at most about once a minute."""
+        now = self._stamp()
+        with self._lock:
+            self._db.execute(
+                "UPDATE phones SET first_seen_at=COALESCE(first_seen_at, ?), last_seen_at=? WHERE id=? "
+                "AND (last_seen_at IS NULL OR last_seen_at < ?)",
+                (now, now, phone_id, (datetime.fromisoformat(now) - timedelta(seconds=60)).isoformat(timespec="seconds")))
 
     def agent_used(self, kind: str) -> int:
         """How many links or notes AI agents have added today (for their daily limit)."""
@@ -672,7 +687,7 @@ class Store(ChatStore, StatsStore):
     def list_phones(self) -> list[dict]:
         with self._lock:
             rows = self._db.execute(
-                "SELECT name, home_wifi, wifi_mode, retry_wait, kind, created_at, revoked_at FROM phones ORDER BY id").fetchall()
+                "SELECT name, home_wifi, wifi_mode, retry_wait, kind, created_at, revoked_at, first_seen_at, last_seen_at FROM phones ORDER BY id").fetchall()
         return [dict(r) for r in rows]
 
     def get_phone(self, name: str) -> dict | None:
@@ -737,6 +752,20 @@ class Store(ChatStore, StatsStore):
             self._db.execute(
                 "INSERT INTO settings (key, value) VALUES (?,?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
+
+    def extension_hello(self, version: str, pinned: bool | None) -> None:
+        """The Chrome extension said hello (installed or Chrome started): its version and whether its button is on the toolbar."""
+        self.set_setting("ext_hello_at", self._stamp())
+        self.set_setting("ext_version", version[:20])
+        self.set_setting("ext_pinned", "" if pinned is None else "1" if pinned else "0")
+
+    def extension_status(self) -> dict:
+        """What the Mac knows about Chrome: added (a hello arrived or it paired), pinned (True/False/None when never reported)."""
+        browser = next((p for p in self.list_phones() if not p["revoked_at"] and p.get("kind") == "browser"), None)
+        pinned = self.get_setting("ext_pinned")
+        return {"added": bool(self.get_setting("ext_hello_at")) or browser is not None,
+                "pinned": None if pinned == "" else pinned == "1", "paired": browser is not None,
+                "used": bool(browser and browser.get("first_seen_at"))}
 
     def revoke_phone(self, name: str) -> bool:
         with self._lock:
@@ -1007,6 +1036,12 @@ class Store(ChatStore, StatsStore):
     def last_delivery(self) -> str:
         with self._lock:
             return self._db.execute("SELECT MAX(received_at) FROM deliveries").fetchone()[0] or ""
+
+    def delivered_kinds(self) -> set[str]:
+        """Which kinds of device have ever delivered a save: "phone", "browser" (the Chrome extension) or "agent"."""
+        with self._lock:
+            rows = self._db.execute("SELECT DISTINCT p.kind FROM deliveries d JOIN phones p ON p.id=d.phone_id").fetchall()
+        return {r[0] for r in rows}
 
     def newest_by_source(self) -> dict[str, str]:
         """The newest saved (archived) post from each site, to test the site with."""

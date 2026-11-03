@@ -268,6 +268,25 @@ class Handler(BaseHTTPRequestHandler):
         log("POST /v1/pair -> 200 (browser paired)")
         self.send_json(200, {"key": key})
 
+    def _extension_hello(self) -> None:
+        """The Chrome extension says it is installed, and whether it is pinned. From this Mac only; no key (it has none before pairing)."""
+        if self.client_address[0] not in ("127.0.0.1", "::1"):
+            self.send_json(404, {"error": "not found"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= 500:
+                raise ValueError("size")
+            body = json.loads(self.rfile.read(length))
+            version, pinned = body["v"], body.get("pinned")
+            if not isinstance(version, str) or pinned not in (None, True, False):
+                raise ValueError("fields")
+        except Exception:
+            self.send_json(400, {"error": "bad request"})
+            return
+        self.server.store.extension_hello(version, pinned)
+        self.send_json(200, {"ok": True})
+
     def do_POST(self) -> None:
         path = urlsplit(self.path).path
         if path.startswith("/hub/"):
@@ -280,6 +299,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/v1/pair":
             self._pair_browser()
+            return
+        if path == "/v1/hello":
+            self._extension_hello()
             return
         if path in ("/v1/seen", "/v1/suggest"):
             self._ask_about_links(path)

@@ -125,6 +125,17 @@ async function state() {
   return { paired: Boolean(key), waiting: outbox.length };
 }
 
+/** Tell the Mac this extension is installed, and whether its button is on the toolbar. Local address only; no key, no page data. */
+async function hello() {
+  let pinned = null;
+  try { pinned = Boolean((await chrome.action.getUserSettings()).isOnToolbar); } catch (_) { /* older Chrome: not known */ }
+  const { port } = await store.get(["port"]);
+  for (const p of port ? [port] : PORTS) {
+    try { await hub("/v1/hello", { method: "POST", body: { v: chrome.runtime.getManifest().version, pinned }, port: p, timeout: 1500 }); } catch (_) { /* nothing listens here */ }
+  }
+  return {};
+}
+
 async function badge(tabId, text, color) {
   await chrome.action.setBadgeBackgroundColor({ color, tabId });
   await chrome.action.setBadgeText({ text, tabId });
@@ -136,17 +147,19 @@ async function ping() {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, respond) => {
-  const run = { state, ping, seen: () => ask("/v1/seen", { urls: msg.urls }).then((r) => (r && r.results) || {}), suggest: () => ask("/v1/suggest", { url: msg.url }).then((r) => (r && r.suggestion) || null), pair: () => pair(msg.code), save: () => save(msg), boards, flush, unpair: async () => { await store.set({ key: "" }); return {}; } }[msg && msg.type];
+  const run = { state, ping, hello, seen: () => ask("/v1/seen", { urls: msg.urls }).then((r) => (r && r.results) || {}), suggest: () => ask("/v1/suggest", { url: msg.url }).then((r) => (r && r.suggestion) || null), pair: () => pair(msg.code), save: () => save(msg), boards, flush, unpair: async () => { await store.set({ key: "" }); return {}; } }[msg && msg.type];
   if (!run) return false;
   Promise.resolve(run()).then(respond, () => respond({ state: "error" }));
   return true;
 });
 
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === RETRY_ALARM) flush(); });
-chrome.runtime.onStartup.addListener(flush);
+chrome.runtime.onStartup.addListener(() => { flush(); hello(); });
+if (chrome.action.onUserSettingsChanged) chrome.action.onUserSettingsChanged.addListener(hello);   // Chrome 130+: pinned or unpinned
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: "save", title: "Save to Magpiary", contexts: ["page", "link"] });
   flush();
+  hello();
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
