@@ -49,7 +49,8 @@ class WelcomePages:
         prog = "".join(f'<a href="/welcome/{k}" class="{"on" if k == cur else "done" if done[k] else ""}"'
                        f'{" aria-current=step" if k == cur else ""}><i>{"✓" if done[k] and k != cur else n}</i><b>{e(label)}</b></a>'
                        for n, (k, label) in enumerate(STEPS, 1))
-        skip = '<a class="w-skip" href="/">Go to my library →</a>' if s["phones"] else '<span class="w-skip"></span>'
+        skip = (self._form("/hub/welcome/done", {"next": "/"}, "Go to my library →", "w-skip") if not s["phones"]
+                else '<a class="w-skip" href="/">Go to my library →</a>')
         return f'<div class="w-top"><a class="logo" href="/welcome">{ui.logo_mark()}magpiary</a><nav class="w-prog" aria-label="Setup steps">{prog}</nav>{skip}</div>'
 
     def welcome_page(self, step: str, q: dict) -> Response:
@@ -206,11 +207,17 @@ class WelcomePages:
                 f'<div>{side}</div></div>')
 
     def _w_share(self, s: dict, q: dict, flash: str) -> str:
-        finish = (self._form("/hub/welcome/done", {"next": "/"}, "Open my library", "btn dark") if s["phones"] and s["chosen"]
-                  else '<small>Pair a phone and choose Smart or Private to finish. Your library opens after that.</small>')
-        listen = ('<div class="listen ok" id="listen"><i></i>Arrived! Your phone and this Mac are talking.</div>' if s["delivered"]
-                  else '<div class="listen" id="listen" data-listen><i></i>Listening for your iPhone on Wi-Fi…</div>')
         newest = self.store.hub_items("inbox", limit=1)
+        saved = bool(s["delivered"] or newest)  # a share from the phone, a pasted link or the browser extension all count
+        ready = saved and s["chosen"]
+        done = self._form("/hub/welcome/done", {"next": "/"}, "Open my library" if ready else "Skip for now",
+                          "btn dark" if ready else "btn")
+        hint = ("" if s["chosen"] else '<small>Choose Smart or Private any time in Settings.</small>') if saved else (
+            '<small>No phone? Paste a link above, or skip: you can set up the phone any time.</small>')
+        listen = ('<div class="listen ok" id="listen"><i></i>Arrived! Your phone and this Mac are talking.</div>' if s["delivered"]
+                  else '<div class="listen ok" id="listen"><i></i>Saved. Your Mac is reading it now.</div>' if newest
+                  else '<div class="listen" id="listen" data-listen><i></i>Listening for your iPhone on Wi-Fi…</div>')
+        finish = done + hint
         arrived = ""
         if newest:
             it = newest[0]
@@ -234,9 +241,7 @@ class WelcomePages:
 
     def welcome_post(self, path: str, form: dict) -> bool:
         if path == "/hub/welcome/done":
-            s = self._welcome_state()
-            if s["phones"] and s["chosen"]:
-                self.store.set_setting(DONE_SETTING, "1")
+            self.store.set_setting(DONE_SETTING, "1")  # the guide is never a trap: every step can be skipped
         elif path == "/hub/welcome/no-ai":
             self.store.set_setting(modes.SETTING, "private")
         else:

@@ -129,19 +129,32 @@ def test_a_fresh_library_opens_the_guide_until_a_phone_is_paired(mac):
     assert "On My iPhone" in page(mac, "/welcome/phone")[2] and "Make it automatic" in page(mac, "/welcome/automatic")[2]
     assert "Private" in page(mac, "/welcome/reading")[2]
     body = page(mac, "/welcome/share")[2]
-    assert "Listening for your iPhone" in body and "Pair a phone and choose Smart or Private to finish" in body
+    assert "Listening for your iPhone" in body and "Skip for now" in body and "Go to my library" in body  # a way out with no phone
     post(mac, "/hub/welcome/done", next="/")
-    assert request(mac, "GET", "/")[0] == 303  # cannot finish without a phone
+    assert request(mac, "GET", "/")[0] == 200  # the guide never traps anyone: skipping opens the library
 
+    mac.store.set_setting("setup_done", "")
     mac.store.add_phone("Test iPhone")
     assert request(mac, "GET", "/")[0] == 200  # a paired phone opens the library
-    assert "choose Smart or Private to finish" in page(mac, "/welcome/share")[2]  # but the guide still asks for a mode
     post(mac, "/hub/settings/mode", mode="private", next="/welcome/reading")
     assert 'class="wp on"' in page(mac, "/welcome/reading")[2] and mac.store.get_setting("ai_mode") == "private"
     body = page(mac, "/welcome/share")[2]
-    assert "Open my library" in body and "Go to my library" in body
+    assert "Go to my library" in body
     status, _, data = request(mac, "GET", "/welcome.json")
     assert json.loads(data) == {"phones": 1, "delivered": False}
+
+def test_a_pasted_link_counts_as_the_first_share_so_a_mac_only_user_can_finish(mac):
+    from test_hub import request
+
+    mac.store.set_setting("setup_done", "")
+    post(mac, "/hub/settings/mode", mode="private", next="/welcome/reading")
+    body = page(mac, "/welcome/share")[2]
+    assert "Listening for your iPhone" in body and "Skip for now" in body and "Open my library" not in body
+    post(mac, "/hub/add", url="https://example.com/a-page", next="/welcome/share")
+    body = page(mac, "/welcome/share")[2]
+    assert "Saved. Your Mac is reading it now." in body and "Open my library" in body and "Listening" not in body
+    post(mac, "/hub/welcome/done", next="/")
+    assert request(mac, "GET", "/")[0] == 200
 
 
 def test_homebrew_installs_use_the_stable_opt_path_and_brew_upgrade(monkeypatch):
