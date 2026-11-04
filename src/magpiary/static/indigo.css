@@ -90,7 +90,7 @@ html.morphing .lhbird { visibility: visible; }
 .sover.morph .spanel2 { max-height: var(--spmax, 60vh); }
 
 /* ---- one dark toolbar look for every control that floats or sits on the background ---- */
-:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn), .fchip) { background: var(--navglass); box-shadow: var(--navring); }
+:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn[data-mood="working"], .nestbtn[data-mood="needs"]), .fchip) { background: var(--navglass); box-shadow: var(--navring); }
 :root[data-theme] .banner, :root[data-theme] .banner.warnb { background: rgb(var(--c-deep) / .72); border: 0; box-shadow: var(--tb-edge); }
 :root[data-theme] .banner.warnb { box-shadow: inset 3px 0 0 #ff8a8f, var(--tb-edge); }
 
@@ -746,10 +746,10 @@ html[data-theme] :is(.top .bar > .addp.btn, .top .bar > .shelfsw, .sslot .search
    4 Primary: the cream button. Hover goes to white.
    The page /settings/buttons-sheet (preview only) lays every one out, with the states forced on. */
 :root[data-theme] { --hov: rgba(255,255,255,.09); --ease-b: cubic-bezier(.2,.8,.2,1); }
-:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn), .fchip, .top .bar > .addp.btn) { box-shadow: var(--navring), inset 0 0 0 999px rgba(255,255,255,0); transition: box-shadow .22s ease, color .22s ease, transform .16s var(--ease-b); }
-:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn), .fchip, .top .bar > .addp.btn):is(:hover, .st-hover):not(:disabled, .busy) { box-shadow: var(--navring), inset 0 0 0 999px rgba(255,255,255,.07); }
-:root[data-theme] .nestbtn { transition: filter .22s ease, transform .16s var(--ease-b); }
-:root[data-theme] .nestbtn:is(:hover, .st-hover) { filter: brightness(1.1); }
+:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn[data-mood="working"], .nestbtn[data-mood="needs"]), .fchip, .top .bar > .addp.btn) { box-shadow: var(--navring), inset 0 0 0 999px rgba(255,255,255,0); transition: box-shadow .22s ease, color .22s ease, transform .16s var(--ease-b); }
+:root[data-theme] :is(.lhsearch, .sslot .search, .askdock, .askhelp, .btn:not(.dark), .pvact, .pvprimary, .tbtn.ibtn, .pgback, .pgnav a, .pgnav button, .bar .ubtn:not(.nestbtn[data-mood="working"], .nestbtn[data-mood="needs"]), .fchip, .top .bar > .addp.btn):is(:hover, .st-hover):not(:disabled, .busy) { box-shadow: var(--navring), inset 0 0 0 999px rgba(255,255,255,.07); }
+:root[data-theme] .nestbtn:is([data-mood="working"], [data-mood="needs"]) { transition: filter .22s ease, transform .16s var(--ease-b); }
+:root[data-theme] .nestbtn:is([data-mood="working"], [data-mood="needs"]):is(:hover, .st-hover) { filter: brightness(1.1); }  /* coloured only while busy or needing you; otherwise it is a plain glass button like Digest and Settings */
 :root[data-theme] :is(.hbtn, .hclose, .fsel-btn, .fsel-pop button, .selbar button, .pacts > a, .pacts > button, .pacts > details > summary, #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button)) { transition: background-color .2s ease, color .2s ease, transform .16s var(--ease-b); }
 :root[data-theme] :is(.hbtn, .hclose, .pacts > a, .pacts > button, .pacts > details > summary, #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button), .selbar button:not(.bdone)).st-hover { background: var(--hov); color: var(--fg); }
 :root[data-theme] :is(.btn.dark, .selbar .bdone, .pvask) { transition: background-color .2s ease, transform .16s var(--ease-b); }
