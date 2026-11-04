@@ -3105,12 +3105,7 @@
   });
   history.replaceState({ ...(history.state || {}), hub: 1 }, "", location.href);
 
-  // ---- first run: the demo loop and listening for the first share ------------------------------------------------------------------
-  const demo = $("#demo");
-  if (demo) {
-    let f = 0;
-    setInterval(() => { f = (f + 1) % 3; demo.dataset.f = f; $$("#dcap span").forEach((s, i) => s.classList.toggle("on", i === f)); }, calm ? 5000 : 2800);
-  }
+  // ---- first run: listening for the first share ------------------------------------------------------------------
   // The Welcome guide ticks itself: when the Mac sees a step happen (/welcome.json changes), the open page reloads, unless something is being typed.
   const wel = $(".wel[data-wsig]");
   if (wel) {

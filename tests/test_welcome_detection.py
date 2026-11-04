@@ -68,3 +68,16 @@ def test_the_chrome_step_leads_with_the_web_store_and_folds_the_hand_install(mac
     body = page(mac, "/welcome/browser")[2]
     assert CHROME_STORE in body and "coming soon" not in body
     assert body.index(CHROME_STORE) < body.index("Or add it by hand") < body.index("Load unpacked")
+
+
+def test_hello_and_first_save_show_one_simple_post_card(mac):
+    from test_hub import page
+
+    hello = page(mac, "/welcome")[2]
+    assert 'class="wtile"' in hello and "Ten things to do before 1,000 users" in hello  # a fresh install: the sample
+    assert 'id="demo"' not in hello and "Your Mac reads it" not in hello  # the old looping phone demo is gone
+    empty = page(mac, "/welcome/share")[2]
+    assert "Your first save appears here" in empty and 'class="wtile"' not in empty
+    mac.store.add_link("https://example.com/a-page")
+    saved = page(mac, "/welcome/share")[2]
+    assert 'class="wtile"' in saved and " · saved " in saved and "big-tile" not in saved  # the tests run on their own clock

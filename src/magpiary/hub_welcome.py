@@ -101,28 +101,22 @@ class WelcomePages:
                 'nothing at all in Private.</small></div></div></div>'
                 '<div class="w-cta"><a class="btn next" href="/welcome/reading">Get started → <span>(About 2 minutes)</span></a>'
                 + self._form("/hub/welcome/done", {"next": "/"}, "Skip, go to my library", "w-link") + '</div></div>'
-                + self._demo() + "</div>")
+                + self._sample() + "</div>")
 
-    def _demo(self) -> str:
-        """Share → your Mac reads it → find it any time, looping; uses your newest save when there is one."""
-        pick = next((i for i in self.store.hub_items("inbox", limit=30) if self.thumb_url(i) and i.get("ai_status") == "done"),
-                    None) or next((i for i in self.store.hub_items("inbox", limit=30) if self.thumb_url(i)), None)
-        bg = f"url({self.thumb_url(pick)})" if pick else "linear-gradient(160deg,#ff2e93,#2f6bff)"
-        title = ui.title_of(pick) if pick else "Ten things to do before 1,000 users"
-        summary = (pick or {}).get("summary") or "Summaries, key moments and the links a post mentions, ready when you are."
-        kind = ui.type_name(pick.get("ai_type")) if pick and pick.get("ai_status") == "done" else "How-to"
-        colour = ui.type_colour(pick.get("ai_type")) if pick and pick.get("ai_status") == "done" else "var(--t-howto)"
-        apps = ('<div class="share"><div class="apps"><div class="ap"><i style="background:#25d366"></i>WhatsApp</div>'
-                '<div class="ap mg"><i></i>Magpiary</div><div class="ap"><i style="background:#0a84ff"></i>Messages</div>'
-                '<div class="ap"><i style="background:#ffcc00"></i>Notes</div></div></div>')
-        return (f'<div><div class="demo" id="demo" data-f="0" style="--demo-bg:{e(bg)}">'
-                f'<div class="fr0"><div class="iph"><div class="scr">{apps}</div></div></div>'
-                f'<div class="fr1"><div class="mini-tile"><div class="sq"></div><div class="lbl">{e(title[:70])}</div>'
-                f'<div class="stp"><div><i></i>Fetch</div><div><i></i>Listen</div><div><i></i>Look</div><div><i></i>Write</div></div></div></div>'
-                f'<div class="fr2"><div class="res-card"><div class="v"></div><div class="in"><b class="ty" style="background:{colour}">'
-                f'{e(kind)}</b><h4>{e(title[:70])}</h4><p>{e(summary[:180])}</p></div></div></div></div>'
-                f'<div class="demo-cap" id="dcap"><span class="on">1 · Share</span><span>2 · Your Mac reads it</span>'
-                f'<span>3 · Find it any time</span></div></div>')
+    def _wtile(self, it: dict | None, line: str) -> str:
+        """A post as a simple card: its picture, then its title and one line (the approved Welcome preview, 3 Nov 2026)."""
+        thumb = self.thumb_url(it) if it else ""
+        title = ui.title_of(it) if it else "Ten things to do before 1,000 users"
+        return (f'<div class="wtile"><div class="sq" style="background:{ui.gradient(it) if it else "linear-gradient(160deg,#ff2e93,#2f6bff)"}">'
+                + (f'<img src="{e(thumb)}" alt="">' if thumb else "")
+                + f'</div><div class="lb"><b>{e(title[:90])}</b><small>{e(line)}</small></div></div>')
+
+    def _sample(self) -> str:
+        """Hello's right column: your newest finished save as a card, or a sample one on a fresh install."""
+        items = self.store.hub_items("inbox", limit=30)
+        pick = next((i for i in items if self.thumb_url(i) and i.get("ai_status") == "done" and i.get("summary")), None)
+        line = (pick or {}).get("summary") or "Summaries, key moments and the links a post mentions, ready when you are."
+        return f'<div class="art">{self._wtile(pick, line[:160])}</div>'
 
     def _w_reading(self, s: dict, q: dict, flash: str) -> str:
         mode = s["mode"] if s["chosen"] or self.store.get_setting(modes.SETTING, "") else ""
@@ -286,14 +280,13 @@ class WelcomePages:
             '<small>No save yet? You can skip and save later.</small>')
         listen = ('<div class="listen ok" id="listen"><i></i>Saved. Your Mac is reading it now.</div>' if saved
                   else '<div class="listen" id="listen"><i></i>Listening for your first save…</div>')
-        arrived = ""
+        arrived = '<div class="art"><div class="chips"><span>Your first save appears here</span></div></div>'
         if newest:
+            from magpiary.hub_settings import ago
+
             it = newest[0]
-            thumb = self.thumb_url(it)
-            arrived = (f'<div class="big-tile"><div class="sq" style="background:{ui.gradient(it)}">'
-                       + (f'<img src="{e(thumb)}" alt="">' if thumb else "") + f'</div><div class="label" style="background:'
-                       f'{ui.type_colour(it.get("ai_type")) if it.get("ai_status") == "done" else ui.source_colour(it["source"])}">'
-                       f'<div class="t">{e(ui.title_of(it))}</div><div class="m"><span>{e(ui.source_name(it["source"]))}</span></div></div></div>')
+            when = ago(it.get("first_shared_at") or "")
+            arrived = self._wtile(it, f'{ui.source_name(it["source"])} · saved {when}')
         return (f'<div class="w-body"><div><div class="w-kick">Last step</div><h1 class="w-h">Now save <em>something.</em></h1>'
                 f'<p class="w-p">Use whichever is closest. Any one of these finishes setup.</p>{flash}'
                 f'<div class="ways"><div class="way"><span class="ic">1</span><div><b>From Chrome</b><small>Open a page and click the Magpiary button.</small></div></div>'
