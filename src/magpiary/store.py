@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import re
 import secrets
 import sqlite3
@@ -203,13 +204,18 @@ class Store(ChatStore, StatsStore):
             return
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
+            # private from the first byte: SQLite gives the -wal and -shm files the database's own mode (review 4, 4 Nov 2026)
+            os.close(os.open(path, os.O_RDWR | os.O_CREAT, 0o600))
+            Path(path).chmod(0o600)  # key hashes live here
         self._db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
         self._db.row_factory = sqlite3.Row
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA foreign_keys=ON")
         self._prepare()
         if str(path) != ":memory:":
-            Path(path).chmod(0o600)  # key hashes live here
+            for side in (Path(f"{path}-wal"), Path(f"{path}-shm")):
+                if side.exists():
+                    side.chmod(0o600)
 
     def _prepare(self) -> None:
         """Create what is missing and bring an older database up to date. Run when the store opens and again after a restore."""

@@ -320,3 +320,22 @@ def test_a_short_link_for_a_trashed_post_brings_it_back_with_its_note(store, rec
     store.expansion_succeeded(short, clean(url))
     item = store.get_item(url)
     assert item["shelf"] == "inbox" and item["note"] == "Watch the second half"
+
+
+def test_a_new_database_and_its_side_files_are_private(tmp_path):
+    """Review 4, 4 Nov 2026: under a 022 umask the -wal and -shm files could be readable by other accounts."""
+    import os
+    import stat
+
+    from magpiary.store import Store
+
+    old = os.umask(0o022)
+    try:
+        s = Store(tmp_path / "fresh.db")
+        s.set_setting("x", "1")
+    finally:
+        os.umask(old)
+    for name in ("fresh.db", "fresh.db-wal", "fresh.db-shm"):
+        p = tmp_path / name
+        if p.exists():
+            assert stat.S_IMODE(p.stat().st_mode) == 0o600, name
