@@ -334,7 +334,7 @@
   }
   // the post's open page or card shows the note at once when an answer is added to it (it was only there after reopening the post)
   function showSavedNote(text) {
-    const block = $$(".pvnoteblock:not(.pvagentnote)").find((b) => b.closest("#cardm, #view, body"));
+    const block = $$(".pvnoteblock:not(.pvagentnote)").find((b) => b.closest("#view, body"));
     if (!block || !text) return;
     let p = $(".pvnote", block);
     if (!p) { p = document.createElement("p"); p.className = "pvnote"; block.prepend(p); }
@@ -392,7 +392,6 @@
       const { doc, url: final } = await getDoc(url);
       const fresh = doc.getElementById("view");
       if (!fresh) { location.href = final; return; }
-      if (cardOpen()) closeCard(true);
       closeNest();
       if (opts.push !== false) history[opts.replace ? "replaceState" : "pushState"]({ hub: 1 }, "", final.replace("&words=1", ""));
       document.title = doc.title;
@@ -463,8 +462,6 @@
   });
   addEventListener("popstate", (ev) => {
     if (boardSwapped && location.pathname.startsWith("/board/")) { location.reload(); return; }
-    if (ev.state && ev.state.card) { openCard(ev.state.card, "none"); return; }
-    if (cardOpen()) { closeCard(true); if (location.pathname.startsWith("/item/")) return; }
     if ($("#view") && hubPath(location.href)) go(location.href, { push: false });
   });
 
@@ -545,8 +542,8 @@
       return go(target.href, { how: "flip" });
     }
     const action = target.pathname;
-    const inCard = f.closest("#cardm"), inNest = f.closest("#nestsheet");
-    if (action === "/hub/update" || f.closest(".wel") || f.closest(".dgmake") || (!$("#view") && !inCard)) {
+    const inNest = f.closest("#nestsheet");
+    if (action === "/hub/update" || f.closest(".wel") || f.closest(".dgmake") || !$("#view")) {
       if (f.dataset.confirm) { ev.preventDefault(); if (await ask(f.dataset.confirm)) { busyOn(f, ev.submitter); f.submit(); } }
       else { busyOn(f, ev.submitter); navBar.start(); }  // the browser loads the next page; the button and the line say so until then
       return;
@@ -573,7 +570,7 @@
       toast(toastText(action));
       fetch(target.href, { method: "POST", body: new URLSearchParams(data), headers: FORM })
         .then((r) => { if (!r.ok) throw new Error(String(r.status)); looking = { before }; })
-        .catch(() => { toast("Couldn't start looking. Try again."); if (cardOpen()) fillCard(cardId, true); else location.reload(); });
+        .catch(() => { toast("Couldn't start looking. Try again."); location.reload(); });
       return;
     }
     const done = busyOn(f, ev.submitter);
@@ -583,21 +580,9 @@
       const to = new URL(r.url);
       const html = await r.text();
       if (inNest) { done(); await fillNest(); toast(toastText(action)); refresh(true); return; }
-      if (inCard) {
-        done();  // release the form at once: it is patched in place, so it would stay locked
-        stale = true;
-        const id = cardId;
-        if (!to.pathname.startsWith("/item/")) {
-          closeCard();
-          toast("Moved to the Trash", { undo: () => post("/hub/shelf", { id, shelf: "inbox", next: "/" }).then(() => refresh(true)) });
-          return;
-        }
-        if (to.searchParams.get("tab")) cardm.dataset.tab = to.searchParams.get("tab");
-        await fillCard(cardId, true); toast(toastText(action)); return;
-      }
       if (/^\/item\/\d+$/.test(to.pathname)) {
         if (to.searchParams.get("tab")) { location.href = r.url; return; }  // a form that names a tab comes back to that tab
-        closeAdd(); openCard(to.pathname.split("/")[2], "push"); refresh(true); return;
+        closeAdd(); goPage(to.pathname.split("/")[2]); return;
       }
       const doc = new DOMParser().parseFromString(html, "text/html");
       const fresh = doc.getElementById("view");
@@ -694,7 +679,7 @@
     G()?.fromTo(addm, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .28, ease: "power3.out" });
     return true;
   }
-  function closeAdd() { if (!addm || addm.hidden) return; addm.hidden = true; if (!cardOpen() && !nestOpen()) scrim.hidden = true; }
+  function closeAdd() { if (!addm || addm.hidden) return; addm.hidden = true; if (!nestOpen()) scrim.hidden = true; }
   $("#addbtn")?.addEventListener("click", (ev) => { if (openAdd()) ev.preventDefault(); });
   addm?.addEventListener("click", (ev) => { if (ev.target.closest("[data-close]")) closeAdd(); });
 
@@ -739,11 +724,8 @@
     if (nestOpen() && !ev.target.closest("#nestsheet, #t-nest, #ticker, .dlg-wrap")) closeNest();
   });
 
-  // ---- the post card over the wall ------------------------------------------------------------------------------
-  const cardm = $("#cardm");
-  let base = null, cardId = null, pushed = false, stale = false;
-  const cardOpen = () => !!cardm && !cardm.hidden;
-  const tileIds = () => $$("#view .tile[data-id]").map((t) => t.dataset.id);
+  // ---- a post as its own page ----------------------------------------------------------------------------------
+  let stale = false;  // the list changed while it was busy: redraw it once it is free
 
   // sound: a post opens muted; once you unmute, the posts you step to keep it (kept for this tab, cleared when you open a post from a list)
   const soundKey = "mag-sound";
@@ -780,7 +762,6 @@
     };
     tabs.forEach((t) => t.addEventListener("click", (ev) => { ev.preventDefault(); if (!t.classList.contains("off")) show(t.dataset.tab, true); }));
     // "Add tag" / "Add note": the form stays hidden until its button is pressed
-    $$(".askp.inline", host).forEach(wireAsk);
     $$("[data-tabto]", host).forEach((a) => a.addEventListener("click", (ev) => {
       ev.preventDefault();
       $(`[data-tab="${a.dataset.tabto}"]`, host)?.click();
@@ -789,7 +770,6 @@
         const stick = (parseFloat(getComputedStyle(root).getPropertyValue("--top-h")) || 64) + ($(".crumbbar")?.offsetHeight || 0) + 6;
         scrollTo({ top: scrollY + bar2.getBoundingClientRect().top - stick, behavior: calm ? "auto" : "smooth" });
       } else if (sc && bar2) sc.scrollTo({ top: sc.scrollTop + bar2.getBoundingClientRect().top - sc.getBoundingClientRect().top, behavior: calm ? "auto" : "smooth" });
-      if (a.dataset.tabto === "ask") setTimeout(() => $('[data-pane="ask"] textarea', host)?.focus({ preventScroll: true }), 120);
     }));
     $$("[data-pvmore]", host).forEach((b) => b.addEventListener("click", () => {
       const box = b.parentElement, open = b.dataset.open !== "1";
@@ -945,41 +925,8 @@
     $$("[data-copy]", host).forEach((b) => b.addEventListener("click", () => copy(b.dataset.copy, b.dataset.copyname || "Summary")));
     $$("[data-copylink]", host).forEach((b) => b.addEventListener("click", () => { copy(b.dataset.copylink, "Link", b); b.closest("details")?.removeAttribute("open"); }));
     initMenus(host);
-    if (host !== cardm) return;
-    const ids = tileIds(), at = ids.indexOf(String(cardId));
-    const prev = $("[data-prev]", host), next = $("[data-next]", host);
-    const pos = $("[data-pos]", host);
-    if (pos && at >= 0) pos.textContent = `${at + 1} of ${ids.length}`;
-    if (at >= 0) {
-      if (at > 0 && prev) { prev.hidden = false; prev.onclick = (ev) => { ev.preventDefault(); step(-1); }; }
-      if (at < ids.length - 1 && next) { next.hidden = false; next.onclick = (ev) => { ev.preventDefault(); step(1); }; }
-    }
-    $("[data-close]", host)?.addEventListener("click", (ev) => { ev.preventDefault(); closeCard(); });
   }
 
-  const CLOSE_ICON = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-  function skeleton(id) {
-    const t = $(`#view .tile[data-id="${id}"]`);
-    const img = t ? $(".sq > img", t)?.getAttribute("src") : "";
-    const title = t ? $(".label .t", t)?.textContent : "";
-    return `<div class="vid"><div class="stage">${img ? `<img class="skimg" src="${esc(img)}" alt="">` : '<div class="sk skv"></div>'}</div></div>` +
-      `<div class="main"><div class="pbar"><span class="pgrow"></span><div class="pacts"><a class="rb" href="/" data-close aria-label="Close">${CLOSE_ICON}</a></div></div>` +
-      `<div class="pscroll"><div class="sk skb"></div><h2 class="it-h">${esc(title)}</h2><div class="sk skl"></div><div class="sk skl"></div><div class="sk skl short"></div></div></div>`;
-  }
-
-  async function fillCard(id, keepTab) {
-    const board = page() === "board" ? $("#view .bpage")?.dataset.board : "";  // opened from a board: the board in the top bar
-    const pile = (base || "").match(/^\/pile\/(\d+)$/)?.[1];  // opened from a pile: its name and place in the top bar
-    const r = await fetch("/item/" + id + "?frag=1" + (board ? "&board=" + board : "") + (pile ? "&pile=" + pile : ""), { cache: "no-store" });
-    if (!r.ok) { closeCard(); return false; }
-    const tab = keepTab ? cardm.dataset.tab : "";
-    cardm.innerHTML = await r.text();
-    if (tab) cardm.dataset.tab = tab; else delete cardm.dataset.tab;
-    cardId = id; wireCard(cardm); askFollow();
-    return true;
-  }
-
-  const pageMode = () => root.dataset.open === "page";
   // A post as a page: the list fades and slides left, the page slides in from the right (and the other way back).
   let leaving = false;  // one way out at a time: a double click or a fast second click must not start two page changes
   function leave(url, dir, replace = false) {
@@ -1008,46 +955,6 @@
     root.classList.remove("slide-in");
     g.to(view, { opacity: 1, x: 0, duration: .3, ease: "power2.out", overwrite: true, clearProps: "transform,opacity", onComplete: () => root.classList.remove("slidefx") });
     setTimeout(() => { if (view.style.opacity === "0") { g.set(view, { clearProps: "transform,opacity" }); root.classList.remove("slidefx"); } }, 900);
-  }
-  async function openCard(id, how = "push", dir = 0) {
-    if (!cardm) return;
-    if (pageMode() && !cardOpen()) { goPage(id); return; }
-    stopPreview(); closeNest(); closeSearch();
-    $(".ctx")?.remove();
-    if (!cardOpen()) base = location.pathname + location.search;
-    [cardm, scrim].forEach((x) => { if (x) x.inert = false; });  // opened from a board card's dialog
-    const was = cardOpen(), g = G();
-    if (!was) rememberSound(true);  // every time a post is opened from a list it starts muted; browsing on keeps what you chose meanwhile
-    if (!was) {
-      cardm.innerHTML = skeleton(id);
-      cardm.hidden = false; scrim.hidden = false; document.body.classList.add("lock");
-      if (g) {
-        // always from the centre, a little lower, fading in: the tile plays no part
-        g.fromTo(cardm, { opacity: 0, scale: .985, y: 28 }, { opacity: 1, scale: 1, y: 0, duration: .5, ease: "power3.out", clearProps: "y,scale" });
-        g.fromTo(scrim, { opacity: 0 }, { opacity: 1, duration: .25 });
-      }
-    } else if (g) await g.to([...cardm.children], { opacity: 0, x: -dir * 28, duration: .14, ease: "power2.in" });
-    if (how === "push") { history.pushState({ card: id }, "", "/item/" + id); pushed = true; }
-    else if (how === "replace") history.replaceState({ card: id }, "", "/item/" + id);
-    if (!(await fillCard(id))) return;
-    if (was && g) g.fromTo([...cardm.children], { opacity: 0, x: dir * 28 }, { opacity: 1, x: 0, duration: .32, ease: "power3.out", clearProps: "x,opacity" });
-    $(".pscroll", cardm)?.scrollTo(0, 0);
-    $("[data-close]", cardm)?.focus({ preventScroll: true });
-    focusTile(id, false);
-  }
-
-  function closeCard(fromHistory) {
-    if (!cardOpen()) return;
-    $("video", cardm)?.pause();
-    const g = G();
-    const finish = () => { cardm.hidden = true; cardm.innerHTML = ""; g?.set(cardm, { clearProps: "opacity,transform,scale,y" }); cardId = null; };
-    if ((!addm || addm.hidden) && !nestOpen()) scrim.hidden = true;
-    document.body.classList.remove("lock");
-    if (g) g.to(cardm, { opacity: 0, scale: .99, y: 14, duration: .2, ease: "power2.in", onComplete: finish }); else finish();
-    if (fromHistory !== true) {
-      if (pushed) { pushed = false; history.back(); } else history.replaceState({ hub: 1 }, "", base || "/");
-    }
-    if (stale) { stale = false; refresh(true); }
   }
 
 
@@ -1126,7 +1033,6 @@
   // still being written for the post you left is stored in that post's chat and is there when you come back.
   let askFollowing = Promise.resolve();
   function askPlace() {
-    if (cardOpen()) return cardId ? "post:" + cardId : "";
     const m = $("[data-askscope]")?.dataset.askscope || "";
     return m.startsWith("post:") ? m : "";
   }
@@ -1341,9 +1247,7 @@
     $$("[data-askq]", panel).forEach((b) => b.addEventListener("click", () => ask(b.dataset.askq, false)));
     const refresh = async () => {  // fetch the chat again (after New chat, or after switching who answers)
       if (panel.matches("aside")) return openAsk(scope);
-      if (panel.classList.contains("askfull")) { location.reload(); return; }
-      panel.innerHTML = await (await fetch("/ask/panel?scope=" + encodeURIComponent(scope) + "&inline=1", { cache: "no-store" })).text();
-      wireAsk(panel);
+      location.reload();  // the full Ask page
     };
     $("[data-askclear]", panel)?.addEventListener("click", async () => {
       await post("/hub/ask/clear", { scope }); refresh();
@@ -1452,24 +1356,19 @@
     ev.stopPropagation(); if ($("[data-askhistwrap]", askPanel)) closeLayer(askPanel); else leaveAsk();
   }, true);
 
-  function step(dir) {
-    const ids = tileIds(), at = ids.indexOf(String(cardId));
-    const to = ids[at + dir];
-    if (to) openCard(to, "replace", dir);
-  }
 
   document.addEventListener("click", (ev) => {
     if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
     const a = ev.target.closest('a[href^="/item/"]');
-    if (!a || !cardm) return;
+    if (!a || !$("#view")) return;
     const m = a.getAttribute("href").match(/^\/item\/(\d+)$/);
     if (!m) return;
     ev.preventDefault();
     if (a.closest("#nestsheet")) closeNest();
-    openCard(m[1], cardOpen() ? "replace" : "push");
+    goPage(m[1]);
   });
   scrim?.addEventListener("click", () => {
-    if (addm && !addm.hidden) closeAdd(); else if (cardOpen()) closeCard(); else closeNest();
+    if (addm && !addm.hidden) closeAdd(); else closeNest();
   });
 
   // ---- live updates: the strip, the Nest button, tile steps, and only the tiles that changed --------------------------
@@ -1483,7 +1382,7 @@
     const busy = view.contains(active) && /INPUT|TEXTAREA|SELECT/.test(active.tagName);
     if (!force && (busy || $("details[open]", view) || $(".editing, [data-stkpop]:not([hidden])", view) || document.body.classList.contains("selecting") || $(".ctx, .chooser"))) { stale = true; return; }
     let doc;
-    try { ({ doc } = await getDoc(location.pathname.startsWith("/item/") ? (base || "/") : location.href)); } catch (e) { return; }
+    try { ({ doc } = await getDoc(location.pathname.startsWith("/item/") ? "/" : location.href)); } catch (e) { return; }
     const fresh = doc.getElementById("view");
     if (!fresh) return;
     syncTop(doc);
@@ -1600,14 +1499,13 @@
     lanesSig = ls;
     // An open post follows its own changes, not every save elsewhere: a reload or a redraw would stop the video you are watching.
     const own = a.item_signature;
-    const mine = own !== undefined && itemSig !== null && own !== itemSig, watching = [...$$("video", cardOpen() ? cardm : document)].some((v) => !v.paused && !v.ended);
+    const mine = own !== undefined && itemSig !== null && own !== itemSig, watching = [...$$("video")].some((v) => !v.paused && !v.ended);
     if (own !== undefined && itemSig === null) itemSig = own;
     // A search that finds nothing new changes nothing the signature counts, so "Looking…" follows the search itself.
     if (a.item_looking) looking ??= { before: null };
     else if (a.item_looking === false && looking && !watching && !$(".cardm input:focus, .cardm textarea:focus")) {
       const { before } = looking; looking = null; itemSig = own;
-      if (cardOpen()) fillCard(cardId, true).then(() => linksResult(before));
-      else if (page() === "card") {  // a post as its own page comes back on the same tab, then says what the search found
+      if (page() === "card") {  // a post as its own page comes back on the same tab, then says what the search found
         try { if (before !== null) sessionStorage.setItem("mag-links-before", before); } catch (e) { /* fine */ }
         const u = new URL(location.href), tab = $(".tabs [data-tab].on")?.dataset.tab;
         if (tab) { u.searchParams.set("tab", tab); history.replaceState(history.state, "", u); }
@@ -1616,20 +1514,16 @@
     }
     if (sig !== null && (a.signature !== sig || lanesChanged)) {
       if (nestOpen()) fillNest();
-      if (cardOpen()) {
-        stale = true;
-        const act = document.activeElement;
-        if (mine && !watching && !(act && cardm.contains(act) && /INPUT|TEXTAREA/.test(act.tagName))) { itemSig = own; fillCard(cardId, true); }
-      } else if (page() === "card") { /* handled below */ }
+      if (page() === "card") { /* handled below */ }
       else if (["wall", "search", "shelf", "pile", "related", "nest", "board"].includes(page())) refresh();
     }
-    if (page() === "card" && !cardOpen() && mine && !watching && !$("textarea:focus, input:focus")) { itemSig = own; location.reload(); }
+    if (page() === "card" && mine && !watching && !$("textarea:focus, input:focus")) { itemSig = own; location.reload(); }
     sig = a.signature;
   }
 
   function linksResult(before) {
     if (before === null) return;
-    const found = $$(".lk:not(.pvnolink)", cardOpen() ? cardm : document).length - before;
+    const found = $$(".lk:not(.pvnolink)").length - before;
     toast(found > 0 ? `Found ${found} new link${found === 1 ? "" : "s"}` : "No new links found");
   }
   try {
@@ -1639,7 +1533,7 @@
 
   async function tick() {
     if (document.hidden) return;
-    try { const open = cardOpen() ? cardId : $(".main[data-item]")?.dataset.item;
+    try { const open = $(".main[data-item]")?.dataset.item;
       if (String(open) !== itemOf) { itemOf = String(open); itemSig = null; looking = null; }  // another post: start counting its changes afresh
       const qs = [page() === "board" || new URLSearchParams(location.search).get("view") === "boards" ? "boards=1" : "", open ? "item=" + open : ""].filter(Boolean).join("&");
       const r = await fetch("/activity.json" + (qs ? "?" + qs : ""), { cache: "no-store" }); if (r.ok) paint(await r.json()); } catch (e) { /* restarting */ }
@@ -1815,7 +1709,7 @@
   if (fine && !calm) {
     document.addEventListener("pointerover", (ev) => {
       const tile = ev.target.closest("#view .tile[data-video], #view .tile[data-photos], #view .mx[data-video]:not(.dim), #view .mx[data-photos]:not(.dim)");
-      if (!tile || pv?.tile === tile || document.body.classList.contains("selecting") || cardOpen() || navigating) return;
+      if (!tile || pv?.tile === tile || document.body.classList.contains("selecting") || navigating) return;
       clearTimeout(pvTimer); pvTimer = setTimeout(() => startPreview(tile), 300);
     });
     document.addEventListener("pointerout", (ev) => {
@@ -1984,7 +1878,7 @@
       if (ev.target.closest("a")) { m.remove(); return; }
       const c = ev.target.closest("[data-c]")?.dataset.c; if (!c) return;
       m.remove();
-      if (c === "open") openCard(id, "push");
+      if (c === "open") goPage(id);
       else if (c === "copy") copy(tile.dataset.url, "Link");
       else if (c === "select") pick(tile);
       else bulk(c, [id], tile);
@@ -2345,7 +2239,7 @@
   }
   document.addEventListener("keydown", (ev) => {
     // a dialog is open, unless it is a board card's under a post opened from it
-    if ($$(".dlg-wrap:not(.keys)").some((d) => !(cardOpen() && d.matches("#view .qrwrap")))) return;
+    if ($$(".dlg-wrap:not(.keys)").length) return;
     const ae = document.activeElement;
     const typing = /INPUT|TEXTAREA|SELECT/.test(ae?.tagName || "") && !(ae.matches?.(".askp textarea") && !ae.value && (ev.key === "ArrowLeft" || ev.key === "ArrowRight"));  // an empty Ask box: the arrows still step through posts
     if (ev.key === "Escape") {
@@ -2355,7 +2249,6 @@
       if (sover && !sover.hidden) { closeSearch(); return; }
       if (addm && !addm.hidden) { closeAdd(); return; }
       if (helpOpen()) { closeHelp(); return; }
-      if (cardOpen()) { closeCard(); return; }
       if (nestOpen()) { closeNest(); return; }
       if (document.body.classList.contains("selecting")) { selectMode(false); return; }
       $$("details.menu[open], details.trials[open]").forEach((d) => d.removeAttribute("open"));
@@ -2363,13 +2256,12 @@
     if (typing || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     if (ev.key === "/" && q) { ev.preventDefault(); openSearch(); if (!bigSearch()) q.focus(); return; }
     if (ev.key === "?") { ev.preventDefault(); sheet(); return; }
-    if (cardOpen()) { if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") step(ev.key === "ArrowRight" ? 1 : -1); return; }
     const tiles = $$("#view .tile[data-id]");
     if ((ev.key === "j" || ev.key === "k") && tiles.length) {
       kIndex = Math.max(0, Math.min(tiles.length - 1, kIndex + (ev.key === "j" ? 1 : -1)));
       focusTile(tiles[kIndex].dataset.id);
     }
-    if (ev.key === "Enter" && kIndex >= 0 && tiles[kIndex] && document.activeElement === document.body) openCard(tiles[kIndex].dataset.id, "push");
+    if (ev.key === "Enter" && kIndex >= 0 && tiles[kIndex] && document.activeElement === document.body) goPage(tiles[kIndex].dataset.id);
   });
 
   // ---- things each page sets up after it arrives ------------------------------------------------------------------------------
@@ -2476,7 +2368,7 @@
   const helpEl = $("#helpsheet"), hsin = $("#hsin");
   const setHelp = () => $("#view #sethelp");
   const helpOpen = () => (helpEl && !helpEl.hidden) || !!setHelp()?.classList.contains("open");
-  function showScrim(on) { const s = $("#scrim"); if (s && !cardOpen()) s.hidden = !on; }
+  function showScrim(on) { const s = $("#scrim"); if (s) s.hidden = !on; }
   async function openHelp() {
     if (page() === "help") return;
     const sh = setHelp();
@@ -2487,7 +2379,7 @@
     }
     if (!helpEl) return;
     closeNest();
-    const ctx = cardOpen() ? "card" : page();
+    const ctx = page();
     hsin.innerHTML = '<div class="hwrap"><div class="sk skl"></div><div class="sk skl"></div><div class="sk skl short"></div></div>';
     // the same size, place and slide-in as Ask's sheet; like Ask it takes the bottom-right corner while it is open
     const btn = $("#t-help");
@@ -2829,7 +2721,7 @@
     // capture, so a post opened over this dialog (or a confirm) still counts as open when Escape closes it
     const key = (ev) => {
       if (!document.body.contains(w)) { document.removeEventListener("keydown", key, true); return; }
-      if (ev.key === "Escape" && !cardOpen() && !$("body > .dlg-wrap")) close();
+      if (ev.key === "Escape" && !$("body > .dlg-wrap")) close();
     };
     document.addEventListener("keydown", key, true);
   }
@@ -3211,8 +3103,7 @@
     root.classList.remove("slide-in", "slidefx");
     try { if (sessionStorage.getItem("mag-slide")) arrive(); } catch (e) { /* fine */ }
   });
-  if (cardm && history.state && history.state.card) history.replaceState({ hub: 1 }, "", location.href);
-  else history.replaceState({ ...(history.state || {}), hub: 1 }, "", location.href);
+  history.replaceState({ ...(history.state || {}), hub: 1 }, "", location.href);
 
   // ---- first run: the demo loop and listening for the first share ------------------------------------------------------------------
   const demo = $("#demo");

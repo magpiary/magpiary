@@ -1559,6 +1559,8 @@ class SettingsPages:
             safety = folder / f"before-restore-{datetime.now():%Y%m%d-%H%M%S}.db"
             try:
                 self.store.restore_from(source, safety)
+                from magpiary import boards
+                boards.restore_keys(source)
             except (ValueError, OSError, sqlite3.Error) as err:
                 words = str(err) if isinstance(err, ValueError) else f"The restore did not finish: {type(err).__name__}"
                 return Response(303, b"", headers={"Location": "/settings/storage?error=" + quote(words) + "#restore"})
@@ -1568,6 +1570,8 @@ class SettingsPages:
             name = f"magpiary-{datetime.now():%Y%m%d-%H%M%S}.db"
             try:
                 self.store.backup_to(self._folders()["backups"] / name)
+                from magpiary import boards
+                boards.back_up_keys(self._folders()["backups"] / name)
             except (OSError, sqlite3.Error) as err:
                 return Response(303, b"", headers={"Location": "/settings/storage?error=" + quote(f"The backup did not finish: {type(err).__name__}") + "#backup"})
             self.store.set_setting(BACKUP_SETTING, datetime.now().isoformat(timespec="seconds"))

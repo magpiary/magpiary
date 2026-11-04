@@ -326,6 +326,24 @@ def test_restore_from_a_backup_puts_the_library_back_and_keeps_a_safety_copy(mac
     assert mac.store.get_item("https://example.com/added-later")
 
 
+def test_a_backup_keeps_the_board_keys_beside_it_and_a_restore_adds_them_back(mac):
+    from magpiary import boards
+
+    boards.remember_key("b" * 16, bytes(range(32)))
+    post(mac, "/hub/backup")
+    folder = mac.server.hub._folders()["backups"]
+    keys = next(folder.glob("magpiary-*.boards.json"))
+    assert keys.stat().st_mode & 0o777 == 0o600 and not list(folder.glob("*.part"))
+    backup = next(folder.glob("magpiary-*.db"))
+    boards.forget_key("b" * 16)  # as on a new Mac
+    boards.remember_key("c" * 16, bytes(32))  # a board made after the backup stays
+    post(mac, "/hub/restore", file=backup.name)
+    assert boards.board_key("b" * 16) == bytes(range(32)) and boards.board_key("c" * 16) == bytes(32)
+    boards.remember_key("b" * 16, bytes([7]) * 32)  # a newer key: the restore adds the backup's as an older one
+    assert boards.restore_keys(backup) == 0  # already known
+    assert boards.board_keys("b" * 16) == [bytes([7]) * 32, bytes(range(32))]
+
+
 def test_restore_refuses_anything_that_is_not_a_sound_backup(mac):
     folder = mac.server.hub._folders()["backups"]
     folder.mkdir(parents=True, exist_ok=True)

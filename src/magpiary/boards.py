@@ -79,11 +79,13 @@ def board_keys(board_id: str) -> list[bytes]:
     return [bytes.fromhex(k) for k in [entry.get("key"), *entry.get("old", [])] if k]
 
 
-def remember_key(board_id: str, key: bytes, bucket: dict | None = None) -> None:
+def remember_key(board_id: str, key: bytes, bucket: dict | None = None, older: list[bytes] = ()) -> None:
+    """Make `key` the board's current key; earlier ones (and any `older` an invite brought) stay to read old events."""
     with _KEYS_LOCK:
         keys = _keys()
         entry = keys.get(board_id, {})
-        old = [k for k in [entry.get("key"), *entry.get("old", [])] if k and k != key.hex()]
+        old = list(dict.fromkeys(k for k in [entry.get("key"), *entry.get("old", []), *(o.hex() for o in older)]
+                                 if k and k != key.hex()))
         keys[board_id] = {"key": key.hex(), "old": old, **({"bucket": bucket} if bucket else
                                                            {"bucket": entry["bucket"]} if entry.get("bucket") else {})}
         _save_keys(keys)
@@ -94,6 +96,53 @@ def forget_key(board_id: str) -> None:
         keys = _keys()
         if keys.pop(board_id, None) is not None:
             _save_keys(keys)
+
+
+def keys_path_for(backup: Path) -> Path:
+    """Where a database backup's board keys sit: beside it, same name (owner, 4 Nov 2026)."""
+    return backup.with_suffix(".boards.json")
+
+
+def back_up_keys(backup: Path) -> bool:
+    """Copy the board keys beside a database backup, owner-only, so a restore on a new Mac can still open its boards.
+    False when there are none to copy."""
+    with _KEYS_LOCK:
+        keys = _keys()
+        if not keys:
+            return False
+        path = keys_path_for(backup)
+        path.unlink(missing_ok=True)
+        with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as f:
+            json.dump(keys, f)
+    return True
+
+
+def restore_keys(backup: Path) -> int:
+    """Add the board keys kept beside a backup to this Mac's. Nothing is lost: a board this Mac already knows keeps
+    its current key and gains the backup's keys as older ones. Returns how many boards gained keys."""
+    try:
+        saved = json.loads(keys_path_for(backup).read_text())
+    except (OSError, ValueError):
+        return 0
+    added = 0
+    with _KEYS_LOCK:
+        keys = _keys()
+        for board_id, entry in (saved.items() if isinstance(saved, dict) else ()):
+            if not isinstance(entry, dict) or not entry.get("key"):
+                continue
+            if board_id not in keys:
+                keys[board_id] = {k: v for k, v in entry.items() if k in ("key", "old", "bucket")}
+                added += 1
+                continue
+            mine = keys[board_id]
+            known = {mine["key"], *mine.get("old", [])}
+            extra = [k for k in [entry["key"], *entry.get("old", [])] if k not in known]
+            if extra:
+                mine["old"] = [*mine.get("old", []), *dict.fromkeys(extra)]
+                added += 1
+        if added:
+            _save_keys(keys)
+    return added
 
 
 # ---- writing this Mac's events ---------------------------------------------------------------------------
@@ -440,6 +489,7 @@ def _board_code(store, board_id: str, call=None, relay_connect=None, renew: bool
     return {"code": code, "expires": data["x"]}
 
 
+OLD_KEYS_MAX = 50  # earlier board keys an invite carries
 NOTE_DAYS = 8  # an invite note runs out after 7 days; a day later it is deleted from the relays
 KEY_NOTE_DAYS = 30  # a member's own bucket key waits longer, for a Mac that was away
 
@@ -488,6 +538,9 @@ def _invite_data(store, board_id: str, call=None) -> tuple[dict, str]:
     expires = int(time.time()) + INVITE_DAYS * 86400
     data = {"v": 1, "b": board_id, "n": board["name"], "c": board["creator"], "k": board_key(board_id).hex(),
             "via": board["via"], "i": invite_id, "x": expires}
+    older = [k.hex() for k in board_keys(board_id)[1:OLD_KEYS_MAX + 1]]
+    if older:  # the keys from before a removal, so a new member can read the whole board (owner, 4 Nov 2026)
+        data["o"] = older
     key_id = ""
     if board["via"] == "bucket":
         own = _keys().get(board_id, {}).get("bucket")
@@ -510,6 +563,7 @@ def _checked(data) -> dict:
         assert data["v"] == 1 and len(bytes.fromhex(data["k"])) == 32 and len(bytes.fromhex(data["c"])) == 32
         assert data["via"] in VIA and isinstance(data["b"], str) and len(data["b"]) == 16 and data["n"]
         assert data["via"] == "nostr" or {"endpoint", "bucket", "key_id", "secret"} <= set(data["s"])
+        assert len(data.get("o", [])) <= OLD_KEYS_MAX and all(len(bytes.fromhex(k)) == 32 for k in data.get("o", []))
     except Exception as err:
         raise ValueError("This invite is damaged. Ask for a new one.") from err
     if data["x"] < time.time():
@@ -558,7 +612,7 @@ def _join(store, data: dict) -> str:
     bucket = None
     if data["via"] == "bucket":
         bucket = {"provider": "invite", **{k: str(data["s"][k]) for k in ("endpoint", "bucket", "key_id", "secret")}}
-    remember_key(data["b"], bytes.fromhex(data["k"]), bucket)
+    remember_key(data["b"], bytes.fromhex(data["k"]), bucket, [bytes.fromhex(k) for k in data.get("o", [])])
     store.save_board(data["b"], " ".join(str(data["n"]).split())[:NAME_MAX], data["c"], data["via"])
     write(store, data["b"], "join", invite=data["i"])
     write(store, data["b"], "profile", **profile_body(store))

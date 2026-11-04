@@ -640,3 +640,32 @@ def test_two_boards_made_at_once_both_keep_their_keys(tmp_path, monkeypatch):
         t.join()
     monkeypatch.setattr(boards, "_keys", real)
     assert set(boards._keys()) == {"board1", "board2"}
+
+
+def test_a_member_who_joins_after_a_removal_still_sees_the_cards_made_before_it(macs):
+    relays = Relays()
+    a = macs.use("a")
+    board_id = make(a, "Kyoto")
+    boards.add_card(a, board_id, item(REEL1, "Moss garden"))
+    boards.sync_all(a, relays.connect)
+    macs.join("b", board_id)
+    a = macs.use("a")
+    boards.remove_member(a, board_id, macs.keys["b"])  # a new board key from here on
+    boards.add_card(a, board_id, item(REEL2, "Night market"))
+    code = boards.make_invite(a, board_id, relay_connect=relays.connect)
+    boards.sync_all(a, relays.connect)
+
+    c = macs.use("c")
+    assert boards.join(c, code, relays.connect) == board_id
+    assert len(boards.board_keys(board_id)) == 2  # the new key and the one before the removal
+    boards.sync_all(c, relays.connect)
+    assert {card["url"] for card in boards.view(c, board_id)["cards"]} == {REEL1, REEL2}
+
+
+def test_an_invite_with_too_many_or_damaged_old_keys_is_refused():
+    base = {"v": 1, "b": "0" * 16, "n": "Board", "c": "11" * 32, "k": "22" * 32, "via": "nostr", "i": "x",
+            "x": 2 ** 40}
+    assert boards._checked({**base, "o": ["33" * 32]})
+    for bad in (["33" * 31], ["33" * 32] * (boards.OLD_KEYS_MAX + 1)):
+        with pytest.raises(ValueError, match="damaged"):
+            boards._checked({**base, "o": bad})

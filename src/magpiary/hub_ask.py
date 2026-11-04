@@ -239,7 +239,7 @@ class AskPages:
 
     # ---- the panel -------------------------------------------------------------------------------------------
 
-    def ask_body(self, scope: str, label: str, items: list[dict], inline: bool = False) -> str:
+    def ask_body(self, scope: str, label: str, items: list[dict]) -> str:
         """The chat itself: what has been said, starting questions, the box, the first-question notice and the footer. Shared by
         the side panel (piles, boards) and the Ask tab on a post."""
         kind = scope.partition(":")[0]
@@ -302,8 +302,6 @@ class AskPages:
         label, items = found
         n = len(items)
         body = self.ask_body(scope, label, items)
-        if q.get("inline") == "1":  # the tab asked for its own content again (after switching who answers or a new chat)
-            return Response(200, body.encode(), "text/html; charset=utf-8", headers={"Cache-Control": "no-store"})
         html_ = (f'<aside id="askpanel" class="askp" role="dialog" aria-label="Ask Magpiary" data-scope="{e(scope)}">'
                  f'<div class="askgrip" data-askgrip role="separator" aria-orientation="vertical" aria-label="Drag to resize" tabindex="-1" '
                  f'title="Drag to resize · double-click to reset"><i></i></div>'
@@ -678,7 +676,7 @@ class AskPages:
         label, items = found
         side = self._chat_list(scope)
         picker = self._place_picker(scope)
-        body = self.ask_body(scope, label, items, inline=True)
+        body = self.ask_body(scope, label, items)
         main = (f'<div class="askpage"><aside class="askside"><b class="asktitle"><i class="askmark" aria-hidden="true">✦</i> Ask Magpiary</b>'
                 f'<hr class="askrule"><a class="askneww" href="/ask?scope=library:all" data-asknewchat>{ui.icon("summary")}<span>New chat</span>{ui.icon("plus")}</a>'
                 f'<div class="askslist">{side}</div><a class="askbacklib" href="/" data-askback>← Back</a></aside>'

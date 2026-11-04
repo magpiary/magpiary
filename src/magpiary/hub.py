@@ -641,7 +641,6 @@ class Hub(
             body = (self._update_banner() + self.top_bar(q, shelf, active)
                     + f'<main class="wrap" id="view">{main}</main>'
                     '<div class="scrim" id="scrim" hidden></div>'
-                    '<section class="cardm it" id="cardm" role="dialog" aria-modal="true" aria-label="Post" hidden></section>'
                     + self.add_modal() + self.search_overlay() + self.nest_shell() + self.help_shell() + self.checklist_panel(page) + self.ask_dock(page))
         script = json.dumps(data or {}).replace("</", "<\\/")
         return ui.document(title, body, look, self._csrf, page, status, script=script)

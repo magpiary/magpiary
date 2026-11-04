@@ -2545,8 +2545,6 @@ a.sw .ld, .sw .ld { margin: 0; color: var(--fg-2); }
 .person .pstub { display: grid; align-content: center; justify-items: center; gap: 10px; padding: 18px 14px; border-left: 2px dashed #c9c1ae; color: var(--fg); }
 .person .pbars { width: 100%; height: 74px; } .person .pno { font: 700 10px var(--mono, ui-monospace, monospace); letter-spacing: .08em; color: var(--fg-3); writing-mode: vertical-rl; transform: rotate(180deg); }
 
-
-
  
  
 
@@ -2557,7 +2555,6 @@ a.sw .ld, .sw .ld { margin: 0; color: var(--fg-2); }
   
 
  
-
 
  
  
@@ -2823,7 +2820,6 @@ dialog.lkd .lkerr { min-height: 0; } dialog.lkd .lkerr:empty { display: none; }
 .plock p { font-size: 12.5px; color: var(--fg-3); max-width: 80ch; }
 .plock p::before { content: "Privacy · "; font-weight: 700; color: var(--fg-2); }
 .gicon { display: inline-grid; place-items: center; width: 26px; height: 26px; color: var(--ok-t, var(--ok)); } .gicon .ico { width: 20px; height: 20px; }
-
 
 /* the search box above the page list */
 .setsearch { position: relative; margin: 0 0 14px; }
@@ -3319,22 +3315,18 @@ html[data-kb] #pileedit:focus-visible ~ .phead .peditbtn { box-shadow: none; }
 .asknotes { margin: 6px 0 22px; padding: 14px 18px; border-radius: 16px; background: var(--chip); max-width: 78ch; } .asknotes h4 { margin: 0 0 8px; }
 .asknote { padding: 8px 0; border-top: 1px solid var(--line); } .asknote:first-of-type { border-top: 0; } .asknote p { margin: 0 0 4px; white-space: pre-line; line-height: 1.55; }
 
-
-/* Ask, review 1: a real border on every side; the post's Ask tab is inline; the Ask button is brand pink and comes first. */
+/* Ask, review 1: a real border on every side; the Ask button is brand pink and comes first. */
 .askp { border: 1px solid color-mix(in srgb, var(--fg) 22%, transparent); box-shadow: 0 24px 60px -12px rgba(0,0,0,.55); background: color-mix(in srgb, var(--fg) 6%, var(--card)); isolation: isolate; }
-.askp.inline { position: static; width: auto; max-width: 620px; height: auto; min-height: 0; max-height: none; border: 0; box-shadow: none; background: none; border-radius: 0; overflow: visible; }
-.askp.inline .askthread { overflow: visible; padding: 6px 0 8px; } .askp.inline .askform { border-top: 0; padding: 10px 0 8px; } .askp.inline .asksuggest { padding: 4px 0 10px; }
-.askp.inline .askfoot { padding: 8px 0 0; } .askp.inline .askconfirm { padding: 12px 0 14px; border-top: 0; }
+
 .pvask { background: var(--t-design-deep, #d6006f); color: #fff; box-shadow: none; font-weight: 700; padding: 11px 18px; border-radius: 14px; }
 .pvask:hover { background: color-mix(in srgb, var(--t-design-deep, #d6006f) 88%, #fff); color: #fff; }
 .pvactions { align-items: stretch; }
 
-
 /* Ask Magpiary: its own look. A pink-to-violet spark, a roomy composer like the chat apps, full width inside the post. */
 .askmark { font-style: normal; background: linear-gradient(135deg, #ff2e93, #8a3ffc); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
 .pvask .askmark { background: none; color: #fff; }
-.askp.inline { max-width: none; width: 100%; }
-.askp .askform { display: block; padding: 10px 14px 12px; border-top: 0; } .askp.inline .askform { padding: 12px 0 8px; }
+
+.askp .askform { display: block; padding: 10px 14px 12px; border-top: 0; }
 .asksend { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--t-design-deep, #e0006c); color: #fff; }
 .asksend:hover { background: color-mix(in srgb, var(--t-design-deep, #e0006c) 86%, #fff); } .asksend .ico { width: 18px; height: 18px; }
 .askbtn2 { white-space: nowrap; background: var(--t-design-deep, #e0006c); color: #fff; box-shadow: none; } .askbtn2 .askmark { background: none; color: #fff; }
@@ -3398,7 +3390,6 @@ body[data-page="card"] .wrap { padding-top: 4px; }
 @media (max-width: 760px) { .crumbs a, .crumbs i { display: none; } .crumbs [aria-current] { max-width: none; } }
 @media (max-width: 760px) { .pgpos { display: none; } }
 
-
 /* ===== The post page, calmer and roomier (28 Oct): no wash, a narrower video column, more air, fewer things shouting ===== */
 body[data-page="card"] .wrap { padding-inline: max(var(--pad), 24px); }  /* follows Settings → Appearance → Page width: boxed or full */
 .cardm.pagemode { grid-template-columns: 34% minmax(0, 1fr); }
@@ -3425,7 +3416,6 @@ body[data-page="card"] .wrap { padding-inline: max(var(--pad), 24px); }  /* foll
 .cardm.pagemode .kp { padding: 12px 14px; }
 @media (max-width: 760px) { .cardm.pagemode .vid { padding: 0 0 8px; } .cardm.pagemode .it-h { font-size: 31px; } .cardm.pagemode .it-lead.pvlead { margin: 26px 0 26px; } }
 
-
 /* Post page, round 3: flat grey buttons beside Ask; the note sits in the row of names; the caption is plain text */
 .cardm.pagemode .pvactions .pvprimary { background: var(--chip); box-shadow: none; color: var(--fg); }
 .cardm.pagemode .pvactions .pvprimary:hover { background: color-mix(in srgb, var(--fg) 11%, var(--chip)); }
@@ -3438,7 +3428,6 @@ body[data-page="card"] .wrap { padding-inline: max(var(--pad), 24px); }  /* foll
 .cardm.pagemode .vid .capb.pvcapb .pvwho b, .cardm.pagemode .vid .capb.pvcapb .cap2 { color: var(--fg); }
 .cardm.pagemode .vid .capb.pvcapb .pvwho small, .cardm.pagemode .vid .capb.pvcapb .pvwhere { color: var(--fg-3); }
 .cardm.pagemode .vid .capb.pvcapb.pvopen { background: var(--card); padding: 14px 16px; border-radius: 14px; box-shadow: 0 0 0 1px var(--line), 0 -14px 34px rgba(0,0,0,.4); }
-
 
 /* Site icons, and the link buttons: no fill until hovered, as wide as their content, the arrow close to the text */
 .fav { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; vertical-align: -3px; margin-right: 8px; color: var(--fg-2); }
@@ -3456,7 +3445,6 @@ body[data-page="card"] .wrap { padding-inline: max(var(--pad), 24px); }  /* foll
 .pvactions .pvprimary b, .pvactions .pvprimary small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .pvactions .pvprimary .fav { margin-right: 10px; width: 20px; height: 20px; }
 
-
 /* Round 4 (28 Oct): the caption's button under it, left-aligned, underline only on hover; its open state is dark, square, on top with a faint fade;
    the autoplay switch is solid and steps aside while the video plays; the link buttons get more side padding and a very dark hover. */
 .capslot { height: 176px; }
@@ -3473,7 +3461,6 @@ body[data-page="card"] .wrap { padding-inline: max(var(--pad), 24px); }  /* foll
 .cardm.pagemode .pvactions .pvprimary, .pvactions .pvprimary.find, .pvactions .pvprimary.wait { padding: 10px 20px; }
 .pvactions .pvprimary:hover, .cardm.pagemode .pvactions .pvprimary:hover { background: color-mix(in srgb, var(--fg) 7%, var(--bg)); }
 
-
 /* The open caption: edge to edge of the video column, flush with the bottom, square, 98% dark, with a long soft fade above it */
 .cardm .vid { --capbg: rgba(12,12,12,.98); --capfade: rgba(12,12,12,0); --capright: 0px; }
 .cardm.pagemode .vid { --capbg: color-mix(in srgb, var(--bg) 98%, transparent); --capfade: color-mix(in srgb, var(--bg) 0%, transparent); --capright: 56px; }
@@ -3484,14 +3471,12 @@ body[data-page="card"] .wrap { padding-inline: max(var(--pad), 24px); }  /* foll
 .capslot .capb.pvcapb.pvopen::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 80px; pointer-events: none; background: linear-gradient(to top, var(--capbg), var(--capfade)); }
 .capslot .capb.pvcapb.pvopen { overflow: visible; } .capslot .capb.pvcapb.pvopen .cap2 { max-height: calc(var(--maxh, 300px) - 120px); overflow: auto; scrollbar-width: thin; }
 
-
 /* Board and Trash context sit first in the reading column; a big play button shows in the middle of a paused video */
 .pvctx { margin: 0 0 18px; max-width: 760px; } .pvctx .pctx, .pvctx .bctx { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .pvbig { position: absolute; z-index: 2; left: 50%; top: 50%; width: 72px; height: 72px; margin: -36px 0 0 -36px; display: grid; place-items: center; border-radius: 50%;
   background: #060606; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.5); transition: opacity .18s, transform .18s, background .18s; }
 .pvbig svg { width: 28px; height: 28px; margin-left: 3px; } .pvbig:hover { background: #000; transform: scale(1.06); } .pvbig:active { transform: scale(.95); }
 .stage.pvplaying .pvbig { opacity: 0; pointer-events: none; transform: scale(.9); }
-
 
 /* Page changes: the arriving page is held invisible until the script fades it in (no flash of the finished page), nothing can make the
    page sideways-scroll while it slides, and the header height has a sensible default before the script measures it. */
@@ -3549,11 +3534,11 @@ html.slidefx #view { will-change: transform, opacity; }
 .askgrip { position: absolute; z-index: 5; left: 0; top: 0; bottom: 0; width: 16px; cursor: col-resize; display: grid; place-items: center; touch-action: none; }
 .askgrip i { width: 4px; height: 44px; border-radius: 3px; background: var(--fg-3); opacity: 0; transition: opacity .15s; }
 .askp:hover .askgrip i, .askp.resizing .askgrip i { opacity: .5; } .askgrip:hover i { opacity: .9; }
-.askp.inline { min-width: 0; max-width: none; width: 100%; background: none; box-shadow: none; border-radius: 0; position: relative; } .askp.inline .askgrip { display: none; }
+
 .askp .askhead { padding: 20px 20px 10px 36px; border: 0; }
 .askp .askhead b { font-size: 17px; letter-spacing: -.01em; } .askp .askhead small { margin-top: 2px; font-size: 13px; }
 .askclear { position: absolute; z-index: 4; top: 18px; right: 70px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--fg-3); }
-.askclear:hover { background: var(--chip); color: var(--fg); } .askclear .ico { width: 18px; height: 18px; } .askp.inline .askclear { top: 0; right: 0; }
+.askclear:hover { background: var(--chip); color: var(--fg); } .askclear .ico { width: 18px; height: 18px; }
 
 /* the conversation */
 .askp .askthread { padding: 8px 36px 20px; gap: 26px; }
@@ -3628,7 +3613,7 @@ html.slidefx #view { will-change: transform, opacity; }
 .askp .askform { margin: 0 20px 20px; padding: 16px 18px 12px 20px; border: 1px solid var(--line); border-radius: 24px; background: color-mix(in srgb, var(--fg) 3%, var(--card));
   box-shadow: 0 10px 30px -14px rgba(0,0,0,.28), 0 2px 6px -2px rgba(0,0,0,.08); transition: border-color .2s, box-shadow .2s; }
 .askp .askform:focus-within { border-color: color-mix(in srgb, var(--fg) 30%, var(--line)); box-shadow: 0 12px 34px -14px rgba(0,0,0,.34), 0 2px 6px -2px rgba(0,0,0,.1); }
-.askp.inline .askform { margin: 0; }
+
 .askp .askform textarea { min-height: 50px; }
 .askp .askconfirm { margin: 0 20px 20px; padding: 14px 18px 16px; border: 1px solid var(--line); border-radius: 20px; }
 .askcardbar { margin-top: 10px; } .askleft, .askright { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -3795,7 +3780,6 @@ body.lock .askdockwrap, body.askopen .askdockwrap { display: none; }
 .actl-all { display: inline-block; margin-top: 16px; font-size: 13px; color: var(--fg-2); } .actl-all:hover { color: var(--fg); } .actl-note { font-size: 13px; color: var(--fg-3); }
 @media (max-width: 1100px) { .askpage.ctl { grid-template-columns: 260px minmax(0, 1fr) 280px; } }
 
-
 .askdockwrap { contain: layout style paint; } .askp { contain: layout style; }
 /* the orb breathes a couple of times and then rests: nothing on the page should animate for ever (calmer on the GPU) */
 .askorb .o1, .askorb .o2 { animation-iteration-count: 2; }
@@ -3868,7 +3852,6 @@ body.lock .askdockwrap, body.askopen .askdockwrap { display: none; }
 *:focus, *:focus-visible, html[data-kb] *:focus-visible { outline: none !important; }
 .tile.sel { outline: 2px solid color-mix(in srgb, var(--fg) 30%, transparent) !important; outline-offset: 3px; }
 
-
 /* 29 Oct, round 3: Help opens exactly like Ask's sheet (same corner, height, width, radius, slide-in) and the bar
    steps aside for it; the shelves sit in the middle of the whole bar; Nest and Settings lose their outlined pills */
 .helpsheet { top: auto; left: auto; right: 20px; bottom: 20px; width: min(460px, calc(100vw - 24px)); height: 90dvh; min-height: min(480px, calc(100dvh - 40px)); max-height: none; border-radius: 24px; }
@@ -3882,7 +3865,6 @@ body.helpopen .askdockwrap { display: none; }
 .nestbtn:not([data-mood="working"]):not([data-mood="needs"]), .setbtn { border-color: transparent; background: transparent; }
 .nestbtn:not([data-mood="working"]):not([data-mood="needs"]):hover, .setbtn:hover { background: var(--chip); border-color: transparent; }
 .nestbtn.on:not([data-mood="working"]):not([data-mood="needs"]), .setbtn.on { background: var(--chip); border-color: transparent; }
-
 
 /* the starter questions in Ask's sheet: closer to the edge (they sat 52px in), bigger and brighter, allowed to wrap */
 .askp:not(.askfull) .askstarters { padding-left: 24px; padding-right: 24px; gap: 2px; }
@@ -3932,21 +3914,6 @@ body.helpopen .askdockwrap { display: none; }
 .cardm.pagemode .pscroll > .tabs, .cardm.pagemode .pscroll > .pane { max-width: 920px; }
 .cardm.pagemode .pane p, .cardm.pagemode .pane .it-sum, .cardm.pagemode .pane .muted { max-width: 760px; }
 .tabs a.off, .tabs a.off:hover { color: var(--fg-3); opacity: .45; cursor: default; pointer-events: auto; }
-.pane[data-pane="ask"] .askp.inline { max-width: none; width: 100%; }
-.pane[data-pane="ask"] .askhello { justify-items: start; text-align: left; margin: 0; padding: 4px 0 8px; }
-.pane[data-pane="ask"] .askhello .askorb { margin-left: -8px; }
-.pane[data-pane="ask"] .askhello b { font-size: 26px; }
-.askp.inline .askstarters { padding-left: 0; padding-right: 0; margin-bottom: 8px; }
-.askp.inline .askform { padding: 16px 20px 12px; margin: 0; border-radius: 20px; box-sizing: border-box; width: 100%; }
-.askp.inline .askform textarea { padding: 0; margin: 0; width: 100%; box-sizing: border-box; }
-
-/* the Ask tab on a post: everything above the input lines up with the text inside it (20px in), and the block is airier */
-.pane[data-pane="ask"] .askp.inline .askthread, .pane[data-pane="ask"] .askp.inline .askstarters, .pane[data-pane="ask"] .askp.inline .askconfirm { padding-left: 20px; padding-right: 20px; }
-.pane[data-pane="ask"] .askhello { gap: 14px; padding: 10px 0 18px; }
-.pane[data-pane="ask"] .askhello .askctx { margin-top: 0; }
-.pane[data-pane="ask"] .askp.inline .askstarters { gap: 6px; margin: 14px 0 26px; }
-.pane[data-pane="ask"] .askp.inline .askstart { padding: 8px 0; }
-.pane[data-pane="ask"] .askp.inline .askthread { padding-top: 14px; }
 
 /* glass on the Settings cards, the Advanced blocks and the tiles (29 Oct, owner): the same recipe, a subtle rim and glow on the tiles */
 
@@ -4102,7 +4069,6 @@ a.navwait:not(.btn) { opacity: .6; transition: opacity .15s; }
 @media (min-width: 900px) and (max-width: 1599px) { html[data-scale="auto"] { zoom: .9; } }
 @media (min-width: 900px) and (max-width: 1399px) { html[data-scale="auto"] { zoom: .85; } }
 html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[data-scale="110"] { zoom: 1.1; }
-
 
 /* key guides: the link first as a button, numbered steps, advice set apart (owner, 2 Nov: make the instructions prominent) */
 .guide2 { counter-reset: g2; }

@@ -13,7 +13,11 @@
 set -eu
 
 UV_VERSION="0.13.0"
-SOURCE="${MAGPIARY_SOURCE:-magpiary @ git+https://github.com/magpiary/magpiary}"
+# The reviewed release this script installs, by its exact commit (a commit cannot be changed later, a branch can).
+# The release steps update both lines after tagging.
+RELEASE="0.1.4"
+RELEASE_COMMIT="e6d0708e9425a9c78af2309d977c56c3cf9f5fac"
+SOURCE="${MAGPIARY_SOURCE:-magpiary @ git+https://github.com/magpiary/magpiary@$RELEASE_COMMIT}"
 PORT="${MAGPIARY_PORT:-$((8765 + ($(id -u) - 501) % 20))}"   # one port per Mac account
 BIN="$HOME/.local/bin"
 
@@ -37,7 +41,7 @@ fi
 step "2/7  yt-dlp"
 uv tool install --upgrade --python 3.12 yt-dlp
 
-step "3/7  Magpiary"
+step "3/7  Magpiary $RELEASE"
 uv tool install --force --python 3.12 "$SOURCE"
 command -v magpiary >/dev/null 2>&1 || fail "Magpiary did not install."
 magpiary --version

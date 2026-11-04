@@ -459,3 +459,18 @@ def test_an_address_only_the_ai_proposed_is_fetched_only_when_it_is_a_bare_site(
     _, urls = targets_for(record, "See https://given.example.com/page/2", "", None)
     assert "https://pebbledesk.example.com" in urls and "https://given.example.com/page/2" in urls
     assert not any("collector" in u for u in urls)
+
+
+def test_an_app_store_listing_counts_only_when_its_developer_is_one_the_post_names():
+    from magpiary.links import app_store
+    about = "An open AI model you can run on your phone, offline and private, for chat and writing help."
+
+    def store_answer(seller):
+        return {"results": [{"trackName": "Gemma 4", "sellerName": seller, "artistName": seller, "description": about,
+                             "trackViewUrl": "https://apps.apple.com/us/app/gemma-4/id1?uo=4"}]}
+    target = Target("Gemma 4", "product", what="Google's open AI model for phones")
+    context = {"google", "model", "phone", "offline", "open"}
+    stranger = pages({"https://itunes.apple.com/search": store_answer("Example Indie Dev LLC")})
+    assert app_store(target, stranger, context) is None  # the same name, someone else's app
+    maker = pages({"https://itunes.apple.com/search": store_answer("Google LLC")})
+    assert app_store(target, maker, context).url == "https://apps.apple.com/us/app/gemma-4/id1"

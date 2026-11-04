@@ -10,6 +10,7 @@ fixed `ack` string is what the Shortcut looks for before it clears its outbox.
 import hmac
 import json
 import os
+import socket
 import sys
 import threading
 from datetime import datetime
@@ -84,6 +85,14 @@ def build_reply(results: list[ItemResult]) -> dict:
     }
 
 
+def _cut(request) -> None:
+    """End a connection that ran past its deadline: its handler's next read or write fails and it lets go."""
+    try:
+        request.shutdown(socket.SHUT_RDWR)
+    except OSError:
+        pass
+
+
 class Server(ThreadingHTTPServer):
     """Carries the store. A phone dropping a connection mid-request is normal: one calm line."""
 
@@ -92,10 +101,17 @@ class Server(ThreadingHTTPServer):
     request_queue_size = 128
     max_connections = 64
     request_timeout = 15  # idle seconds: incomplete headers/bodies must release a worker
+    # Another device on the Wi-Fi gets a share of the connections, not all of them, and a whole connection must finish
+    # in a set time even if it trickles a byte every few seconds; the hub on this Mac keeps the rest (review 5, 4 Nov 2026).
+    max_lan_connections = 32
+    max_per_address = 8
+    lan_deadline = 60  # seconds for one connection from another device, start to finish
 
     def __init__(self, address, store: Store, setup: Setup | None = None):
         super().__init__(address, Handler)
         self._slots = threading.BoundedSemaphore(self.max_connections)
+        self._lan_lock = threading.Lock()
+        self._lan_open: dict[str, int] = {}  # connections now open from each other device
         self.store = store
         self.setup = setup
         if setup is not None:
@@ -118,20 +134,54 @@ class Server(ThreadingHTTPServer):
         request.settimeout(self.request_timeout)
         return request, address
 
+    @staticmethod
+    def is_local(address: str) -> bool:
+        return address in ("127.0.0.1", "::1")
+
+    def _take_lan(self, address: str) -> bool:
+        with self._lan_lock:
+            if sum(self._lan_open.values()) >= self.max_lan_connections or \
+                    self._lan_open.get(address, 0) >= self.max_per_address:
+                return False
+            self._lan_open[address] = self._lan_open.get(address, 0) + 1
+            return True
+
+    def _give_lan(self, address: str) -> None:
+        with self._lan_lock:
+            self._lan_open[address] -= 1
+            if not self._lan_open[address]:
+                del self._lan_open[address]
+
     def process_request(self, request, client_address):
+        lan = not self.is_local(client_address[0])
+        if lan and not self._take_lan(client_address[0]):
+            self.shutdown_request(request)
+            return
         if not self._slots.acquire(blocking=False):
+            if lan:
+                self._give_lan(client_address[0])
             self.shutdown_request(request)
             return
         try:
             super().process_request(request, client_address)
         except BaseException:
             self._slots.release()
+            if lan:
+                self._give_lan(client_address[0])
             raise
 
     def process_request_thread(self, request, client_address):
+        lan = not self.is_local(client_address[0])
+        deadline = threading.Timer(self.lan_deadline, _cut, (request,)) if lan else None
+        if deadline:
+            deadline.daemon = True
+            deadline.start()
         try:
             super().process_request_thread(request, client_address)
         finally:
+            if deadline:
+                deadline.cancel()
+                self._give_lan(client_address[0])
             self._slots.release()
 
     def wake(self) -> None:

@@ -604,12 +604,25 @@ def github_search(target: Target, get: Get, context: set[str], query: str = "",
                  about=f"{repo.get('description') or ''} {' '.join(repo.get('topics') or [])}")
 
 
+APP_SELLER_NOISE = {"inc", "llc", "ltd", "limited", "gmbh", "corp", "corporation", "company", "app", "apps", "software",
+                    "studio", "studios", "lab", "labs", "technology", "technologie", "pty", "sa", "bv", "co"}
+
+
+def _known_maker(app: dict, target: Target, context: set[str]) -> bool:
+    """The app comes from someone the post or the AI named with it: an app of the same name by a stranger is not the
+    thing (a third-party 'Gemma 4' app for Google's Gemma 4, 4 Nov 2026)."""
+    seller = words(f"{app.get('sellerName', '')} {app.get('artistName', '')}") - APP_SELLER_NOISE
+    said = context | words(f"{target.name} {target.what} {target.maker} {target.by} {target.domain.replace('.', ' ')}")
+    return bool(seller & said)
+
+
 def app_store(target: Target, get: Get, context: set[str]) -> Found | None:
     for entity in ("macSoftware", "software"):
         data = _json(get, f"https://itunes.apple.com/search?term={quote(target.name)}&entity={entity}&limit=5")
         for app in (data or {}).get("results", []):
             overlap = (words(app.get("description", "")[:800]) - words(target.name)) & (context | words(target.what))
-            if name_score(target.name, app.get("trackName", "")) == 3 and len(overlap) >= 3:
+            if name_score(target.name, app.get("trackName", "")) == 3 and len(overlap) >= 3 and \
+                    _known_maker(app, target, context):
                 return Found(target.name, TARGET_KIND.get(target.kind, "tools"), app["trackViewUrl"].split("?")[0],
                              app["trackName"], "App Store", 4, central=target.central, section=target.section)
     return None
