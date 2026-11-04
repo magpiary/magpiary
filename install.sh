@@ -16,7 +16,7 @@ UV_VERSION="0.13.0"
 # The reviewed release this script installs, by its exact commit (a commit cannot be changed later, a branch can).
 # The release steps update both lines after tagging.
 RELEASE="0.1.4"
-RELEASE_COMMIT="e6d0708e9425a9c78af2309d977c56c3cf9f5fac"
+RELEASE_COMMIT="fc1b42c640e35e1cf05db3c3978a70aff4a19e6d"
 SOURCE="${MAGPIARY_SOURCE:-magpiary @ git+https://github.com/magpiary/magpiary@$RELEASE_COMMIT}"
 PORT="${MAGPIARY_PORT:-$((8765 + ($(id -u) - 501) % 20))}"   # one port per Mac account
 BIN="$HOME/.local/bin"
