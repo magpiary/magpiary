@@ -280,9 +280,6 @@ html.navhid .crumbbar { top: 6px; }
 /* ---- Settings: one surface per group, the same type scale, the accent only for what is on ---- */
 :root[data-theme] .setside h1 { margin-bottom: 14px; }
 :root[data-theme] .sethead p { font-size: var(--type-body); color: var(--fg-2); }
-:root[data-theme] .modecard { background: var(--card); border: 0; box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; }
-:root[data-theme] .modecard:hover { background: var(--chip); border: 0; }
-:root[data-theme] .modecard.on { background: rgba(247,243,232,.07); border: 0; box-shadow: inset 0 0 0 1.5px rgba(247,243,232,.7); }
 
 /* ---- Help: a calm guide, one colour, reading sizes ---- */
 :root[data-theme] .helppage { max-width: 840px; margin-inline: auto; }

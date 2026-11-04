@@ -14,6 +14,7 @@ from magpiary.brain import Call, build_evidence, http_call, reuse_tags, summaris
 from magpiary.frames import extract
 from magpiary.tools import video_seconds
 from magpiary.transcribe import TranscribeFailed, has_speech, transcribe
+from magpiary.config import load_json as _load  # noqa: E402  (one reader for the library's JSON files)
 
 VIDEO = (".mp4", ".webm", ".mov", ".mkv")
 MAX_IMAGES = 10
@@ -21,11 +22,6 @@ MAX_SLIDES = 10      # a carousel's videos that are read
 CAROUSEL_FRAMES = 24  # frames across a whole carousel, shared between its videos
 
 
-def _load(path: Path, default):
-    try:
-        return json.loads(path.read_text())
-    except (OSError, ValueError):
-        return default
 
 
 def senses(folder: Path, meta: dict, transcriber=transcribe, framer=extract,

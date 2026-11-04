@@ -1211,10 +1211,6 @@ details.menu > .pop.right { left: auto; right: 0; min-width: 240px; }
 /* Smart / Private */
 .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 .modes form { display: flex; }
-.modecard { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 16px; border-radius: 18px; background: var(--bg); border: 2px solid transparent; transition: border-color .2s, transform .2s; }
-.modecard:hover { border-color: var(--line); }
-.modecard.on { border-color: var(--fg); cursor: default; }
-.modecard .pv { width: 100%; height: 76px; }
 .mtitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .mtitle b { font: 700 19px var(--display); }
 .mtitle em { font: 600 12px var(--sans); font-style: normal; color: var(--fg-3); }
@@ -2803,19 +2799,7 @@ dialog.lkd .lkerr { min-height: 0; } dialog.lkd .lkerr:empty { display: none; }
 .segbar button.on { background: var(--fg); color: var(--bg); }
 @media (max-width: 640px) { .segbar { border-radius: 18px; } }
 
-/* Claude Code: three choices as cards */
-.cmodes { display: grid; gap: 12px; }
 .segs { display: grid; gap: 8px; }
-.cmodes .seg { display: grid; gap: 2px; padding: 12px 16px 12px 44px; border-radius: 16px; background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--line); cursor: pointer; position: relative; transition: box-shadow .15s; }
-.cmodes .seg input { position: absolute; opacity: 0; pointer-events: none; }
-.cmodes .seg::before { content: ""; position: absolute; left: 16px; top: 16px; width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--fg-3); }
-.cmodes .seg:has(input:checked) { box-shadow: inset 0 0 0 2px var(--fg); }
-.cmodes .seg:has(input:checked)::before { background: radial-gradient(circle, var(--fg) 0 4px, transparent 5px); box-shadow: inset 0 0 0 1.5px var(--fg); }
-.cmodes .seg:has(input:focus-visible) { box-shadow: inset 0 0 0 2px var(--fg), 0 0 0 3px var(--focus-glow); }
-.cmodes .seg b { font-size: 15px; } .cmodes .seg span { font-size: 13px; color: var(--fg-2); }
-.cwait { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13.5px; color: var(--fg-2); }
-.cwait select { height: 36px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 0 10px; }
-.cwait .btn { margin-left: auto; }
 
 /* a phone's row: the name and its Wi-Fi large, the rest small */
 .phone2 .srl > b { font-size: 18px; font-weight: 700; }
@@ -2931,21 +2915,9 @@ dialog.lkd .lkerr { min-height: 0; } dialog.lkd .lkerr:empty { display: none; }
 /* AI & summaries: the two modes are filled cards, the chosen one lifted and outlined, its note inside */
 .modes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 640px) { .modes { grid-template-columns: minmax(0, 1fr); } }
-.modecard { background: var(--chip); border-color: transparent; }
-.modecard:hover { background: color-mix(in srgb, var(--fg) 7%, var(--chip)); border-color: var(--line); }
-.modecard.on { background: color-mix(in srgb, var(--fg) 10%, var(--bg)); border-color: var(--fg); }
 .mnote { display: block; margin-top: 4px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--fg) 12%, transparent); font-size: 13px; font-weight: 400; line-height: 1.55; color: var(--fg-2); }
 .mnote.bad { color: var(--bad-t); font-weight: 600; }
 
-/* Claude Code: flat choices, the chosen one filled and outlined; the wait belongs to "first, then my key" only */
-.cmodes .seg { background: none; box-shadow: none; padding: 12px 16px 12px 46px; }
-.cmodes .seg:hover { background: color-mix(in srgb, var(--fg) 5%, transparent); }
-.cmodes .seg:has(input:checked) { background: color-mix(in srgb, var(--fg) 9%, var(--bg)); box-shadow: inset 0 0 0 2px var(--fg); }
-.cmodes .seg::before { top: 15px; }
-.cwaitin { display: none; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.cmodes .seg:has(input:checked) .cwaitin { display: flex; }
-.cwaitin em { font-style: normal; font-size: 13px; color: var(--fg-2); }
-.cwaitin select { height: 38px; padding: 0 36px 0 12px; border-radius: 12px; }
 .cacts { display: flex; gap: 8px; padding-top: 2px; }
 .srow.rstack .srl > b { font-size: 16.5px; }
 .srow.info { background: none; }
@@ -3336,14 +3308,10 @@ html[data-kb] #pileedit:focus-visible ~ .phead .peditbtn { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .askm.thinking i { animation: none; opacity: .6; } }
 .asksuggest { padding: 4px 16px 10px; display: flex; flex-direction: column; gap: 8px; } .asksuggest p { margin: 0 0 2px; color: var(--fg-3); font-size: 13px; }
 .asksuggest[hidden] { display: none; }
-.askchip { text-align: left; padding: 10px 14px; border-radius: 14px; background: var(--chip); font-size: 14px; color: var(--fg-2); } .askchip:hover { color: var(--fg); background: color-mix(in srgb, var(--fg) 10%, var(--chip)); }
 .askform { display: flex; align-items: flex-end; gap: 8px; padding: 10px 14px 12px; border-top: 1px solid var(--line); }
 .askform[hidden], .askconfirm[hidden] { display: none; }
 .askform textarea { flex: 1; min-width: 0; resize: none; max-height: 120px; padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--line); background: transparent; color: var(--fg); font: inherit; font-size: 14.5px; }
 .askconfirm { padding: 12px 16px 14px; border-top: 1px solid var(--line); font-size: 14px; } .askconfirm p { margin: 0 0 10px; } .askconfirm .row { display: flex; gap: 8px; }
-.askfoot { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 8px 16px 14px; color: var(--fg-3); font-size: 12.5px; }
-.askabout summary { cursor: pointer; list-style: none; } .askabout summary::-webkit-details-marker { display: none; } .askabout summary::after { content: " +"; }
-.askabout[open] summary::after { content: " −"; } .askabout p { margin: 8px 0 0; line-height: 1.5; max-width: 34ch; }
 .asknokey { padding: 24px 22px; display: grid; gap: 12px; } .asknokey p { margin: 0; color: var(--fg-2); line-height: 1.5; }
 .askp.min { top: auto; bottom: 20px; width: auto; border-radius: 999px; } .askp.min > :not(.askhead) { display: none; } .askp.min .askhead { border: 0; cursor: pointer; padding: 10px 14px 10px 18px; } .askp.min .askhead small { display: none; }
 .askbtn { white-space: nowrap; } .pvask { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 12px; font-size: 13.5px; font-weight: 600; color: var(--fg-2); background: var(--chip); }
@@ -3366,15 +3334,9 @@ html[data-kb] #pileedit:focus-visible ~ .phead .peditbtn { box-shadow: none; }
 .askmark { font-style: normal; background: linear-gradient(135deg, #ff2e93, #8a3ffc); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
 .pvask .askmark { background: none; color: #fff; }
 .askp.inline { max-width: none; width: 100%; }
-.askbox { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 12px 12px 10px 16px; border-radius: 20px; background: color-mix(in srgb, var(--fg) 7%, var(--card));
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fg) 14%, transparent); transition: box-shadow .15s; }
-.askbox:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fg) 32%, transparent); }
 .askp .askform { display: block; padding: 10px 14px 12px; border-top: 0; } .askp.inline .askform { padding: 12px 0 8px; }
-.askbox textarea { width: 100%; min-height: 28px; max-height: 180px; resize: none; padding: 6px 0; border: 0; outline: none; background: transparent; color: var(--fg); font: inherit; font-size: 16px; line-height: 1.5; box-shadow: none; }
-.askbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; } .askbar small { color: var(--fg-3); font-size: 12px; }
 .asksend { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--t-design-deep, #e0006c); color: #fff; }
 .asksend:hover { background: color-mix(in srgb, var(--t-design-deep, #e0006c) 86%, #fff); } .asksend .ico { width: 18px; height: 18px; }
-.askabout p { max-width: none; } .askfoot { align-items: flex-start; } .askabout { flex: 1; min-width: 0; }
 .askbtn2 { white-space: nowrap; background: var(--t-design-deep, #e0006c); color: #fff; box-shadow: none; } .askbtn2 .askmark { background: none; color: #fff; }
 .askbtn2:hover { background: color-mix(in srgb, var(--t-design-deep, #e0006c) 88%, #fff); color: #fff; }
 .pvmorebtn { padding: 5px 12px; border-radius: 999px; font-size: 13.5px; color: var(--fg-3); box-shadow: inset 0 0 0 1.5px var(--line); } .pvmorebtn:hover { color: var(--fg); }

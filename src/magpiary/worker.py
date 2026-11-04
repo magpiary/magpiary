@@ -16,6 +16,7 @@ from magpiary.expand import ExpansionFailed, Fetch, expand, http_fetch
 from magpiary.sources import FetchFailed, Get, http_get
 from magpiary.store import Store
 from magpiary.tools import ToolMissing, YtDlp, update_ytdlp
+from magpiary.config import load_json as _load_json  # noqa: E402  (one reader for the library's JSON files)
 
 RETRYABLE = {"rate_limited", "unknown"}  # the rest (private, deleted, login wall...) wait for Retry
 
@@ -447,11 +448,6 @@ def screen_due(store: Store, activity=None, read=None, log: Callable[[str], None
     return done
 
 
-def _load_json(path: Path):
-    try:
-        return json.loads(path.read_text())
-    except (OSError, ValueError):
-        return None
 
 
 def icons_due(store: Store, get=None, log: Callable[[str], None] = lambda m: None, limit: int = 8) -> int:

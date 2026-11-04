@@ -1311,7 +1311,7 @@ A UX audit found Settings was arranged by when features were built. Decisions, e
 - Native clicks in every app state, updating by replacing the app, and a real friend's board test.
 - Anything else recorded as open in the sections above stays open until an entry here says otherwise.
 
-## Deeper dive (owner decisions, 4 Nov 2026; not built yet)
+## Deeper dive (owner decisions, 4 Nov 2026; built 4 Nov, in main)
 
 **What it is.** An extra, deeper reading of one post, on top of its normal summary. The normal summary stays exactly as in 0.1.4 for every post, long videos included, and runs automatically; nothing is held back for length any more.
 
@@ -1331,7 +1331,7 @@ A UX audit found Settings was arranged by when features were built. Decisions, e
 
 **Replaces.** The 0.1.4 "long videos wait for Read it now" behaviour and its "held" state.
 
-## Local engines need permission; Digest, Ask and Deeper dive follow one rule (owner decisions, 4 Nov 2026; not built yet)
+## Local engines need permission; Digest, Ask and Deeper dive follow one rule (owner decisions, 4 Nov 2026; built 4 Nov, in main)
 
 **Why.** A friend's fresh install found Claude Code and Codex on his Mac and used them for the Digest and Ask without asking.
 

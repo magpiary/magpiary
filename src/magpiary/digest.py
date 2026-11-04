@@ -2,8 +2,9 @@
 
 A digest is made on the Mac at its moment (Sunday 9:00 for the week, the 1st at 9:00 for the previous month): the
 period's saves by pile, older related saves to rediscover, the numbers and a word cloud, all without AI. Then its
-story is written (a headline, themes, the top 3 picks worth acting on, how interests shifted) by Claude Code on the
-owner's plan, or after a day by the API key; Private mode writes none. A Mac notification says a digest is ready
+story is written (a headline, themes, the top 3 picks worth acting on, how interests shifted) by the engine chosen
+under engines.py's one rule (Claude Code or Codex allowed in AI keys, else a paid key, else a free key only if the owner
+turned the Digest on anyway); it never moves to another engine by itself. Private mode writes none. A Mac notification says a digest is ready
 (clicking it can't open the hub), and the hub shows a dot and a banner until it is opened.
 """
 
@@ -180,8 +181,8 @@ def weekly_due(store, now: datetime | None = None, key_source=None, alert=notify
 
 # ---- the written story (digest v2, owner's decisions 24 Oct 2026) -------------------------------------------
 # "Wrapped for your saves": a headline with highlighted words, themes with an emoji, the top 3 picks worth acting
-# on, and how interests shifted, in one voice (playful editorial; four tones were tried first). Written by Claude
-# Code on the owner's Claude plan; after a day without it, by the API key.
+# on, and how interests shifted, in one voice (playful editorial; four tones were tried first). Written by the engine
+# engines.choice() picks for the Digest; a failed try is retried with the same one, never quietly handed to another.
 
 VOICE = "playful editorial"  # the owner's pick after the trial (25 Oct): playful and editorial in one
 WORDS_PER_SAVE = 300  # the opening of what was said goes with each save's summary

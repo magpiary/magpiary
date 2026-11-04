@@ -17,3 +17,12 @@ def config_dir() -> Path:
 def db_path() -> Path:
     return data_dir() / "magpiary.db"
 
+
+def load_json(path: Path, default=None):
+    """A JSON file of the library, or `default` when it is missing or broken (one reader for every module; not cached)."""
+    import json
+
+    try:
+        return json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return default

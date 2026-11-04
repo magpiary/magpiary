@@ -19,6 +19,7 @@ from magpiary.links import host_of as links_host
 from magpiary.queuepage import REASONS, when
 from magpiary.store import TRASH_DAYS
 from magpiary.web import Response, e
+from magpiary.config import load_json as _read_json  # noqa: E402  (one reader for the library's JSON files)
 
 VIDEO = (".mp4", ".webm", ".mov")
 AI_REASONS = {"busy": "the AI was too busy or slow; trying again later", "no_key": "no AI key yet",
@@ -28,11 +29,6 @@ AI_REASONS = {"busy": "the AI was too busy or slow; trying again later", "no_key
 SHORT_CAPTION = 140  # shorter captions are shown large; longer ones fold
 
 
-def _read_json(path: Path):
-    try:
-        return json.loads(path.read_text())
-    except (OSError, ValueError):
-        return None
 
 
 def _short(n: int) -> str:

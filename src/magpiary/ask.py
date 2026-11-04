@@ -13,6 +13,7 @@ from pathlib import Path
 
 from magpiary.brain import BrainFailed
 from magpiary.providers import _strip_fences, write_text
+from magpiary.config import load_json as _read  # noqa: E402  (one reader for the library's JSON files)
 
 PER_POST = 2600        # characters of one post sent to the AI
 SAID = 1300            # of those, the spoken words
@@ -31,11 +32,6 @@ def _clock(seconds: float) -> str:
     return f"{int(seconds) // 60}:{int(seconds) % 60:02d}"
 
 
-def _read(path: Path):
-    try:
-        return json.loads(path.read_text())
-    except (OSError, ValueError):
-        return None
 
 
 def post_text(item: dict, question: str, number: int, limit: int = PER_POST) -> str:

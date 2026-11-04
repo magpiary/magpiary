@@ -1,8 +1,9 @@
 """Deeper dive: an extra, deeper reading of one post, on top of its normal summary (owner decisions 4 Nov 2026, see
 docs/specs.md "Deeper dive"). The normal summary never depends on it.
 
-Off by default (Settings > AI & digest > Advanced). Nothing here runs until the owner presses Deeper dive on a post, and
-it runs once per post. A long video is read in full, in sections (the creator's chapters, else about 15 minutes each):
+On or off by engines.py's one rule (on by itself with Claude Code or Codex allowed, or a paid key; never on a free key),
+switched in Settings > AI & digest > Summaries. Nothing here runs until the owner presses Deeper dive on a post, and it
+runs once per post. A long video is read in full, in sections (the creator's chapters, else about 15 minutes each):
 each section is summarised, then the whole. Its words come from the creator's own uploaded subtitles when there are
 some (never YouTube's automatic ones), else the transcript Whisper made on this Mac. Every post also gets more frames,
 all its pictures, its comments, the pages it links to and the links in the creator's bio.
@@ -23,6 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 from magpiary.brain import BrainFailed, _clock
+from magpiary.config import load_json as _read  # noqa: E402  (one reader for the library's JSON files)
 
 MODEL, EFFORT = "deep_model", "deep_effort"
 EFFORTS = {"low": "Low", "medium": "Medium", "high": "High"}
@@ -182,11 +184,6 @@ def engine(store, keys=None) -> dict:
 
 # ---- what it will read ------------------------------------------------------------------------
 
-def _read(path: Path, default=None):
-    try:
-        return json.loads(path.read_text())
-    except (OSError, ValueError):
-        return default
 
 
 def sections_for(meta: dict, duration: float | None) -> list[dict]:
