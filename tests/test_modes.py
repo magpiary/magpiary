@@ -116,3 +116,17 @@ def test_a_failed_transcript_is_not_marked_done_and_is_tried_again_the_next_day(
     store._db.execute("UPDATE items SET senses_status='failed:2000-01-01' WHERE canonical_url=?", (url,))
     run()
     assert len(tries) == 2
+
+
+def test_a_transcript_whisper_could_not_make_is_failed_not_done(store, tmp_path):
+    """Review 2, 4 Nov 2026: senses() catches Whisper's failure and returns it as a problem; that is a failure too."""
+    from magpiary.worker import brain_due
+
+    url = "https://www.instagram.com/reel/MODE4/"
+    folder = tmp_path / "w"
+    folder.mkdir()
+    store.add_link(url)
+    store.fetch_succeeded(url, str(folder))
+    brain_due(store, tmp_path, pause=lambda t: None, process=lambda i, k, p: None,
+              prepare=lambda item, progress: ([], [], "whisper exited 1"), key_source=Keys([]))
+    assert store.get_item(url)["senses_status"].startswith("failed:")

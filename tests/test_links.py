@@ -435,3 +435,16 @@ def test_web_search_only_takes_the_things_own_site():
            {"url": "https://www.lennysnewsletter.com/p/x", "title": "Notion and Figma"}]
     assert from_search(Target("Figma", "tool", "central", "design tool"), lambda q: ads,
                        lambda *a, **k: (200, "text/html", b"<title>Figma</title>"), set()) is None
+
+
+def test_a_failed_or_empty_search_keeps_the_links_already_found(store, monkeypatch):
+    """Review 2, 4 Nov 2026: "Find more links" offline wiped the links and marked the job done."""
+    from magpiary import worker
+
+    store.save_found_links(store.url, [Found("Cursor", "tools", "https://cursor.com", "Cursor", "Wikidata", 6)])
+    for broken in (lambda *a, **k: (_ for _ in ()).throw(OSError("offline")), lambda *a, **k: []):
+        store.find_links_again(store.id_for(store.url))
+        monkeypatch.setattr(worker, "find_links", broken, raising=False)
+        monkeypatch.setattr("magpiary.links.find_links", broken)
+        links_due(store, get=pages({}), pause=lambda s: None)
+        assert [l["url"] for l in store.links_for(store.url)] == ["https://cursor.com"]

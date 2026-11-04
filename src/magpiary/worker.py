@@ -163,12 +163,17 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
                 continue
             progress = activity.begin("process", item) if activity else NO_PROGRESS
             try:
-                prepare(item, progress)
+                got = prepare(item, progress)
             except Exception as err:  # a broken file must not stop the others; it is tried again tomorrow
                 log(f"transcript failed: {type(err).__name__}")
                 store.senses_failed(url)
             else:
-                store.senses_done(url, transcript_text(Path(item["archive_dir"])))
+                problem = got[2] if isinstance(got, tuple) and len(got) == 3 else ""
+                if problem:  # senses() caught Whisper's failure and said so: not done, tried again tomorrow
+                    log("transcript failed: " + problem[:80])
+                    store.senses_failed(url)
+                else:
+                    store.senses_done(url, transcript_text(Path(item["archive_dir"])))
             finally:
                 if activity:
                     activity.end("process")
@@ -376,13 +381,17 @@ def links_due(store: Store, activity=None, get=None, pause: Callable[[str], None
                                get=get, search=search, skip=store.removed_links(item["canonical_url"]),
                                author=meta.get("author") or "", pause=pause,
                                videos=youtube_search() if record.get("list_items") else None)
-        except Exception as err:  # one bad page must not stop the rest
+        except Exception as err:  # one bad page must not stop the rest; the links already found stay
             log(f"link search failed: {type(err).__name__}")
-            found = []
+            found = None
         finally:
             if activity:
                 activity.end("process")
-        store.save_found_links(item["canonical_url"], found)
+        had = [l for l in store.links_for(item["canonical_url"]) if l.get("origin") == "auto" and not l.get("removed")]
+        if found is None or (not found and had):  # failed, or nothing at all (offline?): keep what was there
+            store.save_found_links(item["canonical_url"], [], status="done", keep=True)
+        else:
+            store.save_found_links(item["canonical_url"], found)
         done += 1
     return done
 

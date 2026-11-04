@@ -92,7 +92,8 @@ def carousel_senses(folder: Path, meta: dict, videos: list[Path], transcriber, f
             if progress.activity:
                 progress.percent((n + 1) / len(videos) * 100)
         saved = {"engine": engine or "none (no sound)", "slides": len(videos), "segments": segments}
-        (folder / "transcript.json").write_text(json.dumps(saved, ensure_ascii=False))
+        if not problems:  # a slide that failed is not marked as read: the whole carousel is listened to again next time
+            (folder / "transcript.json").write_text(json.dumps(saved, ensure_ascii=False))
     frames = _load(folder / "frames.json", None)
     if frames is None or not all("slide" in f for f in frames):
         progress.step("frames")

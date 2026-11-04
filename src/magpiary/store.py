@@ -263,11 +263,17 @@ class Store(ChatStore, StatsStore):
         self._db.execute("UPDATE items SET ai_type = CASE WHEN lower(COALESCE(ai_title, '') || ' ' || COALESCE(suggested_tags, '')) "
                          "LIKE '%design%' THEN 'design' ELSE 'other' END WHERE ai_type IN ('media', 'entertainment')")
         found = [r["name"] for r in self._db.execute("PRAGMA table_info(search)")]
-        if found != ["url", *SEARCH_COLUMNS]:  # new searchable fields: rebuild the index
-            self._db.execute("DROP TABLE IF EXISTS search")
-            self._db.execute(SEARCH_SCHEMA)
-            for row in self._db.execute("SELECT canonical_url FROM items").fetchall():
-                self._reindex(row[0])
+        if found != ["url", *SEARCH_COLUMNS]:  # new searchable fields: rebuild the index, all or nothing (a kill midway
+            self._db.execute("BEGIN IMMEDIATE")  # used to leave a new, half-filled index that was never refilled)
+            try:
+                self._db.execute("DROP TABLE IF EXISTS search")
+                self._db.execute(SEARCH_SCHEMA)
+                for row in self._db.execute("SELECT canonical_url FROM items").fetchall():
+                    self._reindex(row[0])
+                self._db.execute("COMMIT")
+            except BaseException:
+                self._db.execute("ROLLBACK")
+                raise
 
     def close(self) -> None:
         self._db.close()
@@ -287,13 +293,14 @@ class Store(ChatStore, StatsStore):
                 raise ValueError("That file is not a Magpiary backup.") from err
             if not sound or not {"items", "settings", "phones"} <= tables:
                 raise ValueError("That file is not a sound Magpiary backup.")
-            self.backup_to(safety_copy)
+            # One hold of the lock from the safety copy to the end: a save that arrives meanwhile waits, so it is never
+            # acknowledged and then lost between the two (review 4 Nov 2026).
             with self._lock:
+                self.backup_to(safety_copy)
                 backup.backup(self._db)
+                self._prepare()  # a backup from an older version gets the newer tables and columns
         finally:
             backup.close()
-        with self._lock:
-            self._prepare()  # a backup from an older version gets the newer tables and columns
 
     def _migrate_item_ids(self) -> None:
         """Keep legacy rowids, then never reuse one (including ids in retained chats and digests)."""
@@ -1790,9 +1797,14 @@ class Store(ChatStore, StatsStore):
                 "(links_status IS NULL OR links_force=1) ORDER BY links_force DESC, created_at DESC").fetchall()
         return [dict(r) for r in rows]
 
-    def save_found_links(self, url: str, found: list, status: str = "done") -> None:
-        """Replace the automatic links (the owner's own links and removals stay)."""
+    def save_found_links(self, url: str, found: list, status: str = "done", keep: bool = False) -> None:
+        """Replace the automatic links (the owner's own links and removals stay). `keep`: the search failed, so the links
+        already found stay as they are and only the job is closed."""
         now = self._stamp()
+        if keep:
+            with self._lock:
+                self._db.execute("UPDATE items SET links_status=?, links_force=0 WHERE canonical_url=?", (status, url))
+            return
         with self._lock:
             removed = {r[0] for r in self._db.execute(
                 "SELECT url FROM links WHERE canonical_url=? AND removed=1", (url,)).fetchall()}
