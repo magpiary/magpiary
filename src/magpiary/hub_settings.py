@@ -716,9 +716,10 @@ class SettingsPages:
                      "<li>Press <b>Load unpacked</b> and choose the folder that opens: <code>Magpiary › chrome-extension</code>.</li>"
                      "<li>Pin Magpiary from the puzzle-piece menu.</li><li>Then press <b>Pair Chrome</b> here and paste the code into the extension.</li></ol>")
             from magpiary.hub_welcome import CHROME_STORE
+            from magpiary.logos import LOGOS
 
             rows += _row("Get the extension", "Free from the Chrome Web Store.",
-                         f'<a class="btn sm" href="{CHROME_STORE}" target="_blank" rel="noopener">Chrome Web Store</a>',
+                         f'<a class="btn sm" href="{CHROME_STORE}" target="_blank" rel="noopener">{LOGOS["chromewebstore"]}Chrome Web Store</a>',
                          lead=ui.icon("ext"), cls="phone2",
                          more=_more(steps + self._form("/hub/extension/get", back, "Show the folder", "btn sm"), "Or add it by hand"))
             rows += _row("Chrome", "Save the page you're on, or one post from a feed, straight to this Mac.",

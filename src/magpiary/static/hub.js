@@ -3133,7 +3133,8 @@
       const open = () => { list.hidden = false; btn.setAttribute("aria-expanded", "true"); mark(cur); list.focus(); };
       const close = (back) => { list.hidden = true; btn.setAttribute("aria-expanded", "false"); list.removeAttribute("aria-activedescendant"); if (back) btn.focus(); };
       const pick = (i) => {
-        input.value = opts[i].dataset.v; btn.firstElementChild.textContent = $("b", opts[i]).textContent;
+        input.value = opts[i].dataset.v;
+        btn.firstElementChild.replaceChildren(...[$(".plogo", opts[i])?.cloneNode(true), Object.assign(document.createElement("span"), { textContent: $("b", opts[i]).textContent })].filter(Boolean));
         opts.forEach((o) => o.setAttribute("aria-selected", String(o === opts[i])));
         $$(".guide2").forEach((g) => { g.hidden = g.dataset.provider !== input.value; });
         close(true);

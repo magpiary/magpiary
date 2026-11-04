@@ -81,3 +81,15 @@ def test_hello_and_first_save_show_one_simple_post_card(mac):
     mac.store.add_link("https://example.com/a-page")
     saved = page(mac, "/welcome/share")[2]
     assert 'class="wtile"' in saved and " · saved " in saved and "big-tile" not in saved  # the tests run on their own clock
+
+
+def test_the_key_picker_and_the_store_buttons_show_their_logos(mac):
+    from test_hub import page, post
+    from magpiary.logos import LOGOS
+
+    post(mac, "/hub/settings/mode", mode="smart", next="/welcome/reading")
+    reading = page(mac, "/welcome/reading")[2]
+    for provider in ("gemini", "openrouter", "claude", "openai"):
+        assert f'id="opt-{provider}"' in reading and LOGOS[provider] in reading
+    assert LOGOS["chromewebstore"] in page(mac, "/welcome/browser")[2]
+    assert all("<script" not in svg and "href" not in svg for svg in LOGOS.values())

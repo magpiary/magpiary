@@ -4117,11 +4117,11 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .wel .pop .ok { color: #0b8a50; font-weight: 700; }
 .wel .pg { padding: 16px 18px; }
 .wel .pg i { display: block; height: 9px; border-radius: 5px; background: #e7e7ea; margin-bottom: 8px; }
-.wel .wphone { width: min(230px, 70%); margin: 0 auto; border-radius: 34px; background: #111; padding: 10px; box-shadow: 0 18px 40px rgba(0, 0, 0, .3); }
-.wel .wphone .wscr { border-radius: 26px; background: #f2f2f7; color: #222; padding: 14px 12px 18px; min-height: 250px; display: grid; align-content: end; }
-.wel .wphone .wshr { background: #fff; border-radius: 18px; padding: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 9.5px; text-align: center; }
-.wel .wphone .wshr span { display: grid; gap: 4px; justify-items: center; }
-.wel .wphone .wshr i { width: 34px; height: 34px; border-radius: 9px; background: #ccc; display: block; }
+.wel .wphone { width: min(220px, 62%); aspect-ratio: 9 / 19; margin: 0 auto; border-radius: 36px; background: #111; padding: 9px; box-shadow: 0 18px 40px rgba(0, 0, 0, .3); display: flex; }
+.wel .wphone .wscr { flex: 1; min-width: 0; border-radius: 28px; background: #f2f2f7; color: #222; padding: 0 8px 10px; display: grid; align-content: end; overflow: hidden; }
+.wel .wphone .wshr { background: #fff; border-radius: 18px; padding: 10px 6px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; font-size: 9px; line-height: 1.2; text-align: center; }
+.wel .wphone .wshr span { display: grid; gap: 4px; justify-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wel .wphone .wshr i { width: min(32px, 100%); aspect-ratio: 1; border-radius: 22%; background: #ccc; display: block; }
 .wel .wphone .wshr .mg i { background: linear-gradient(160deg, #ff2e93, #2f6bff); }
 .wel .ways { display: grid; gap: 10px; margin-bottom: 14px; }
 .wel .way { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--chip); }
@@ -4143,6 +4143,11 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .wel .dd-list li b { display: block; font: 700 15px var(--display); }
 .wel .dd-list li small { display: block; font-size: 12.5px; color: var(--fg-3); }
 .wel .dd-list li i { font-style: normal; font-weight: 800; color: var(--ok); visibility: hidden; }
+.wel .opt { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.wel .dd-btn .opt { gap: 10px; font-weight: 600; }
+.plogo { flex: none; width: 22px; height: 22px; }
+.wel .dd-btn .plogo { width: 20px; height: 20px; }
+.btn .plogo { width: 18px; height: 18px; }
 .wel .dd-list li[aria-selected="true"] i { visibility: visible; }
 .wel .dd-list li.act { background: var(--chip); }
 .wel .helpbtn { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-weight: 700; font-size: 14px; color: var(--fg-2); padding: 4px 0; background: none; border: 0; cursor: pointer; font-family: inherit; }

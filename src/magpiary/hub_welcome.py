@@ -15,6 +15,7 @@ import json
 
 from magpiary import keys as keyring
 from magpiary import modes, ui
+from magpiary.logos import LOGOS
 from magpiary.web import Response, e
 
 DONE_SETTING = "setup_done"
@@ -138,12 +139,13 @@ class WelcomePages:
             have = "".join(f'<div class="key" style="background:var(--bg)"><span class="ord">✓</span><div><b>{e(k.name)}</b>'
                            f'<small>{e(keyring.PROVIDERS[k.provider]["name"].split(" (")[0])}</small></div></div>' for k in keys)
             first = next(iter(ai))
-            options = "".join(f'<li role="option" id="opt-{p}" data-v="{p}" aria-selected="{str(p == first).lower()}"><span>'
-                              f'<b>{e(v["name"].split(" (")[0])}</b><small>{e(self.GUIDE_CHIP.get(p, ""))}</small></span>'
+            options = "".join(f'<li role="option" id="opt-{p}" data-v="{p}" aria-selected="{str(p == first).lower()}">'
+                              f'<span class="opt">{LOGOS.get(p, "")}<span><b>{e(v["name"].split(" (")[0])}</b>'
+                              f'<small>{e(self.GUIDE_CHIP.get(p, ""))}</small></span></span>'
                               f'<i aria-hidden="true">✓</i></li>' for p, v in ai.items())
             picker = (f'<div class="dd" id="prov"><input type="hidden" name="provider" value="{first}">'
                       f'<button type="button" class="dd-btn" id="provbtn" role="combobox" aria-haspopup="listbox" aria-expanded="false" '
-                      f'aria-controls="provlist" aria-label="Provider"><span>{e(ai[first]["name"])}</span>{ui.icon("chev")}</button>'
+                      f'aria-controls="provlist" aria-label="Provider"><span class="opt">{LOGOS.get(first, "")}<span>{e(ai[first]["name"])}</span></span>{ui.icon("chev")}</button>'
                       f'<ul class="dd-list" id="provlist" role="listbox" aria-label="Provider" tabindex="-1" hidden>{options}</ul></div>')
             guides = self._key_guides(ai)
             side = (f'<div class="keybox"><h3>{"Your AI keys" if keys else "Paste your AI key"}</h3>{have}'
@@ -175,7 +177,7 @@ class WelcomePages:
         back = {"next": "/welcome/browser"}
         hand = (f'<small>Free from the Chrome Web Store. Press <b>Add to Chrome</b> there, then come back here.</small>'
                 f'<div style="margin-top:8px"><a class="btn sm dark" href="{CHROME_STORE}" target="_blank" rel="noopener">'
-                f'{ui.icon("ext")}Get it from the Chrome Web Store</a></div>'
+                f'{LOGOS["chromewebstore"]}Get it from the Chrome Web Store</a></div>'
                 '<details class="handadd"><summary>Or add it by hand</summary>'
                 '<ol class="mini"><li><span>a</span><div>Open Chrome\'s extensions page. Copy the address, paste it into Chrome\'s '
                 'address bar and press Enter.<div class="inl"><code>chrome://extensions</code><button type="button" class="btn sm" '
