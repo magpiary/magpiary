@@ -192,13 +192,15 @@ final class Shell: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// True if the launchd agent already points at this copy of the program (moving the app needs the agent rewritten).
+    /// True if the launchd agent already starts this copy of the program through this app's launcher (Contents/MacOS/magpiary-hub,
+    /// so macOS prompts name Magpiary). Moving the app, or an agent from before the launcher, needs the agent rewritten.
     func serviceIsCurrent() -> Bool {
         let plist = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents/org.magpiary.receiver.plist")
         guard let data = try? Data(contentsOf: plist),
               let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-              let args = dict["ProgramArguments"] as? [String], let first = args.first else { return false }
-        return first == program.path
+              let args = dict["ProgramArguments"] as? [String], args.count >= 2 else { return false }
+        let launcher = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/magpiary-hub").path
+        return args[0] == launcher && args[1] == program.path
     }
 
     @discardableResult

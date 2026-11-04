@@ -59,6 +59,8 @@ if grep -rlaF "$HOME/" "$APP"; then echo "The app still contains this Mac's home
 
 echo "== Native shell (Swift)"
 swiftc -O -target "$ARCH-apple-macos12.0" -o "$APP/Contents/MacOS/Magpiary" "$HERE"/main.swift "$HERE"/InstallerWindow.swift "$HERE"/Panel.swift -framework AppKit -framework WebKit
+# The hub's launcher: launchd starts it and it runs the hub, so macOS permission prompts name Magpiary, not Python.
+clang -O2 -target "$ARCH-apple-macos12.0" -o "$APP/Contents/MacOS/magpiary-hub" "$ROOT/src/magpiary/helper/hub.c"
 
 cp -R "$HERE/installer" "$RES/installer"
 cp -R "$HERE/panel" "$RES/panel"

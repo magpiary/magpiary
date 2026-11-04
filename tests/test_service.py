@@ -103,3 +103,44 @@ def test_a_busy_launchd_is_tried_again(home, program):
     launchd = FakeLaunchd(busy_bootstraps=2)
     assert "installed" in service.install(program, 8765, launchd, env={}, wait=lambda s: None)
     assert [c[1] for c in launchd.calls].count("bootstrap") == 3
+
+
+def test_the_service_starts_the_hub_through_the_magpiary_launcher(home, program):
+    helper = home / "config" / "Magpiary.app" / "Contents" / "MacOS" / "magpiary-hub"
+    service.install(program, 8765, FakeLaunchd(), env={}, wait=lambda s: None, helper=helper)
+    args = plistlib.loads(service.plist_path().read_bytes())["ProgramArguments"]
+    assert args == [str(helper), str(program), "serve", "--port", "8765"]
+
+
+def test_the_dmg_app_uses_its_own_launcher(tmp_path):
+    exe = tmp_path / "Magpiary.app" / "Contents" / "MacOS" / "magpiary-hub"
+    program = tmp_path / "Magpiary.app" / "Contents" / "Resources" / "python" / "bin" / "magpiary"
+    program.parent.mkdir(parents=True)
+    assert service.bundled_helper(program) is None
+    exe.parent.mkdir(parents=True)
+    exe.write_text("")
+    assert service.bundled_helper(program) == exe
+    assert service.bundled_helper(tmp_path / "bin" / "magpiary") is None
+
+
+def test_no_command_line_tools_means_no_launcher_and_no_apple_pop_up():
+    asked = []
+
+    def run(command):
+        asked.append(command[0])
+        return subprocess.CompletedProcess(command, 2, "", "no developer tools")
+    assert service.build_helper(run) is None
+    assert asked == ["xcode-select"]   # nothing that would open Apple's "install the tools" window
+
+
+def test_the_launcher_is_built_once_named_magpiary_and_passes_the_exit_status_on():
+    if subprocess.run(["xcode-select", "-p"], capture_output=True).returncode != 0:
+        pytest.skip("Apple's command line tools are not installed")
+    exe = service.build_helper()
+    assert exe and exe.is_file()
+    info = plistlib.loads((exe.parents[1] / "Info.plist").read_bytes())
+    assert info["CFBundleName"] == info["CFBundleDisplayName"] == "Magpiary" and info["LSBackgroundOnly"] is True
+    assert (exe.parents[1] / "Resources" / "Magpiary.icns").stat().st_size > 1000
+    assert subprocess.run([str(exe), "/bin/sh", "-c", "exit 3"]).returncode == 3
+    built = exe.stat().st_mtime_ns
+    assert service.build_helper() == exe and exe.stat().st_mtime_ns == built   # unchanged source: not rebuilt

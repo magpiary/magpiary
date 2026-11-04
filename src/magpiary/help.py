@@ -468,8 +468,25 @@ TOPICS = {
                 "Open Settings → Privacy → Hub lock and choose a 6-digit PIN.",
                 "Open tabs cover themselves when the Mac sleeps or locks, after your idle time, or when you press Lock.",
                 "Optional: add Touch ID in each browser you use, on the same localhost address Magpiary opens at."]),
+            ("macOS permission prompts", "Every one Magpiary can cause, and why. Each is asked once.", [
+                "“Magpiary would like to access data from other apps” or “manage apps”: the first time you press Download PDF, "
+                "or Magpiary reads a page that needs a browser to draw it. It runs Chrome (or Chromium, Edge, Brave) in the "
+                "background with an empty profile; it never opens your own Chrome profile. Allow it, or PDFs fall back to "
+                "your browser's Save as PDF.",
+                "“Accept incoming network connections?”: only when the macOS firewall is on. Allow it so your iPhone can "
+                "send saves over Wi-Fi.",
+                "Notifications from “Script Editor”: the note that a new digest is ready. macOS names the tool Magpiary uses "
+                "to show it; turning it off only hides the note.",
+                "Terminal using other apps' data, and “Chrome Safe Storage”: only when you run magpiary login connect, to "
+                "copy one site's login.",
+                "The prompts say Magpiary with its icon. On a Mac without Apple's command line tools they say Python 3.12 "
+                "instead; it is the same request. Change your answer any time in System Settings → Privacy & Security."]),
         ],
         "faqs": [
+            ("Why did a prompt say Python 3.12?",
+             "Magpiary is written in Python. Since 0.1.5 it runs inside a small Magpiary launcher so prompts name Magpiary; "
+             "if Apple's command line tools are missing it runs without it and macOS names Python. What you allowed for "
+             "Python 3.12 is asked once more for Magpiary."),
             ("I forgot my PIN.",
              "Run magpiary lock reset in Terminal. It turns the lock off and forgets the PIN and every Touch ID; your library "
              "and boards are untouched."),
