@@ -613,3 +613,30 @@ def test_a_member_leaves_and_their_cards_stay(macs):
     boards.sync(a, board_id, nostr)
     v = boards.view(a, board_id)
     assert [c["url"] for c in v["cards"]] == [REEL1] and len(boards.people(v)) == 1
+
+
+def test_two_boards_made_at_once_both_keep_their_keys(tmp_path, monkeypatch):
+    """Review 4 Nov 2026: two read-change-writes of boards.json at once lost one board's key."""
+    import threading
+
+    from magpiary import boards
+
+    monkeypatch.setattr(boards, "config_dir", lambda: tmp_path)
+    real = boards._keys
+    both_read = threading.Barrier(2, timeout=2)
+
+    def slow_keys():
+        keys = real()
+        try:
+            both_read.wait()  # without the lock, both threads read the same old file here
+        except threading.BrokenBarrierError:
+            pass
+        return keys
+    monkeypatch.setattr(boards, "_keys", slow_keys)
+    threads = [threading.Thread(target=boards.remember_key, args=(f"board{n}", bytes([n]) * 32)) for n in (1, 2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    monkeypatch.setattr(boards, "_keys", real)
+    assert set(boards._keys()) == {"board1", "board2"}

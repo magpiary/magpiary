@@ -268,3 +268,17 @@ def test_a_central_source_with_no_paper_is_looked_for_as_code():
         assert links.resolve(links.Target("Some Paper", "source", "passing"), missing, set(), [], None, lambda s: None) == []
     finally:
         links.crossref, links.github_search = orig_cross, orig_search
+
+
+def test_a_queued_deeper_dive_waits_in_private_mode(tmp_path):
+    """Review 4 Nov 2026: a dive queued before switching to Private must not send anything."""
+    from magpiary import modes
+    from magpiary.worker import deep_due
+
+    store = Store(tmp_path / "m.db")
+    url, folder = saved(store, tmp_path, meta={"source": "instagram", "duration": 30})
+    store.queue_deep(store.id_for(url))
+    store.set_setting(modes.SETTING, "private")
+    asked = []
+    assert deep_due(store, tmp_path / "notes", asker=lambda *a: asked.append(a) or "{}") == 0
+    assert asked == [] and store.item_by_id(store.id_for(url))["deep_status"] == "queued"

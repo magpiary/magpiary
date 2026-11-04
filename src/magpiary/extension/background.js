@@ -40,27 +40,59 @@ async function hub(path, { method = "GET", body, key, timeout = 0, port } = {}) 
   return { status: r.status, json };
 }
 
-/** Send everything waiting. The outbox is cleared only for items the Mac acknowledged. */
-async function flush() {
-  const { key, outbox = [] } = await store.get(["key", "outbox"]);
-  if (!key) return { state: "unpaired" };
-  if (!outbox.length) return { state: "ok", waiting: 0 };
-  let reply;
-  try {
-    reply = await hub("/v1/items", { method: "POST", body: { items: outbox }, key });
-  } catch (_) {
-    await chrome.alarms.create(RETRY_ALARM, { delayInMinutes: 1 });
-    return { state: "offline", waiting: outbox.length };
+// One change to the outbox at a time: a save made while a send is in flight must not be overwritten by that send's old copy.
+let outboxLock = Promise.resolve();
+function withOutbox(fn) {
+  const run = outboxLock.then(fn, fn);
+  outboxLock = run.catch(() => {});
+  return run;
+}
+const BATCH = 200;              // the Mac takes at most 1,000 items and 1 MB a request: send in slices so a long queue still drains
+const BATCH_BYTES = 512 * 1024;
+
+function slice(outbox) {
+  const out = [];
+  let bytes = 0;
+  for (const item of outbox) {
+    const size = JSON.stringify(item).length + 1;
+    if (out.length && (out.length >= BATCH || bytes + size > BATCH_BYTES)) break;
+    out.push(item);
+    bytes += size;
   }
-  if (reply.status === 401) return { state: "revoked", waiting: outbox.length };
-  if (reply.status === 200 && reply.json && reply.json.ack === ACK) {
-    const done = new Set([...(reply.json.accepted || []), ...(reply.json.rejected || []).map((r) => r.id)]);
-    const left = outbox.filter((i) => !done.has(i.id));
-    await store.set({ outbox: left });
-    return { state: "ok", waiting: left.length, results: reply.json.results || [], message: reply.json.message };
-  }
-  await chrome.alarms.create(RETRY_ALARM, { delayInMinutes: 1 });
-  return { state: "offline", waiting: outbox.length };
+  return out;
+}
+
+/** Send everything waiting, a slice at a time. The outbox is cleared only for items the Mac acknowledged. */
+function flush() {
+  return withOutbox(async () => {
+    const { key } = await store.get(["key"]);
+    if (!key) return { state: "unpaired" };
+    let results = [], message;
+    for (;;) {
+      const { outbox = [] } = await store.get(["outbox"]);
+      if (!outbox.length) return { state: "ok", waiting: 0, results, message };
+      const batch = slice(outbox);
+      let reply;
+      try {
+        reply = await hub("/v1/items", { method: "POST", body: { items: batch }, key });
+      } catch (_) {
+        await chrome.alarms.create(RETRY_ALARM, { delayInMinutes: 1 });
+        return { state: "offline", waiting: outbox.length, results };
+      }
+      if (reply.status === 401) return { state: "revoked", waiting: outbox.length, results };
+      if (!(reply.status === 200 && reply.json && reply.json.ack === ACK)) {
+        await chrome.alarms.create(RETRY_ALARM, { delayInMinutes: 1 });
+        return { state: "offline", waiting: outbox.length, results };
+      }
+      const done = new Set([...(reply.json.accepted || []), ...(reply.json.rejected || []).map((r) => r.id)]);
+      const latest = (await store.get(["outbox"])).outbox || [];   // read again: a save may have arrived meanwhile
+      const left = latest.filter((i) => !done.has(i.id));
+      await store.set({ outbox: left });
+      results = results.concat(reply.json.results || []);
+      message = reply.json.message || message;
+      if (!batch.some((i) => done.has(i.id))) return { state: "ok", waiting: left.length, results, message };  // no progress: stop
+    }
+  });
 }
 
 async function save({ url, note = "", board = "" }) {
@@ -70,8 +102,10 @@ async function save({ url, note = "", board = "" }) {
   if (cleaned.error) return { state: "unsupported", error: cleaned.error };
   const item = { id: itemId(), url: cleaned.url, shared_at: localStamp(), note: String(note).slice(0, 2000), v: 1 };
   if (/^[0-9a-f]{16}$/.test(board)) item.board = board;
-  const { outbox = [] } = await store.get(["outbox"]);
-  await store.set({ outbox: [...outbox, item] });
+  await withOutbox(async () => {
+    const { outbox = [] } = await store.get(["outbox"]);
+    await store.set({ outbox: [...outbox, item] });
+  });
   const sent = await flush();
   const mine = (sent.results || []).find((r) => r.id === item.id);
   return { ...sent, url: cleaned.url, source: cleaned.source, savedCount: mine ? mine.saved_count : undefined };

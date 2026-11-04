@@ -50,13 +50,22 @@ def _keys() -> dict:
 
 
 def _save_keys(keys: dict) -> None:
+    """Written whole to a private temporary file, then swapped in: a crash never leaves half a file of keys."""
     path = _keys_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.parent.chmod(0o700)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w") as f:
-        json.dump(keys, f)
-    path.chmod(0o600)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".boards-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(keys, f)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
+_KEYS_LOCK = threading.RLock()  # every read-change-write of boards.json holds it: two boards made at once keep both keys
 
 
 def board_key(board_id: str) -> bytes:
@@ -71,18 +80,20 @@ def board_keys(board_id: str) -> list[bytes]:
 
 
 def remember_key(board_id: str, key: bytes, bucket: dict | None = None) -> None:
-    keys = _keys()
-    entry = keys.get(board_id, {})
-    old = [k for k in [entry.get("key"), *entry.get("old", [])] if k and k != key.hex()]
-    keys[board_id] = {"key": key.hex(), "old": old, **({"bucket": bucket} if bucket else
-                                                       {"bucket": entry["bucket"]} if entry.get("bucket") else {})}
-    _save_keys(keys)
+    with _KEYS_LOCK:
+        keys = _keys()
+        entry = keys.get(board_id, {})
+        old = [k for k in [entry.get("key"), *entry.get("old", [])] if k and k != key.hex()]
+        keys[board_id] = {"key": key.hex(), "old": old, **({"bucket": bucket} if bucket else
+                                                           {"bucket": entry["bucket"]} if entry.get("bucket") else {})}
+        _save_keys(keys)
 
 
 def forget_key(board_id: str) -> None:
-    keys = _keys()
-    if keys.pop(board_id, None) is not None:
-        _save_keys(keys)
+    with _KEYS_LOCK:
+        keys = _keys()
+        if keys.pop(board_id, None) is not None:
+            _save_keys(keys)
 
 
 # ---- writing this Mac's events ---------------------------------------------------------------------------
@@ -421,10 +432,11 @@ def _board_code(store, board_id: str, call=None, relay_connect=None, renew: bool
     store.save_invite(data["i"], board_id, data["x"], key_id)
     store.update_invite(data["i"], state="shared")
     store.save_relay_note(note, "code")
-    keys = _keys()
-    keys.setdefault(board_id, {})["code"] = {"code": code, "expires": data["x"], "invite": data["i"], "key_tag": current,
-                                             "note": note, "tag": tag}
-    _save_keys(keys)
+    with _KEYS_LOCK:
+        keys = _keys()
+        keys.setdefault(board_id, {})["code"] = {"code": code, "expires": data["x"], "invite": data["i"], "key_tag": current,
+                                                 "note": note, "tag": tag}
+        _save_keys(keys)
     return {"code": code, "expires": data["x"]}
 
 
@@ -456,9 +468,10 @@ def clean_relays(store, relay_connect=None, now=None) -> int:
 def retire_code(store, board_id: str) -> None:
     """The board's code stops being offered here; its sealed invite runs out on its own date. Its bucket key stays
     until a week after that, while the members who joined with it get keys of their own."""
-    keys = _keys()
-    if keys.get(board_id, {}).pop("code", None) is not None:
-        _save_keys(keys)
+    with _KEYS_LOCK:
+        keys = _keys()
+        if keys.get(board_id, {}).pop("code", None) is not None:
+            _save_keys(keys)
 
 
 def make_invite(store, board_id: str, call=None, relay_connect=None) -> str:

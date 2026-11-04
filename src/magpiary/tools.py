@@ -140,7 +140,10 @@ class YtDlp:
                            "--write-thumbnail", "--convert-thumbnails", "jpg",
                            "-o", str(folder / "media-%(autonumber)02d.%(ext)s"),
                            "-o", "thumbnail:" + str(folder / "thumbnail.%(ext)s"), url], 3600)
-        if result.returncode != 0 and not any(folder.glob("media-*")):
+        for leftover in folder.glob("media-*"):
+            if leftover.suffix in UNFINISHED or ".part-Frag" in leftover.name:
+                leftover.unlink(missing_ok=True)  # a download cut short: never mistaken for the post's media
+        if result.returncode != 0 and not media_files(folder):
             raise YtDlpError(*classify(result.stderr))
 
     def version(self) -> str:
@@ -148,6 +151,14 @@ class YtDlp:
             return self.run([*self._base(), "--version"], 30).stdout.strip()
         except (ToolMissing, OSError, subprocess.SubprocessError):
             return ""
+
+
+UNFINISHED = {".part", ".ytdl", ".temp", ".tmp"}
+
+
+def media_files(folder: Path) -> list[Path]:
+    """The finished media in a download folder (media-01.mp4, ...), never a part file yt-dlp left behind."""
+    return sorted(p for p in folder.glob("media-*") if p.is_file() and p.suffix not in UNFINISHED and ".part-Frag" not in p.name)
 
 
 def stream(command: list[str], timeout: int, on_progress: Callable[[float], None]) -> subprocess.CompletedProcess:

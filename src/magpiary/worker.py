@@ -235,8 +235,13 @@ def deep_due(store: Store, notes_dir: Path, activity=None, log: Callable[[str], 
     from magpiary import deepdive
     from magpiary.brain import BrainFailed
 
+    from magpiary import modes
+
     done = 0
     for item in store.due_for_deep():
+        # Private mode, or Deeper dive turned off after it was queued: nothing goes to any AI; it waits, queued.
+        if modes.current(store) == "private" or (asker is None and not deepdive.enabled(store)):
+            return done
         url = item["canonical_url"]
         store.deep_running(url)
         progress = activity.begin("process", item) if activity else NO_PROGRESS

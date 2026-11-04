@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from magpiary.activity import NO_PROGRESS, Progress
 from magpiary.sources import FetchFailed, Get, Render, chrome_render, describe, http_get
-from magpiary.tools import Run, YtDlp, YtDlpError, default_run, video_seconds
+from magpiary.tools import Run, YtDlp, YtDlpError, default_run, media_files, video_seconds
 
 MAX_IMAGE_BYTES = 25_000_000
 MAX_VIDEO_BYTES = 400_000_000
@@ -121,7 +121,7 @@ def fetch_item(item: dict, library: Path, get: Get = http_get, ytdlp: YtDlp | No
             except YtDlpError as err:
                 if not fetched.images:
                     raise FetchFailed(err.reason, err.detail) from err
-        media = sorted(p.name for p in work.glob("media-*"))
+        media = [p.name for p in media_files(work)]
         media += _save_videos(fetched.videos, work, lambda u: get_video(get, u), len(media) + 1)
         if fetched.videos and not media and not fetched.images:  # the video could not be saved: keep its cover
             fetched.images = [fetched.poster] if fetched.poster else []
