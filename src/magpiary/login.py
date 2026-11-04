@@ -113,19 +113,31 @@ def connected(store, domain: str = DEFAULT) -> str:
     return store.get_setting(_setting(domain), "") if login_path(domain).exists() else ""
 
 
-def cookie_header(domain: str) -> str:
-    """The saved login as a Cookie header for a page fetch ("" when there is none or it has expired)."""
+def cookie_header(domain: str, url: str = "") -> str:
+    """The saved login as a Cookie header for a page fetch ("" when there is none or it has expired). With `url`, only the
+    cookies a browser would send there: matching host (or a subdomain when the cookie allows it), path, and https for a
+    secure one. Two tenants of one host such as a.github.io and b.github.io never get each other's (review 5, 4 Nov 2026)."""
     try:
         path = login_path(domain)
         text = path.read_text()
     except (OSError, ValueError):
         return ""
+    parts = urlsplit(url) if url else None
+    host, where = ((parts.hostname or "").lower(), parts.path or "/") if parts else ("", "/")
     now, pairs = time.time(), []
     for ln in text.splitlines():
+        if ln.startswith("#HttpOnly_"):
+            ln = ln[len("#HttpOnly_"):]
         fields = ln.split("\t")
         if len(fields) == 7 and not ln.startswith("# "):
             expires = fields[4]
             if expires.isdigit() and int(expires) and int(expires) < now:
                 continue
+            if parts:
+                cdomain, subdomains, cpath, secure = fields[0].lower().lstrip("."), fields[1].upper() == "TRUE", fields[2] or "/", fields[3].upper() == "TRUE"
+                if not (host == cdomain or (subdomains and host.endswith("." + cdomain))):
+                    continue
+                if not where.startswith(cpath) or (secure and parts.scheme != "https"):
+                    continue
             pairs.append(f"{fields[5]}={fields[6]}")
     return "; ".join(pairs)

@@ -339,3 +339,32 @@ def test_a_new_database_and_its_side_files_are_private(tmp_path):
         p = tmp_path / name
         if p.exists():
             assert stat.S_IMODE(p.stat().st_mode) == 0o600, name
+
+
+def test_no_page_or_fragment_can_be_framed_by_another_site(mac, tmp_path):
+    """Review 5, 4 Nov 2026: /item/N?frag=1 had working forms and no frame protection (clickjacking)."""
+    from test_hub import IG, archive, page
+
+    item, _ = archive(mac, tmp_path, IG, "instagram", {"text": "A post", "author": "Ada Example", "media": []})
+    for path in ("/", "/settings/ai", f"/item/{item}?frag=1"):
+        headers = {k.lower(): v for k, v in page(mac, path)[1].items()}
+        assert headers.get("x-frame-options") == "DENY", path
+        assert "frame-ancestors 'none'" in headers.get("content-security-policy", ""), path
+
+
+def test_a_backup_and_the_library_folder_are_private(tmp_path):
+    """Review 5, 4 Nov 2026: the .part backup was readable while copying; the library folder was 0755."""
+    import os
+    import stat
+
+    from magpiary.store import Store
+
+    home = tmp_path / "home"
+    old = os.umask(0o022)
+    try:
+        s = Store(home / "magpiary.db")
+        s.backup_to(tmp_path / "b" / "copy.db")
+    finally:
+        os.umask(old)
+    assert stat.S_IMODE(home.stat().st_mode) == 0o700
+    assert stat.S_IMODE((tmp_path / "b" / "copy.db").stat().st_mode) == 0o600 and not (tmp_path / "b" / "copy.part").exists()

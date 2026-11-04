@@ -168,6 +168,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", response.content_type)
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("X-Content-Type-Options", "nosniff")
+        if response.content_type.startswith("text/html"):  # every page and fragment: no other site may frame it (review 5)
+            self.send_header("X-Frame-Options", "DENY")
+            if not any(k.lower() == "content-security-policy" for k in response.headers):
+                self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
         length = response.stream[2] if response.stream else len(response.body)
         self.send_header("Content-Length", str(length))
         for name, value in response.headers.items():

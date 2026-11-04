@@ -204,6 +204,10 @@ class Store(ChatStore, StatsStore):
             return
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
+            try:  # the library folder is the owner's alone: archived posts, notes and backups sit in it (review 5, 4 Nov 2026)
+                Path(path).parent.chmod(0o700)
+            except OSError:
+                pass
             # private from the first byte: SQLite gives the -wal and -shm files the database's own mode (review 4, 4 Nov 2026)
             os.close(os.open(path, os.O_RDWR | os.O_CREAT, 0o600))
             Path(path).chmod(0o600)  # key hashes live here
@@ -611,14 +615,19 @@ class Store(ChatStore, StatsStore):
         """A whole, consistent copy of the database, finished under another name so a half-made copy never looks like a backup."""
         path.parent.mkdir(parents=True, exist_ok=True)
         part = path.with_suffix(".part")
-        copy = sqlite3.connect(part)
+        part.unlink(missing_ok=True)
+        os.close(os.open(part, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600))  # private before a byte is copied (review 5)
         try:
-            with self._lock:
-                self._db.backup(copy)
-        finally:
-            copy.close()
-        part.chmod(0o600)
-        part.replace(path)
+            copy = sqlite3.connect(part)
+            try:
+                with self._lock:
+                    self._db.backup(copy)
+            finally:
+                copy.close()
+            part.replace(path)
+        except BaseException:
+            part.unlink(missing_ok=True)  # a backup cut short leaves nothing behind
+            raise
 
     def phone_kind(self, phone_id: int) -> str:
         with self._lock:

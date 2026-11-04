@@ -92,16 +92,14 @@ def fetch_due(store: Store, library: Path, get: Get = http_get, ytdlp: YtDlp | N
 
 def _get_with_login(get: Get, site: str) -> Get:
     """Page fetches carry the owner's saved login for this one site. Only the real fetcher takes a cookie; a test double is left alone."""
-    header = login.cookie_header(site)
-    if not header or get is not http_get:
+    if not login.cookie_header(site) or get is not http_get:
         return get
 
     def fetch(url, *rest):
-        # the login goes only to that site and its subdomains, never to an image or page on another host that the
-        # post points at (review 3, 4 Nov 2026: a members' page's og:image could collect the session cookie)
-        if login.site_of(url) != site or urlsplit(url).scheme != "https":
-            return http_get(url, *rest)
-        return http_get(url, *rest, cookie=header)
+        # the login goes only to that site, over https, and only the cookies that belong at that exact address: never to an
+        # image or page on another host the post points at (review 3), nor to a sibling tenant like b.github.io (review 5)
+        header = login.cookie_header(site, url) if login.site_of(url) == site and urlsplit(url).scheme == "https" else ""
+        return http_get(url, *rest, cookie=header) if header else http_get(url, *rest)
     return fetch
 
 

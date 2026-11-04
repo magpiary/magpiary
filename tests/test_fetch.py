@@ -455,7 +455,7 @@ def test_a_saved_login_is_sent_only_to_its_own_site(monkeypatch):
     from magpiary import login, worker
 
     sent = []
-    monkeypatch.setattr(login, "cookie_header", lambda site: "session=abcd")
+    monkeypatch.setattr(login, "cookie_header", lambda site, url="": "session=abcd")
     monkeypatch.setattr(worker, "http_get", lambda url, *rest, cookie=None: sent.append((url, cookie)))
     get = worker._get_with_login(worker.http_get, "example.com")
     for url in ("https://www.example.com/post", "https://img.example.com/a.jpg", "https://collector.test/i.jpg",
@@ -463,3 +463,21 @@ def test_a_saved_login_is_sent_only_to_its_own_site(monkeypatch):
         get(url)
     assert sent == [("https://www.example.com/post", "session=abcd"), ("https://img.example.com/a.jpg", "session=abcd"),
                     ("https://collector.test/i.jpg", None), ("http://example.com/plain", None)]
+
+
+
+def test_a_cookie_goes_only_where_a_browser_would_send_it(tmp_path, monkeypatch):
+    """Review 5, 4 Nov 2026: cookies of a.github.io reached b.github.io, and a path or secure flag was ignored."""
+    from magpiary import login
+
+    jar = tmp_path / "jar.txt"
+    jar.write_text("# Netscape HTTP Cookie File\n"
+                   "a.github.io\tFALSE\t/\tTRUE\t0\tsa\t1\n"
+                   ".github.io\tTRUE\t/\tTRUE\t0\tall\t2\n"
+                   "#HttpOnly_a.github.io\tFALSE\t/private\tTRUE\t0\tdeep\t3\n"
+                   "a.github.io\tFALSE\t/\tFALSE\t0\tplain\t4\n")
+    monkeypatch.setattr(login, "login_path", lambda domain: jar)
+    assert login.cookie_header("github.io", "https://a.github.io/x") == "sa=1; all=2; plain=4"
+    assert login.cookie_header("github.io", "https://a.github.io/private/p") == "sa=1; all=2; deep=3; plain=4"
+    assert login.cookie_header("github.io", "https://b.github.io/x") == "all=2"
+    assert login.cookie_header("github.io", "http://a.github.io/x") == "plain=4"
