@@ -3167,5 +3167,30 @@
     g.from($$("#view .tile, #view .pile").slice(0, 36), { opacity: 0, y: 16, duration: .45, ease: "power2.out", stagger: .025, clearProps: "opacity,transform" });
   }
   if (g && page() === "welcome") g.from($$(".w-body > div > *"), { opacity: 0, y: 18, duration: .5, ease: "power3.out", stagger: .06, clearProps: "opacity,transform" });
+  // Download PDF on a page saved as the owner saw it: the Mac draws it (a few seconds), so the button says so, then the file
+  // arrives as a download. With no browser on the Mac to draw it, the print-ready page opens instead (Save as PDF from there).
+  document.addEventListener("click", async (ev) => {
+    const a = ev.target.closest("a[data-pdf]"); if (!a) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if (a.classList.contains("making")) return;
+    const label = a.querySelector("span"), was = label.textContent;
+    a.classList.add("making"); a.setAttribute("aria-busy", "true"); label.textContent = "Making the PDF…";
+    try {
+      const r = await fetch(a.href, { cache: "no-store" });
+      if (!r.ok) throw new Error(String(r.status));
+      if (!(r.headers.get("Content-Type") || "").startsWith("application/pdf")) { open(a.href, "_blank", "noopener"); label.textContent = was; return; }
+      const name = /filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") || "")?.[1] || "saved-page.pdf";
+      const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: name });
+      document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+      label.textContent = "PDF downloaded";
+      setTimeout(() => { label.textContent = was; }, 2600);
+    } catch (_) {
+      label.textContent = "Couldn't make the PDF";
+      setTimeout(() => { label.textContent = was; }, 3000);
+    } finally {
+      a.classList.remove("making"); a.removeAttribute("aria-busy");
+    }
+  }, true);
   window.__hub = { go, setSize, openNest, closeNest, openSearch, closeSearch, showSavedNote }; // for the browser checks
 })();

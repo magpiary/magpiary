@@ -234,11 +234,66 @@ def source_logo(source: str, cls: str = "slogo") -> str:
     return f'<svg class="{cls}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{paths}</svg>'
 
 
-def source_badge(source: str) -> str:
-    """Where a post came from: its logo and its name, plainly (owner, 1 Nov). A source with no logo gets the globe."""
+def source_badge(source: str, url: str = "") -> str:
+    """Where a post came from: its logo and its name, plainly (owner, 1 Nov). A post from any other site shows that site's
+    own name and the icon this Mac fetched once for it (owner, 4 Nov); with no icon yet, the globe."""
+    if source == "other" and url:
+        return f'<span class="pvsrc">{site_logo(url)}{e(site_name(url))}</span>'
     paths = SOURCE_LOGOS.get(source) or SOCIAL_ICONS.get(source) or SOCIAL_ICONS["website"]
     return (f'<span class="pvsrc"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{paths}</svg>'
             f'{SOURCE_DOMAINS.get(source) or source_name(source)}</span>')
+
+
+# Sites people save from whose name is not simply their domain. Anything else shows its domain (nytimes.com).
+SITE_NAMES = {
+    "behance.net": "Behance", "medium.com": "Medium", "substack.com": "Substack", "dribbble.com": "Dribbble",
+    "pinterest.com": "Pinterest", "github.com": "GitHub", "figma.com": "Figma", "notion.site": "Notion", "notion.so": "Notion",
+    "vimeo.com": "Vimeo", "tiktok.com": "TikTok", "facebook.com": "Facebook", "wikipedia.org": "Wikipedia",
+    "news.ycombinator.com": "Hacker News", "producthunt.com": "Product Hunt", "dev.to": "DEV", "bsky.app": "Bluesky",
+    "tumblr.com": "Tumblr", "artstation.com": "ArtStation", "deviantart.com": "DeviantArt", "flickr.com": "Flickr",
+    "unsplash.com": "Unsplash", "spotify.com": "Spotify", "soundcloud.com": "SoundCloud", "twitch.tv": "Twitch",
+    "stackoverflow.com": "Stack Overflow", "arxiv.org": "arXiv", "huggingface.co": "Hugging Face", "awwwards.com": "Awwwards",
+    "nytimes.com": "The New York Times", "theguardian.com": "The Guardian", "bbc.co.uk": "BBC", "bbc.com": "BBC",
+    "theverge.com": "The Verge", "wired.com": "WIRED", "etsy.com": "Etsy", "amazon.com": "Amazon", "goodreads.com": "Goodreads",
+    "mastodon.social": "Mastodon", "quora.com": "Quora", "vercel.app": "Vercel", "framer.website": "Framer",
+}
+_SECOND_LEVEL = {"co", "com", "org", "net", "ac", "gov", "edu", "ne", "or"}
+
+
+def site_host(url: str) -> str:
+    from urllib.parse import urlsplit
+
+    return (urlsplit(url).hostname or "").lower().removeprefix("www.")
+
+
+def registrable(host: str) -> str:
+    """bbc.co.uk from news.bbc.co.uk, medium.com from someone.medium.com (good enough without the public suffix list)."""
+    parts = host.split(".")
+    take = 3 if len(parts) >= 3 and len(parts[-1]) == 2 and parts[-2] in _SECOND_LEVEL else 2
+    return ".".join(parts[-take:])
+
+
+def site_name(url: str) -> str:
+    host = site_host(url)
+    return SITE_NAMES.get(host) or SITE_NAMES.get(registrable(host)) or registrable(host) or "Web page"
+
+
+def site_logo(url: str, cls: str = "") -> str:
+    """The site's own little icon, as this Mac fetched it once (icons.py); the globe until then or if it has none."""
+    from magpiary import icons
+
+    host = site_host(url)
+    for h in (host, registrable(host)):
+        if h and icons.cached(h):
+            return f'<img class="siteico {cls}" src="/icon/{e(h)}" alt="" width="16" height="16" loading="lazy">'
+    return f'<svg class="{cls}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{SOCIAL_ICONS["website"]}</svg>'
+
+
+def source_label(item: dict) -> str:
+    """A post's source in words: the platform, or for any other site, that site's name."""
+    if item.get("source") == "other" and item.get("canonical_url"):
+        return site_name(item["canonical_url"])
+    return source_name(item.get("source") or "")
 
 
 def source_name(source: str) -> str:
@@ -301,7 +356,7 @@ def caption_title(item: dict) -> str:
     if caption:
         first = re.split(r"(?<=[.!?])\s|\n", caption, maxsplit=1)[0].strip()
         return first[:160] or caption[:160]
-    who = item.get("author") or source_name(item["source"])
+    who = item.get("author") or source_label(item)
     return item.get("title") or f"Post by {who}"
 
 

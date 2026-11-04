@@ -1887,6 +1887,12 @@ class Store(ChatStore, StatsStore):
         with self._lock:
             return [r[0] for r in self._db.execute("SELECT url FROM links WHERE removed=0 ORDER BY rowid DESC").fetchall()]
 
+    def site_urls(self) -> list[str]:
+        """Posts saved from sites other than the six platforms (for their site icon), newest first."""
+        with self._lock:
+            return [r[0] for r in self._db.execute("SELECT canonical_url FROM items WHERE source='other' "
+                                                   "ORDER BY created_at DESC").fetchall()]
+
     def urls_with_links(self) -> set[str]:
         with self._lock:
             return {r[0] for r in self._db.execute("SELECT DISTINCT canonical_url FROM links WHERE removed=0")}

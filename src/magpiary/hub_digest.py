@@ -181,7 +181,7 @@ class DigestPages:
             title = item.get("ai_title") or item.get("title") or item["canonical_url"]
             rows.append(f'<a class="dgsave" href="/item/{item["id"]}">'
                         + (f'<img src="{e(thumb)}" alt="">' if thumb else '<span class="ph"></span>')
-                        + f'<span><b>{e(title)}</b><small>{e(ui.source_name(item.get("source") or ""))}</small></span></a>')
+                        + f'<span><b>{e(title)}</b><small>{e(ui.source_label(item))}</small></span></a>')
         return (f'<div class="dgsaves">{"".join(rows)}</div>' if rows else '<p class="dgby">No saves carry this word.</p>')
 
     def _thumbs(self, ids: list) -> str:

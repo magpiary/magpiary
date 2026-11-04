@@ -4217,6 +4217,14 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 
 /* Read: a page saved as the owner saw it in Chrome ("Save what I see"), in reading order */
 .reader { max-width: 680px; font-size: 16px; line-height: 1.65; color: var(--fg); }
+.reader .rdtop { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.reader .rdtop .pvlabel { margin: 0; }
+.reader .rdpdf { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.reader .rdpdf .ico { width: 16px; height: 16px; }
+.reader .rdpdf.making { pointer-events: none; opacity: .85; }
+.reader .rdpdf.making .ico { animation: rdpdf 1s ease-in-out infinite; }
+@keyframes rdpdf { 0%, 100% { transform: translateY(-1px); } 50% { transform: translateY(2px); } }
+@media (prefers-reduced-motion: reduce) { .reader .rdpdf.making .ico { animation: none; } }
 .reader .rdtitle { font-family: var(--display); font-size: 26px; line-height: 1.2; margin: 6px 0 6px; }
 .reader .rdby { color: var(--fg-3); font-size: 13px; margin: 0 0 22px; }
 .reader h3, .reader h4, .reader h5 { font-family: var(--display); line-height: 1.3; margin: 28px 0 10px; }

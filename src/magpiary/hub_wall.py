@@ -152,7 +152,7 @@ class WallPages:
         words = words or []
         href = f"/item/{item['id']}"
         thumb = self.thumb_url(item)
-        src = ui.source_name(item["source"])
+        src = ui.source_label(item)
         lane = ctx["lanes"].get(item["id"])
         on = ctx.get("boards_of", {}).get(item["canonical_url"], [])
         version = (f'{item["status"]}.{item.get("ai_status")}.{lane["step"] if lane else ""}.{item.get("shelf")}.'

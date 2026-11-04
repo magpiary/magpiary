@@ -288,7 +288,7 @@ class WelcomePages:
 
             it = newest[0]
             when = ago(it.get("first_shared_at") or "")
-            arrived = self._wtile(it, f'{ui.source_name(it["source"])} · saved {when}')
+            arrived = self._wtile(it, f'{ui.source_label(it)} · saved {when}')
         return (f'<div class="w-body"><div><div class="w-kick">Last step</div><h1 class="w-h">Now save <em>something.</em></h1>'
                 f'<p class="w-p">Use whichever is closest. Any one of these finishes setup.</p>{flash}'
                 f'<div class="ways"><div class="way"><span class="ic">1</span><div><b>From Chrome</b><small>Open a page and click the Magpiary button.</small></div></div>'

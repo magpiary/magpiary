@@ -524,7 +524,7 @@ class BoardPages:
             there = i["canonical_url"] in on_board
             thumb = self.thumb_url(i)
             kind = ("On the board" if there else ui.type_name(i.get("ai_type")) if i.get("ai_status") == "done"
-                    else ui.source_name(i["source"])) + (" · Archived" if i.get("shelf") == "archive" and not there else "")
+                    else ui.source_label(i)) + (" · Archived" if i.get("shelf") == "archive" and not there else "")
             art = (f'<img src="{e(thumb)}" alt="" loading="lazy">' if thumb else
                    f'<i style="background:{ui.gradient(i)}"></i>')
             rows += (f'<label class="apick{" there" if there else ""}"><input type="checkbox" name="pick" value="{i["id"]}"'

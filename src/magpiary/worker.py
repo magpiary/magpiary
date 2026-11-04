@@ -460,11 +460,12 @@ def screen_due(store: Store, activity=None, read=None, log: Callable[[str], None
 
 
 def icons_due(store: Store, get=None, log: Callable[[str], None] = lambda m: None, limit: int = 8) -> int:
-    """Fetch the little site icon for a few link sites that have none yet, once each, on this Mac. Returns how many were kept."""
+    """Fetch the little site icon for a few sites that have none yet (sites posts were saved from, then link sites), once
+    each, on this Mac. Returns how many were kept."""
     from magpiary import icons
 
     kept = 0
-    for host in icons.due(store.link_urls(), limit):
+    for host in icons.due(store.site_urls() + store.link_urls(), limit):
         try:
             kept += bool(icons.fetch(host, get))
         except Exception as err:  # one odd site must not stop the rest

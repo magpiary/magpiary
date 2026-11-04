@@ -196,3 +196,67 @@ def test_a_captured_page_opens_on_its_reader_view_with_everything_escaped(mac, t
     assert f'/media/{item_id}/screen.jpg' in html and "What I saw" in html
     assert request(mac, "GET", f"/media/{item_id}/screen.jpg")[0] == 200
     assert request(mac, "GET", f"/media/{item_id}/article.json")[0] == 404   # only pictures and videos are served
+
+
+def captured_post(mac, tmp_path):
+    from test_hub import archive
+
+    article = {**PAGE, "blocks": [{**b, "file": "media-01.jpg"} if b["t"] == "img" and b["src"] == PIC1 else b
+                                  for b in capture.clean_page(PAGE)["blocks"] if b["t"] != "img" or b["src"] == PIC1]}
+    return archive(mac, tmp_path, URL, "other", {"title": PAGE["title"], "media": ["media-01.jpg"]},
+                   {"media-01.jpg": JPEG, "article.json": json.dumps(article).encode()})
+
+
+def test_download_pdf_is_made_on_the_mac_and_falls_back_to_a_print_page(mac, tmp_path, monkeypatch):
+    from magpiary import reader
+    from test_hub import page, request
+
+    item_id, _ = captured_post(mac, tmp_path)
+    assert f'href="/item/{item_id}/pdf" data-pdf download' in page(mac, f"/item/{item_id}")[2]
+    made = []
+    monkeypatch.setattr(reader, "make_pdf", lambda html: made.append(html) or b"%PDF-1.7 made")
+    status, headers, data = request(mac, "GET", f"/item/{item_id}/pdf")
+    assert status == 200 and data == b"%PDF-1.7 made" and headers["Content-Type"] == "application/pdf"
+    assert headers["Content-Disposition"] == 'attachment; filename="A-quiet-guide-to-paper-gardens.pdf"'
+    assert "data:image/jpeg;base64," in made[0] and "/media/" not in made[0]   # every picture inside: no network needed
+    assert "&lt;script&gt;" in made[0] and "<script>" not in made[0]
+    monkeypatch.setattr(reader, "make_pdf", lambda html: None)                 # no browser on this Mac
+    status, headers, data = request(mac, "GET", f"/item/{item_id}/pdf")
+    assert status == 200 and "Save as PDF" in data.decode() and "default-src 'none'" in headers["Content-Security-Policy"]
+    assert request(mac, "GET", "/item/999/pdf")[0] == 404
+
+
+def test_a_real_pdf_is_drawn_offline_when_a_browser_is_installed(tmp_path):
+    from magpiary import reader, sources
+
+    if not any(Path(b).exists() for b in sources.BROWSERS):
+        pytest.skip("no Chrome, Chromium, Edge or Brave on this Mac")
+    folder = tmp_path / "post"
+    folder.mkdir()
+    (folder / "media-01.png").write_bytes(bytes.fromhex(
+        "89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+        "1f15c4890000000d49444154789c6360f8cfc0f01f0005000201e5273de30000000049454e44ae426082"))
+    article = {"title": "Paper gardens", "blocks": [{"t": "p", "text": "Fold the stems first."},
+                                                    {"t": "img", "src": PIC1, "file": "media-01.png"}]}
+    html = reader.print_html(article, folder, URL).replace("</body>", '<img src="https://img.example.net/x.png"></body>')
+    data = reader.make_pdf(html)   # the stray web picture is refused by the shut network, the PDF is still made
+    assert data and data.startswith(b"%PDF")
+
+
+def test_posts_from_other_sites_show_that_sites_name_and_icon(mac, tmp_path, monkeypatch):
+    from magpiary import icons, ui
+    from magpiary.worker import icons_due
+
+    assert ui.site_name("https://www.behance.net/gallery/123/Paper-Gardens") == "Behance"
+    assert ui.site_name("https://someone.medium.com/a-quiet-guide-0f3c") == "Medium"
+    assert ui.site_name("https://news.bbc.co.uk/x") == "BBC"
+    assert ui.site_name("https://blog.example.org/post") == "example.org"
+    assert ui.source_label({"source": "other", "canonical_url": "https://www.behance.net/gallery/1/x"}) == "Behance"
+    assert ui.source_label({"source": "instagram", "canonical_url": "https://www.instagram.com/p/x/"}) == "Instagram"
+    assert "Behance" in ui.source_badge("other", "https://www.behance.net/gallery/1/x") and "<svg" in ui.source_badge("other", "https://www.behance.net/g")
+    asked = []
+    mac.store.add_link("https://www.behance.net/gallery/1/x")
+    icons_due(mac.store, get=lambda url, headers, limit: asked.append(url) or (200, url, PNG))
+    assert asked[0] == "https://behance.net/favicon.ico"     # the site a post came from gets its icon, fetched once
+    badge = ui.source_badge("other", "https://www.behance.net/gallery/1/x")
+    assert '<img class="siteico' in badge and 'src="/icon/behance.net"' in badge

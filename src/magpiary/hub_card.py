@@ -135,6 +135,23 @@ class CardPages:
 
     # ---- the post as a page: breadcrumb, and the posts before and after it ---------------------------------------------
 
+    def pdf_page(self, item_id: int) -> Response:
+        """A saved page as a PDF, made on this Mac. With no browser to draw it, the same page opens ready for Save as PDF."""
+        from magpiary import reader
+
+        item = self.store.item_by_id(item_id)
+        folder = Path(item["archive_dir"]) if item and item.get("archive_dir") else None
+        article = _read_json(folder / "article.json") if folder else None
+        if not isinstance(article, dict) or not article.get("blocks"):
+            return Response(404, b"not found", "text/plain")
+        data = reader.make_pdf(reader.print_html(article, folder, item["canonical_url"]))
+        if data:
+            return Response(200, data, "application/pdf", {
+                "Content-Disposition": f'attachment; filename="{reader.filename(article)}"', "Cache-Control": "no-store"})
+        note = "No Chrome, Chromium, Edge or Brave was found to make the PDF. Press ⌘P, then choose Save as PDF."
+        return Response(200, reader.print_html(article, folder, item["canonical_url"], note).encode(), "text/html; charset=utf-8",
+                        {"Cache-Control": "no-store", "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; frame-ancestors 'none'"})
+
     def _crumbs(self, item: dict, frm: str) -> tuple[str, str, str]:
         """Library › Example pile › Post title: where you came from, each part a link, ending at this post."""
         trail: list[tuple[str, str]] = []
@@ -282,7 +299,7 @@ class CardPages:
             title = meta.get("title") if item["source"] in ("reddit", "youtube") and meta.get("title") else ""
             inner = ('<div class="txtpost">' + (f"<b>{e(title)}</b>\n" if title else "")
                      + f'{rich_text(text, item["source"])}</div>')
-        bits = [ui.source_name(item["source"])]
+        bits = [ui.source_label(item)]
         if slides:
             bits.append(f"{slides} slides")
         else:
@@ -366,8 +383,8 @@ class CardPages:
         done = bool(record)
         kind = type_of(record) if record else ""
         colour = ui.deep(ui.type_colour(kind)) if done else ui.deep(ui.source_colour(item["source"]))
-        badge = (f'<b style="background:{colour}">{e(ui.type_name(kind) if done else ui.source_name(item["source"]))}</b>')
-        where = ui.source_badge(item["source"]) if done else ""
+        badge = (f'<b style="background:{colour}">{e(ui.type_name(kind) if done else ui.source_label(item))}</b>')
+        where = ui.source_badge(item["source"], item.get("canonical_url", "")) if done else ""
         from magpiary.brain import FORMAT_NAMES
         shape = " · ".join(x for x in (FORMAT_NAMES.get((record or {}).get("format") or "", ""), (record or {}).get("topic") or "") if x)
         badge += f'<em class="itfmt">{e(shape)}</em>' if shape else ""
@@ -679,53 +696,19 @@ class CardPages:
                              for k, _, _, v in tabs)
 
     def _reader_pane(self, item: dict, article: dict, folder: Path) -> str:
-        """The page as the owner saw it in Chrome, in reading order: headings, paragraphs, lists and pictures in their
-        places. Built from article.json only (text escaped, pictures from this post's own folder), never the page's HTML."""
-        out, items, ordered = [], [], False
+        """The page as the owner saw it in Chrome, in reading order (reader.py), with Download PDF on top."""
+        from magpiary import reader
 
-        def close_list():
-            nonlocal items
-            if items:
-                tag = "ol" if ordered else "ul"
-                out.append(f"<{tag}>{''.join(items)}</{tag}>")
-                items = []
-
-        for b in article.get("blocks") or []:
-            kind = b.get("t") if isinstance(b, dict) else None
-            if kind != "li":
-                close_list()
-            if kind == "h":
-                level = min(max(int(b.get("level") or 2), 2), 4)
-                out.append(f'<h{level + 1}>{e(b.get("text", ""))}</h{level + 1}>')
-            elif kind == "p":
-                out.append(f'<p>{e(b.get("text", ""))}</p>')
-            elif kind == "li":
-                if not items:
-                    ordered = b.get("ordered") is True
-                items.append(f'<li>{e(b.get("text", ""))}</li>')
-            elif kind == "quote":
-                out.append(f'<blockquote>{e(b.get("text", ""))}</blockquote>')
-            elif kind == "code":
-                out.append(f'<pre><code>{e(b.get("text", ""))}</code></pre>')
-            elif kind == "caption":
-                out.append(f'<p class="rdcap">{e(b.get("text", ""))}</p>')
-            elif kind in ("img", "video") and b.get("file") and (folder / str(b["file"])).is_file():
-                src = self._media_url(item, str(b["file"]))
-                media = (f'<video src="{e(src)}" controls preload="metadata"></video>'
-                         if str(b["file"]).endswith(".mp4") else
-                         f'<img src="{e(src)}" alt="{e(b.get("alt", ""))}" loading="lazy">')
-                cap = f'<figcaption>{e(b.get("caption", ""))}</figcaption>' if b.get("caption") else ""
-                out.append(f"<figure>{media}{cap}</figure>")
-            elif kind == "embed" and str(b.get("src", "")).startswith(("https://", "http://")):
-                out.append(f'<p class="rdcap">{self._outlink(str(b["src"]), "Embedded on the page")}</p>')
-        close_list()
-        head = f'<h2 class="rdtitle">{e(article.get("title", ""))}</h2>' if article.get("title") else ""
-        by = " · ".join(x for x in (article.get("byline", ""), article.get("site", ""),
-                                     ui.day(article.get("published") or "") or "") if x)
+        body = reader.blocks_html(article, folder, lambda name: self._media_url(item, name),
+                                  lambda url: self._outlink(url, "Embedded on the page"))
+        by = reader.byline(article)
         shot = (f' · <a class="link" href="{self._media_url(item, "screen.jpg")}" target="_blank" rel="noopener">What I saw</a>'
                 if (folder / "screen.jpg").is_file() else "")
-        return (f'<article class="reader"><small class="pvlabel">Saved as you saw it in Chrome</small>{head}'
-                f'<p class="rdby">{e(by)}{shot}</p>{"".join(out)}</article>')
+        pdf = (f'<a class="btn sm rdpdf" href="/item/{item["id"]}/pdf" data-pdf download>{ui.icon("download")}'
+               f'<span>Download PDF</span></a>')
+        head = f'<h2 class="rdtitle">{e(article.get("title", ""))}</h2>' if article.get("title") else ""
+        return (f'<article class="reader"><div class="rdtop"><small class="pvlabel">Saved as you saw it in Chrome</small>{pdf}</div>'
+                f'{head}<p class="rdby">{e(by)}{shot}</p>{body}</article>')
 
     def _list_block(self, item: dict, record: dict | None) -> str:
         """A list post's items (a round-up, "10 tools"): each with who made it, the poster's note and its link once found."""
@@ -790,7 +773,7 @@ class CardPages:
                    f'<span><b>{e(name or "@" + handle)}</b>'
                    + (f'<small>@{e(handle)}</small>' if handle and name and handle != name else "") + "</span></div>")
         posted = ui.day(meta.get("published_at") or item.get("published_at"))
-        foot = (f'<div class="pvwhere">{e(ui.source_name(item["source"]))}'
+        foot = (f'<div class="pvwhere">{e(ui.source_label(item))}'
                 + (f" · posted {e(posted)}" if posted else "") + "</div>")
         if not caption:
             return f'<div class="capb pvcapb">{who}{foot}</div>'
@@ -982,11 +965,11 @@ class CardPages:
         for r in related[:RELATED_SHOWN]:
             other = r["row"]
             thumb = self.thumb_url(other)
-            who = other.get("author") or ui.source_name(other["source"])
+            who = other.get("author") or ui.source_label(other)
             rows.append(f'<div class="rel"><a class="th" href="/item/{other["id"]}" style="background:{ui.gradient(other)}">'
                         + (f'<img loading="lazy" src="{e(thumb)}" alt="">' if thumb else "") + "</a>"
                         f'<a href="/item/{other["id"]}"><b>{e(rel.title_of(other)[:120])}</b><small>{e(who)} · '
-                        f'{e(ui.source_name(other["source"]))}</small><em>{e(r["reason"])}</em></a>'
+                        f'{e(ui.source_label(other))}</small><em>{e(r["reason"])}</em></a>'
                         + self._form("/hub/not-related", {"id": item["id"], "other": other["id"], "next": here + "?tab=rel"},
                                      "Not related", "link") + "</div>")
         more = (f'<p style="margin:12px 8px 0"><a class="btn sm" href="{here}/related">See all {len(related)} related →</a></p>'
@@ -1029,7 +1012,7 @@ class CardPages:
                                  for c in discussion[:200]) + "</details>")
         out.append(self._timing(item))
         engine = (record or {}).get("engine") or {}
-        details = [("Source", ui.source_name(item["source"])), ("Link", item["canonical_url"]),
+        details = [("Source", ui.source_label(item)), ("Link", item["canonical_url"]),
                    ("First saved", when(item.get("first_shared_at"))), ("Times shared", str(item["saved_count"]))]
         if meta.get("published_at"):
             details.append(("Posted", ui.day(meta["published_at"])))

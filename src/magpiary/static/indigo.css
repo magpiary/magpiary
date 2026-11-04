@@ -396,6 +396,7 @@ html.moving .label { backdrop-filter: none !important; -webkit-backdrop-filter: 
 :root[data-theme] .it-type { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .pvsrc { display: inline-flex; align-items: center; gap: 6px; font: 600 var(--type-small) var(--sans); color: var(--fg); }
 .pvsrc svg { width: 15px; height: 15px; flex: none; }
+.pvsrc img.siteico { width: 16px; height: 16px; flex: none; border-radius: 4px; object-fit: contain; }
 :root[data-theme] .chips.pvment { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 14px 0 0; }
 .pvmentl { font: 500 var(--type-micro) var(--sans); color: var(--fg-3); }
 :root[data-theme] .chips.pvment > a { --k: #f7f3e8; padding: 0; height: auto; border: 0; background: none; box-shadow: none; color: var(--k); font: 500 var(--type-small) var(--sans); }

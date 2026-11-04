@@ -249,6 +249,8 @@ class Hub(
             return self.card_page(int(m.group(1)), fragment=q.get("frag") == "1", tab=q.get("tab", ""),
                                   board=q.get("board", "") if re.fullmatch(r"[0-9a-f]{16}", q.get("board", "")) else "",
                                   pile=q.get("pile", "") if q.get("pile", "").isdigit() else "", frm=q.get("from", ""))
+        if m := re.fullmatch(r"/item/(\d+)/pdf", path):
+            return self.pdf_page(int(m.group(1)))
         if m := re.fullmatch(r"/item/(\d+)/related", path):
             return self.related_page(int(m.group(1)))
         if path == "/doctor":
