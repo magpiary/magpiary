@@ -17,7 +17,7 @@ import html
 import json
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from urllib.parse import quote, unquote, urljoin, urlsplit
 
 from magpiary.sources import USER_AGENT, page_tags
@@ -771,7 +771,9 @@ def resolve(target: Target, get: Get, context: set[str], posted: list["PostPage"
     """The main link and its badges for one thing, best first."""
     if target.kind == "source":
         found = crossref(target, get, pause)
-        return [found] if found else []
+        if found or not target.central:
+            return [found] if found else []
+        target = replace(target, kind="code")  # a benchmark or dataset the post is about, with no paper: often on GitHub
     if target.kind == "place":
         found = place(target, get, pause)
         return [found] if found else []

@@ -282,7 +282,9 @@ def _with_deep(record: dict, folder: Path) -> dict:
         return record
     record = dict(record)
     targets, items = list(record.get("link_targets") or []), list(record.get("list_items") or [])
-    for n in deep["named"]:  # an older deep.json has no role: those stay "passing", as before
+    from magpiary.deepdive import tidy_named
+
+    for n in tidy_named(deep["named"]):  # an older deep.json has no role: those stay "passing", as before
         if n["kind"] in ("video", "article"):
             items.append({"name": n["name"], "kind": n["kind"], "by": "", "note": "", "slide": 0})
         else:

@@ -513,11 +513,18 @@ def _common(meta: dict, record: dict, folder: Path, pages: list[dict], bio: list
     return text
 
 
+# Languages, formats and general technologies: the model is asked to leave them out, and these stay out when it does
+# not (a live run named Rust as code). Lower case, matched on the whole name.
+GENERAL = {"rust", "go", "golang", "javascript", "typescript", "python", "java", "c", "c#", "c++", "ruby", "swift",
+           "kotlin", "php", "html", "css", "sql", "markdown", "json", "yaml", "git", "gpu", "cpu", "simd", "llm", "llms",
+           "ai", "agile", "crm", "api", "apis", "aws", "github", "reddit", "linkedin", "youtube", "google", "cloud"}
+
+
 def tidy_named(named, at_default: str = "") -> list[dict]:
     out, seen = [], {}
     for n in named if isinstance(named, list) else []:
         name = str(n.get("name") or "").strip()[:200] if isinstance(n, dict) else ""
-        if not name:
+        if not name or name.lower() in GENERAL:
             continue
         if name.lower() in seen:  # named again in a later part: central there makes it central, and a site is kept
             first = out[seen[name.lower()]]

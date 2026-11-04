@@ -247,6 +247,24 @@ def test_codex_gets_a_strict_schema_and_its_empty_fields_are_dropped():
 
 
 def test_a_name_central_in_any_part_is_central():
-    named = deepdive.tidy_named([{"name": "Pebble", "kind": "tool", "role": "passing"}, {"name": "Burrow", "kind": "tool"},
+    named = deepdive.tidy_named([{"name": "Pebble", "kind": "tool", "role": "passing"}, {"name": "Burrow", "kind": "tool"}, {"name": "Rust", "kind": "code"},
                                  {"name": "pebble", "kind": "tool", "role": "central", "domain": "pebble.example"}])
     assert [(n["name"], n["role"], n["domain"]) for n in named] == [("Pebble", "central", "pebble.example"), ("Burrow", "passing", "")]
+
+
+def test_a_central_source_with_no_paper_is_looked_for_as_code():
+    from magpiary import links
+
+    calls = []
+    target = links.Target("Pebble Bench", "source", "central")
+    orig_cross, orig_search = links.crossref, links.github_search
+    try:
+        links.crossref = lambda t, get, pause: None
+        links.github_search = lambda t, get, context, query="", pause=None, **kw: calls.append(t.kind) or links.Found(
+            t.name, "skills_code", "https://github.com/example/pebble-bench", "example/pebble-bench", "GitHub", 5)
+        missing = lambda *a, **k: (404, {}, b"")  # noqa: E731
+        found = links.resolve(target, missing, set(), [], None, lambda s: None)
+        assert calls and calls[0] == "code" and found and found[0].url.endswith("pebble-bench")
+        assert links.resolve(links.Target("Some Paper", "source", "passing"), missing, set(), [], None, lambda s: None) == []
+    finally:
+        links.crossref, links.github_search = orig_cross, orig_search
