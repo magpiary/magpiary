@@ -22,7 +22,7 @@ MEDIA_TYPES = {
     ".webp": "image/webp",
     ".gif": "image/gif",
 }
-MEDIA_NAME = re.compile(r"^(media-\d{2,3}\.[a-z0-9]{2,4}|thumbnail\.jpg)$")
+MEDIA_NAME = re.compile(r"^(media-\d{2,3}\.[a-z0-9]{2,4}|thumbnail\.jpg|screen\.jpg)$")
 
 THUMB_WIDTH = 600
 THUMB_VERSION = 2  # in the address: browsers keep a tile's picture for a year, so a better copy needs a new address

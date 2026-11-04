@@ -658,6 +658,10 @@ class CardPages:
                 ("tr", "Transcript", "", self._transcript_pane(folder)),
                 ("det", "Details", "", self._details_pane(item, record, folder, meta))]
         tabs = tabs[:1] + self._extra_tabs(item, record, context) + tabs[1:]  # Ask Magpiary is the second tab, after Summary
+        article = _read_json(folder / "article.json") if folder else None
+        if isinstance(article, dict) and article.get("blocks"):  # a page saved as the owner saw it: read it first
+            tabs.insert(0, ("read", "Read", "", self._reader_pane(item, article, folder)))
+            tab = tab or "read"
         off = self._transcript_off(folder)  # no speech or no transcript: the tab stays, greyed, with the reason on hover
         tab = tab if tab in {t[0] for t in tabs} and tab != off[0] else "sum"
         kind = type_of(record) if record else ""
@@ -673,6 +677,55 @@ class CardPages:
                              + (f' data-related-src="{here}?frag=1&amp;tab=rel&amp;from=preview"' if k == "rel" and lazy_related else "")
                              + f'>{v}</section>'
                              for k, _, _, v in tabs)
+
+    def _reader_pane(self, item: dict, article: dict, folder: Path) -> str:
+        """The page as the owner saw it in Chrome, in reading order: headings, paragraphs, lists and pictures in their
+        places. Built from article.json only (text escaped, pictures from this post's own folder), never the page's HTML."""
+        out, items, ordered = [], [], False
+
+        def close_list():
+            nonlocal items
+            if items:
+                tag = "ol" if ordered else "ul"
+                out.append(f"<{tag}>{''.join(items)}</{tag}>")
+                items = []
+
+        for b in article.get("blocks") or []:
+            kind = b.get("t") if isinstance(b, dict) else None
+            if kind != "li":
+                close_list()
+            if kind == "h":
+                level = min(max(int(b.get("level") or 2), 2), 4)
+                out.append(f'<h{level + 1}>{e(b.get("text", ""))}</h{level + 1}>')
+            elif kind == "p":
+                out.append(f'<p>{e(b.get("text", ""))}</p>')
+            elif kind == "li":
+                if not items:
+                    ordered = b.get("ordered") is True
+                items.append(f'<li>{e(b.get("text", ""))}</li>')
+            elif kind == "quote":
+                out.append(f'<blockquote>{e(b.get("text", ""))}</blockquote>')
+            elif kind == "code":
+                out.append(f'<pre><code>{e(b.get("text", ""))}</code></pre>')
+            elif kind == "caption":
+                out.append(f'<p class="rdcap">{e(b.get("text", ""))}</p>')
+            elif kind in ("img", "video") and b.get("file") and (folder / str(b["file"])).is_file():
+                src = self._media_url(item, str(b["file"]))
+                media = (f'<video src="{e(src)}" controls preload="metadata"></video>'
+                         if str(b["file"]).endswith(".mp4") else
+                         f'<img src="{e(src)}" alt="{e(b.get("alt", ""))}" loading="lazy">')
+                cap = f'<figcaption>{e(b.get("caption", ""))}</figcaption>' if b.get("caption") else ""
+                out.append(f"<figure>{media}{cap}</figure>")
+            elif kind == "embed" and str(b.get("src", "")).startswith(("https://", "http://")):
+                out.append(f'<p class="rdcap">{self._outlink(str(b["src"]), "Embedded on the page")}</p>')
+        close_list()
+        head = f'<h2 class="rdtitle">{e(article.get("title", ""))}</h2>' if article.get("title") else ""
+        by = " · ".join(x for x in (article.get("byline", ""), article.get("site", ""),
+                                     ui.day(article.get("published") or "") or "") if x)
+        shot = (f' · <a class="link" href="{self._media_url(item, "screen.jpg")}" target="_blank" rel="noopener">What I saw</a>'
+                if (folder / "screen.jpg").is_file() else "")
+        return (f'<article class="reader"><small class="pvlabel">Saved as you saw it in Chrome</small>{head}'
+                f'<p class="rdby">{e(by)}{shot}</p>{"".join(out)}</article>')
 
     def _list_block(self, item: dict, record: dict | None) -> str:
         """A list post's items (a round-up, "10 tools"): each with who made it, the poster's note and its link once found."""

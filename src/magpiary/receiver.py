@@ -2,6 +2,8 @@
 
     GET  /v1/ping     no key; reveals nothing stored
     POST /v1/items    Authorization: Bearer <phone key>; {"items": [{id, url, shared_at, note, ...}]}
+    POST /v1/capture  the Chrome extension's key, from this Mac only; {"capture", "item", "page", "screen", "mhtml"}:
+                      one save with the page as the owner saw it ("Save what I see")
 
 The reply to a batch is sent only after every item is committed to the queue. The
 fixed `ack` string is what the Shortcut looks for before it clears its outbox.
@@ -10,6 +12,7 @@ fixed `ack` string is what the Shortcut looks for before it clears its outbox.
 import hmac
 import json
 import os
+import shutil
 import socket
 import sys
 import threading
@@ -23,7 +26,8 @@ from magpiary.config import data_dir
 from magpiary.expand import Fetch, http_fetch
 from magpiary.hub import Hub, backfill_details
 from magpiary.power import KeepAwake
-from magpiary import agent_policy
+from magpiary import agent_policy, capture
+from magpiary.cleaner import clean
 from magpiary.protocol import ACK, BOARDS_PATH, DEFAULT_PORT
 from magpiary.digest import story_due, weekly_due as digest_due
 from magpiary.embed import Warm
@@ -363,6 +367,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/v1/agent/note":
             self._agent_note()
             return
+        if path == "/v1/capture":
+            self._capture()
+            return
         if path != "/v1/items":
             self.send_json(404, {"error": "not found"})
             return
@@ -445,6 +452,63 @@ class Handler(BaseHTTPRequestHandler):
         board = self.server.store.board(to_boards[-1]) if to_boards and len(stored) == 1 else None
         if board:
             reply["message"] = f"Saved, and on its way to {board['name']} ✅"
+        self.send_json(200, reply)
+
+    def _capture(self) -> None:
+        """One save from the Chrome extension with the page as the owner saw it. The capture is written (private) before
+        the item is stored, and both before the reply, so an acknowledged capture is never lost."""
+        store = self.server.store
+        if self.client_address[0] not in ("127.0.0.1", "::1"):
+            self.send_json(404, {"error": "not found"})
+            return
+        phone = store.phone_for_key(self._bearer())
+        if phone is None:
+            log(f"POST /v1/capture from {self.client_address[0]} -> 401 (bad, missing or revoked key)")
+            self.send_json(401, {"error": "unauthorized"})
+            return
+        if store.phone_kind(phone.id) != "browser":
+            self.send_json(403, {"error": "only the Chrome extension sends pages"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = -1
+        if length > capture.MAX_BYTES:
+            log(f"POST /v1/capture from {phone.name} -> 413 (too large)")
+            self.send_json(413, {"error": "request too large"})
+            return
+        try:
+            if length <= 0:
+                raise ValueError("empty")
+            body = json.loads(self.rfile.read(length))
+            item = body["item"]
+            if not isinstance(item, dict) or not isinstance(item.get("url"), str):
+                raise ValueError("item")
+            link = clean(item["url"])
+            if link.needs_expansion:
+                raise ValueError("short link")
+        except Exception:  # UnsupportedLink too
+            log(f"POST /v1/capture from {phone.name} -> 400 (bad body)")
+            self.send_json(400, {"error": "bad request"})
+            return
+        try:
+            folder = capture.save(link.url, body.get("capture"), body.get("page"), body.get("screen"), body.get("mhtml"))
+        except capture.BadCapture as err:
+            log(f"POST /v1/capture from {phone.name} -> 400 ({err})")
+            self.send_json(400, {"error": "bad capture"})
+            return
+        results = store.receive(phone, [item])
+        if results[0].status == "rejected":
+            shutil.rmtree(folder, ignore_errors=True)
+        elif results[0].status in ("again", "replay"):
+            store.recaptured(link.url)  # saved before: archive it again from what the owner sees now
+        if results[0].status != "rejected":
+            self.server.work_wanted.set()
+            if item.get("board"):
+                self.server.boards_wanted.set()
+        log(f"POST /v1/capture from {phone.name}, {length // 1024} KB -> 200 ({results[0].status})")
+        reply = build_reply(results)
+        reply["capture"] = body.get("capture")
         self.send_json(200, reply)
 
     def _read_form(self, limit: int = 20_000) -> dict | None:

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from magpiary.activity import NO_PROGRESS
 from magpiary.archive import fetch_item
+from magpiary import capture as captures
 from magpiary import login
 from magpiary.hub import details_from_folder
 from magpiary.expand import ExpansionFailed, Fetch, expand, http_fetch
@@ -61,8 +62,11 @@ def fetch_due(store: Store, library: Path, get: Get = http_get, ytdlp: YtDlp | N
         ytdlp = with_login(base, site) if item.get("use_login") else base
         item_get = _get_with_login(get, site) if item.get("use_login") else get
         progress = activity.begin("fetch", item) if activity else NO_PROGRESS
+        seen = captures.latest(url)  # the page as the owner saw it: read from that, not fetched again
+        if seen:
+            ytdlp, item_get = base, get  # a capture never needs the owner's saved login
         try:
-            folder = fetch_item(item, library, item_get, ytdlp, progress=progress)
+            folder = fetch_item(item, library, item_get, ytdlp, progress=progress, capture=seen)
         except ToolMissing as err:
             store.fetch_failed(url, "unknown", str(err), retry=True)
             continue
@@ -70,7 +74,7 @@ def fetch_due(store: Store, library: Path, get: Get = http_get, ytdlp: YtDlp | N
             # yt-dlp breaks when a site changes: update it (once a day at most) and try once more
             if err.reason in RETRYABLE and item["source"] in ("instagram", "youtube", "x", "linkedin") and update():
                 try:
-                    folder = fetch_item(item, library, item_get, ytdlp, progress=progress)
+                    folder = fetch_item(item, library, item_get, ytdlp, progress=progress, capture=seen)
                 except FetchFailed as again:
                     store.fetch_failed(url, *_plain_failure(again, item, ytdlp is not base))
                     continue
@@ -86,6 +90,11 @@ def fetch_due(store: Store, library: Path, get: Get = http_get, ytdlp: YtDlp | N
                 activity.end("fetch")
         store.fetch_succeeded(url, str(folder))
         store.set_details(url, details_from_folder(folder))
+        if seen:
+            captures.done(seen)
+        newer = captures.latest(url)
+        if newer and (not seen or newer.id != seen.id):  # captured while this fetch ran: read it next time round
+            store.recaptured(url)
         on_archived()
         done += 1
     return done

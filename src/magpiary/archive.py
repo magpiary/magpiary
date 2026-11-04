@@ -14,6 +14,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from magpiary.activity import NO_PROGRESS, Progress
+from magpiary.capture import Capture
 from magpiary.sources import FetchFailed, Get, Render, chrome_render, describe, http_get
 from magpiary.tools import Run, YtDlp, YtDlpError, default_run, media_files, video_seconds
 
@@ -99,16 +100,60 @@ def _save_cover(url: str, folder: Path, get: Get) -> None:
         (folder / "thumbnail.jpg").write_bytes(data)
 
 
+def _save_captured(capture: Capture, urls: list[str], folder: Path, get: Get, start: int) -> dict[str, str]:
+    """A captured page's pictures, in order: downloaded logged out, and any that fail taken from the browser's own copy
+    of the page. Returns picture address -> file name, so the reader view can put each one back in its place."""
+    backup: dict[str, bytes] | None = None
+    names: dict[str, str] = {}
+    for url in urls:
+        if urlsplit(url).scheme not in ("http", "https"):
+            continue
+        try:
+            status, data = get_image(get, url)
+        except OSError:
+            status, data = 0, b""
+        ext = _image_type(data) if status == 200 and len(data) <= MAX_IMAGE_BYTES else None
+        if not ext:
+            backup = capture.backup() if backup is None else backup
+            data = backup.get(url, b"")
+            ext = _image_type(data) if len(data) <= MAX_IMAGE_BYTES else None
+        if ext:
+            name = f"media-{start + len(names):02d}.{ext}"
+            (folder / name).write_bytes(data)
+            names[url] = name
+    return names
+
+
+def _write_article(capture: Capture, folder: Path, pictures: dict[str, str], videos: dict[str, str]) -> None:
+    """The captured page in reading order for the reader view: each picture and video points at its saved file."""
+    blocks = []
+    for b in capture.page["blocks"]:
+        if b["t"] == "img":
+            if b["src"] not in pictures:
+                continue
+            b = {**b, "file": pictures[b["src"]]}
+        elif b["t"] == "video":
+            b = {**b, "file": videos.get(b["src"]) or pictures.get(b["poster"], "")}
+        blocks.append(b)
+    (folder / "article.json").write_text(json.dumps({k: v for k, v in capture.page.items() if k != "blocks"} | {"blocks": blocks},
+                                                    ensure_ascii=False, indent=2))
+    if capture.screen:
+        shutil.copyfile(capture.screen, folder / "screen.jpg")
+
+
 def fetch_item(item: dict, library: Path, get: Get = http_get, ytdlp: YtDlp | None = None,
-               run: Run = default_run, progress: Progress = NO_PROGRESS, render: Render | None = None) -> Path:
+               run: Run = default_run, progress: Progress = NO_PROGRESS, render: Render | None = None,
+               capture: Capture | None = None) -> Path:
     """Fetch and archive one item. Returns its folder. Raises FetchFailed. A real fetch may draw a script-made page
-    in a browser on the Mac; recorded fetches (an injected `get`) never do unless given `render`."""
+    in a browser on the Mac; recorded fetches (an injected `get`) never do unless given `render`. With a `capture`
+    (the page as the owner saw it, from the Chrome extension) the page is not read again: only its pictures and
+    videos are downloaded."""
     ytdlp = ytdlp or YtDlp(run)
     if render is None and get is http_get:
         render = chrome_render
     url, source = item["canonical_url"], item["source"]
     progress.step("fetch")
-    fetched = describe(source, url, get, ytdlp, render)
+    fetched = capture.fetched() if capture else describe(source, url, get, ytdlp, render)
     progress.step("download")
     final = _archive_folder(item, library)
     work = library / f".tmp-{final.name}"
@@ -122,12 +167,21 @@ def fetch_item(item: dict, library: Path, get: Get = http_get, ytdlp: YtDlp | No
                 if not fetched.images:
                     raise FetchFailed(err.reason, err.detail) from err
         media = [p.name for p in media_files(work)]
-        media += _save_videos(fetched.videos, work, lambda u: get_video(get, u), len(media) + 1)
+        video_names = {}
+        for video in fetched.videos:  # one at a time, so the reader view knows which file is which video
+            saved = _save_videos([video], work, lambda u: get_video(get, u), len(media) + 1)
+            media += saved
+            video_names.update({video: saved[0]} if saved else {})
         if fetched.videos and not media and not fetched.images:  # the video could not be saved: keep its cover
             fetched.images = [fetched.poster] if fetched.poster else []
         elif fetched.poster:
             _save_cover(fetched.poster, work, get)
-        media += _save_images(fetched.images, work, lambda u: get_image(get, u), len(media) + 1)
+        if capture:
+            pictures = _save_captured(capture, fetched.images, work, get, len(media) + 1)
+            media += list(pictures.values())
+            _write_article(capture, work, pictures, video_names)
+        else:
+            media += _save_images(fetched.images, work, lambda u: get_image(get, u), len(media) + 1)
         if not media and not fetched.meta.get("text"):
             raise FetchFailed("unknown", "nothing could be saved from this post")
         videos = [work / m for m in media if m.endswith((".mp4", ".webm", ".mov", ".mkv"))]

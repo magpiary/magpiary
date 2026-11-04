@@ -33,6 +33,13 @@ PAGE = """<!doctype html><html><body style="margin:0;font:16px sans-serif">
 </body></html>"""
 
 
+def only_test_hub(ext, port):
+    """The copy talks to the throwaway hub only, never to a real Magpiary on 8765 and up."""
+    bg = (ext / "background.js").read_text()
+    assert "const PORTS = Array.from" in bg
+    (ext / "background.js").write_text(re.sub(r"const PORTS = Array\.from\([^;]+;", f"const PORTS = [{port}];", bg))
+
+
 class Site(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -51,8 +58,7 @@ def browser(tmp_path, env):  # noqa: F811
     manifest = json.loads((ext / "manifest.json").read_text())
     manifest["host_permissions"] = [f"http://127.0.0.1:{env.mac.port}/*", "http://127.0.0.1/*"]  # the test hub, and the test page
     (ext / "manifest.json").write_text(json.dumps(manifest))
-    bg = (ext / "background.js").read_text().replace("http://127.0.0.1:8765", f"http://127.0.0.1:{env.mac.port}")
-    (ext / "background.js").write_text(bg)
+    only_test_hub(ext, env.mac.port)
     site = ThreadingHTTPServer(("127.0.0.1", 0), Site)
     threading.Thread(target=site.serve_forever, daemon=True).start()
     with pw.sync_playwright() as p:
@@ -73,6 +79,9 @@ def pair(ctx, sw, env):
     popup.wait_for_selector("#pair:not([hidden])")
     popup.fill("#code", code)
     popup.click("#pairgo")
+    popup.wait_for_selector("#welcome:not([hidden])")   # "Chrome is paired" stays until Got it
+    popup.evaluate("chrome.storage.local.remove('welcomePending')")
+    popup.reload()
     popup.wait_for_selector("#save:not([hidden])")
     return popup
 
@@ -234,3 +243,82 @@ def test_pick_mode_panel_says_already_saved(browser):
     cdp = ctx.new_cdp_session(page)    # the closed overlay is not in the page's DOM, but it is in what a screen reader sees
     names = " | ".join(str((n.get("name") or {}).get("value", "")) for n in cdp.send("Accessibility.getFullAXTree")["nodes"])
     assert "Already saved just now" in names and "Save again" in names
+
+
+# ---- "Save what I see": a made-up article at a made-up address, mapped to a local server
+ARTICLE = """<!doctype html><html lang="en"><head><title>Paper gardens | Writers Example</title>
+<meta property="og:site_name" content="Writers Example"><meta name="author" content="Robin Example">
+<meta property="article:published_time" content="2026-10-02T09:00:00Z"></head>
+<body style="margin:0;font:16px sans-serif">
+<header><nav><a href="/">Home</a> <a href="/me">Signed in as Reader Person</a></nav></header>
+<main><article>
+  <h1>A quiet guide to paper gardens</h1>
+  <p>Fold the stems first, then the petals, and keep the creases sharp so the flower stands on its own.</p>
+  <h2>Tools</h2><ul><li>Bone folder</li><li>Thin paper</li></ul>
+  <figure><img src="/tulip-small.png" srcset="/tulip-small.png 200w, /tulip.png 800w" width="400" height="300" alt="A folded tulip">
+  <figcaption>The first fold</figcaption></figure>
+  <p>Glue nothing. A good fold holds better than glue ever will, and it can be opened again later.</p>
+  <img src="/avatar.png" width="32" height="32" alt="author photo">
+  <button>Follow</button>
+</article>
+<aside class="recommended">Recommended for Reader Person: ten more gardens</aside></main>
+<footer>Writers Example footer</footer>
+</body></html>"""
+PIXEL = bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+                      "1f15c4890000000d49444154789c6360f8cfc0f01f0005000201e5273de30000000049454e44ae426082")
+
+
+class Writers(BaseHTTPRequestHandler):
+    def do_GET(self):
+        png = self.path.endswith(".png")
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png" if png else "text/html")
+        self.end_headers()
+        self.wfile.write(PIXEL if png else ARTICLE.encode())
+
+    def log_message(self, *args):
+        pass
+
+
+def test_save_what_i_see_sends_the_article_screenshot_and_page_copy(tmp_path, env):  # noqa: F811
+    from magpiary import capture
+
+    ext = tmp_path / "ext"
+    shutil.copytree(EXT, ext)
+    manifest = json.loads((ext / "manifest.json").read_text())
+    manifest["host_permissions"] = ["<all_urls>"]   # the test stands in for the owner's click (activeTab) with plain access
+    (ext / "manifest.json").write_text(json.dumps(manifest))
+    only_test_hub(ext, env.mac.port)
+    site = ThreadingHTTPServer(("127.0.0.1", 0), Writers)
+    threading.Thread(target=site.serve_forever, daemon=True).start()
+    try:
+        with pw.sync_playwright() as p:
+            ctx = p.chromium.launch_persistent_context(
+                str(tmp_path / "profile"), executable_path=CHROME, headless=False,
+                args=[f"--disable-extensions-except={ext}", f"--load-extension={ext}", "--headless=new",
+                      f"--host-resolver-rules=MAP writers.example.org 127.0.0.1:{site.server_port}"])
+            sw = ctx.service_workers[0] if ctx.service_workers else ctx.wait_for_event("serviceworker")
+            pair(ctx, sw, env)
+            page = ctx.new_page()
+            page.goto("http://writers.example.org/paper-gardens?utm_source=feed")
+            page.bring_to_front()
+            page.wait_for_function("document.images[0].complete")
+            tab_id = sw.evaluate("chrome.tabs.query({url: 'http://writers.example.org/*'}).then(t => t[0].id)")
+            r = sw.evaluate(f"saveSeen({{tabId: {tab_id}, url: 'http://writers.example.org/paper-gardens?utm_source=feed', note: 'for the craft board'}})")
+            assert r["state"] == "ok" and not r["linkOnly"]
+            assert sw.evaluate("captures('readonly', (s) => s.count())") == 0   # acknowledged, so cleared
+            ctx.close()
+    finally:
+        site.shutdown()
+    url = "http://writers.example.org/paper-gardens"
+    assert env.mac.counts() == {url: 1}
+    got = capture.latest(url)
+    page_json = got.page
+    assert page_json["title"] == "A quiet guide to paper gardens" and page_json["byline"] == "Robin Example"
+    words = json.dumps(page_json)
+    assert "Reader Person" not in words and "footer" not in words and "Follow" not in words   # only the article
+    assert [b["t"] for b in page_json["blocks"]] == ["p", "h", "li", "li", "img", "p"]
+    assert page_json["blocks"][4]["src"] == "http://writers.example.org/tulip.png"   # the largest size offered
+    assert page_json["blocks"][4]["caption"] == "The first fold"
+    assert got.screen and got.screen.read_bytes()[:3] == b"\xff\xd8\xff"
+    assert got.backup() == {"http://writers.example.org/tulip.png": PIXEL}   # the picture, from the browser's own copy

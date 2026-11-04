@@ -1,5 +1,7 @@
 /* Magpiary background worker. Talks to the hub on this Mac only, over localhost, with the key from pairing.
  * It sends the cleaned link, the optional note and board, and nothing else: no page text, title, cookies or history.
+ * Only when the owner ticks "Save what I see" does it also send the page as it is drawn (its text and pictures, one
+ * screenshot of the visible part and the browser's own copy of the page), and only to this Mac.
  * It makes no request to any site. */
 importScripts("clean.js");
 
@@ -111,6 +113,115 @@ async function save({ url, note = "", board = "" }) {
   return { ...sent, url: cleaned.url, source: cleaned.source, savedCount: mine ? mine.saved_count : undefined };
 }
 
+// ---- "Save what I see": captures wait in IndexedDB (they can be megabytes), at most a few, until this Mac acknowledges each one
+
+const CAPTURE_MAX_BYTES = 47 * 1000 * 1000;   // the Mac takes 48 MB a capture
+const CAPTURE_WAITING = 5;
+
+function captureDb() {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open("magpiary", 1);
+    open.onupgradeneeded = () => open.result.createObjectStore("captures", { keyPath: "capture" });
+    open.onsuccess = () => resolve(open.result);
+    open.onerror = () => reject(open.error);
+  });
+}
+
+async function captures(mode, fn) {
+  const db = await captureDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction("captures", mode);
+      const req = fn(tx.objectStore("captures"));
+      tx.oncomplete = () => resolve(req && req.result);
+      tx.onerror = () => reject(tx.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function base64(blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/** Read the open tab as the owner sees it. Chrome lets us because the owner opened the panel on this tab and pressed Save. */
+async function readTab(tab) {
+  const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["capture.js"] });
+  const page = result && result.result;
+  if (!page || !Array.isArray(page.blocks) || !page.blocks.length) return null;
+  let screen = "", mhtml = "";
+  try { screen = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "jpeg", quality: 72 }); } catch (_) { /* a page Chrome won't picture */ }
+  try {
+    const blob = await chrome.pageCapture.saveAsMHTML({ tabId: tab.id });   // the browser's own copy, from memory: the backup for pictures
+    if (blob && blob.size < 30 * 1000 * 1000) mhtml = await base64(blob);
+  } catch (_) { /* no copy: the Mac downloads the pictures itself */ }
+  const body = { page, screen, mhtml };
+  if (JSON.stringify(body).length > CAPTURE_MAX_BYTES) body.mhtml = "";
+  if (JSON.stringify(body).length > CAPTURE_MAX_BYTES) body.screen = "";
+  return body;
+}
+
+/** Send every waiting capture, oldest first. Each is removed only when the Mac's reply names it. */
+let captureLock = Promise.resolve();
+function flushCaptures() {
+  const run = captureLock.then(async () => {
+    const { key } = await store.get(["key"]);
+    if (!key) return { state: "unpaired" };
+    const waiting = ((await captures("readonly", (s) => s.getAll())) || []).sort((a, b) => a.at - b.at);
+    const results = [];
+    for (const c of waiting) {
+      let reply;
+      try {
+        reply = await hub("/v1/capture", { method: "POST", body: { capture: c.capture, item: c.item, page: c.page, screen: c.screen, mhtml: c.mhtml }, key });
+      } catch (_) {
+        await chrome.alarms.create(RETRY_ALARM, { delayInMinutes: 1 });
+        return { state: "offline", waiting: waiting.length - results.length, results };
+      }
+      if (reply.status === 401) return { state: "revoked", waiting: waiting.length - results.length, results };
+      if (reply.status === 400 || reply.status === 413) {   // the Mac can't take this capture: keep the save as a plain link
+        await captures("readwrite", (s) => s.delete(c.capture));
+        await withOutbox(async () => { const { outbox = [] } = await store.get(["outbox"]); await store.set({ outbox: [...outbox, c.item] }); });
+        await flush();
+        results.push({ id: c.item.id, status: "link_only" });
+        continue;
+      }
+      if (!(reply.status === 200 && reply.json && reply.json.ack === ACK && reply.json.capture === c.capture)) {
+        await chrome.alarms.create(RETRY_ALARM, { delayInMinutes: 1 });
+        return { state: "offline", waiting: waiting.length - results.length, results };
+      }
+      await captures("readwrite", (s) => s.delete(c.capture));
+      results.push(...(reply.json.results || []));
+    }
+    return { state: "ok", waiting: 0, results };
+  });
+  captureLock = run.catch(() => {});
+  return run;
+}
+
+async function saveSeen({ tabId, url, note = "", board = "" }) {
+  const { key } = await store.get(["key"]);
+  if (!key) return { state: "unpaired" };
+  const cleaned = MagpiaryClean.clean(url);
+  if (cleaned.error) return { state: "unsupported", error: cleaned.error };
+  const waiting = (await captures("readonly", (s) => s.count())) || 0;
+  if (waiting >= CAPTURE_WAITING) return { state: "full" };
+  let tab;
+  try { tab = await chrome.tabs.get(tabId); } catch (_) { return { state: "error" }; }
+  const read = await readTab(tab).catch(() => null);
+  if (!read) return { ...(await save({ url, note, board })), linkOnly: true };   // nothing readable: saved as a link
+  const item = { id: itemId(), url: cleaned.url, shared_at: localStamp(), note: String(note).slice(0, 2000), v: 1 };
+  if (/^[0-9a-f]{16}$/.test(board)) item.board = board;
+  const capture = item.id;
+  await captures("readwrite", (s) => s.put({ capture, at: Date.now(), item, ...read }));
+  const sent = await flushCaptures();
+  const mine = (sent.results || []).find((r) => r.id === item.id);
+  return { ...sent, url: cleaned.url, source: cleaned.source, savedCount: mine ? mine.saved_count : undefined, linkOnly: Boolean(mine && mine.status === "link_only") };
+}
+
 async function boards() {
   const { key } = await store.get(["key"]);
   if (!key) return [];
@@ -156,7 +267,8 @@ async function pair(code) {
 
 async function state() {
   const { key, outbox = [] } = await store.get(["key", "outbox"]);
-  return { paired: Boolean(key), waiting: outbox.length };
+  const seen = await captures("readonly", (s) => s.count()).catch(() => 0);
+  return { paired: Boolean(key), waiting: outbox.length + (seen || 0) };
 }
 
 /** Tell the Mac this extension is installed, and whether its button is on the toolbar. Local address only; no key, no page data. */
@@ -181,14 +293,14 @@ async function ping() {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, respond) => {
-  const run = { state, ping, hello, seen: () => ask("/v1/seen", { urls: msg.urls }).then((r) => (r && r.results) || {}), suggest: () => ask("/v1/suggest", { url: msg.url }).then((r) => (r && r.suggestion) || null), pair: () => pair(msg.code), save: () => save(msg), boards, flush, unpair: async () => { await store.set({ key: "" }); return {}; } }[msg && msg.type];
+  const run = { state, ping, hello, seen: () => ask("/v1/seen", { urls: msg.urls }).then((r) => (r && r.results) || {}), suggest: () => ask("/v1/suggest", { url: msg.url }).then((r) => (r && r.suggestion) || null), pair: () => pair(msg.code), save: () => save(msg), saveSeen: () => saveSeen(msg), boards, flush, unpair: async () => { await store.set({ key: "" }); return {}; } }[msg && msg.type];
   if (!run) return false;
   Promise.resolve(run()).then(respond, () => respond({ state: "error" }));
   return true;
 });
 
-chrome.alarms.onAlarm.addListener((a) => { if (a.name === RETRY_ALARM) flush(); });
-chrome.runtime.onStartup.addListener(() => { flush(); hello(); });
+chrome.alarms.onAlarm.addListener((a) => { if (a.name === RETRY_ALARM) { flush(); flushCaptures(); } });
+chrome.runtime.onStartup.addListener(() => { flush(); flushCaptures(); hello(); });
 if (chrome.action.onUserSettingsChanged) chrome.action.onUserSettingsChanged.addListener(hello);   // Chrome 130+: pinned or unpinned
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: "save", title: "Save to Magpiary", contexts: ["page", "link"] });

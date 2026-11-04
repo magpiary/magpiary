@@ -1043,6 +1043,16 @@ class Store(ChatStore, StatsStore):
                 "next_retry_at=?, updated_at=? WHERE canonical_url=?",
                 (reason, detail[:200], attempts, retry_at, self._stamp(), url))
 
+    def recaptured(self, url: str) -> bool:
+        """The Chrome extension sent the page as the owner saw it: archive the post again from that capture, then
+        read and summarise it again (the capture replaces what was saved before)."""
+        with self._lock:
+            cur = self._db.execute(
+                "UPDATE items SET status='queued', reason=NULL, reason_detail=NULL, attempts=0, next_retry_at=NULL, "
+                "senses_status=NULL, ai_status=NULL, ai_attempts=0, ai_next_at=NULL, screen_text=NULL, updated_at=? "
+                "WHERE canonical_url=? AND status IN ('queued', 'archived', 'needs_attention')", (self._stamp(), url))
+        return cur.rowcount > 0
+
     def retry(self, url: str) -> bool:
         """The Retry button: start over (a short link is expanded again, a post is fetched again)."""
         try:

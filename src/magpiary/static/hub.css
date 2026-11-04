@@ -4214,3 +4214,16 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .modestat.smart { color: var(--ok); }
 .modestat.private { color: var(--fg-2); }
 .modestat svg { width: 14px; height: 14px; }
+
+/* Read: a page saved as the owner saw it in Chrome ("Save what I see"), in reading order */
+.reader { max-width: 680px; font-size: 16px; line-height: 1.65; color: var(--fg); }
+.reader .rdtitle { font-family: var(--display); font-size: 26px; line-height: 1.2; margin: 6px 0 6px; }
+.reader .rdby { color: var(--fg-3); font-size: 13px; margin: 0 0 22px; }
+.reader h3, .reader h4, .reader h5 { font-family: var(--display); line-height: 1.3; margin: 28px 0 10px; }
+.reader h3 { font-size: 21px; } .reader h4 { font-size: 18px; } .reader h5 { font-size: 16px; }
+.reader p { margin: 0 0 16px; }
+.reader ul, .reader ol { margin: 0 0 16px; padding-left: 22px; } .reader li { margin: 4px 0; }
+.reader blockquote { margin: 0 0 16px; padding: 2px 0 2px 16px; border-left: 3px solid var(--line); color: var(--fg-2); font-style: italic; }
+.reader pre { background: var(--chip); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; margin: 0 0 16px; }
+.reader figure { margin: 22px 0; } .reader figure img, .reader figure video { display: block; max-width: 100%; height: auto; border-radius: 10px; margin: 0 auto; }
+.reader figcaption, .reader .rdcap { color: var(--fg-3); font-size: 13px; text-align: center; margin-top: 8px; }

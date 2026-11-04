@@ -101,7 +101,8 @@ async function init() {
     $("pill").style.setProperty("--c", color);
     $("pill").lastElementChild.textContent = cleaned.source === "other" ? name : `${name} ${cleaned.kind || "post"}`;
     $("link").textContent = cleaned.url.replace(/^https?:\/\/(www\.)?/, "") + (cleaned.needsExpansion ? " · your Mac will expand this short link" : "");
-    $("savego").onclick = () => doSave(cleaned);
+    $("seenbox").hidden = cleaned.source !== "other";   // posts on the six feed sites are read by the Mac itself
+    $("savego").onclick = () => doSave(cleaned, tab);
     $("addnote").onclick = () => { $("addnote").hidden = true; $("notebox").hidden = false; $("note").focus(); };
     $("note").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("savego").click(); });
     $("savego").focus();   // the shortcut opens this panel; Enter then saves
@@ -134,17 +135,24 @@ async function init() {
   };
 }
 
-async function doSave(cleaned) {
+async function doSave(cleaned, tab) {
   $("savego").disabled = true;
-  const r = await send({ type: "save", url: cleaned.url, note: $("note").value, board: $("board").value });
+  const seen = !$("seenbox").hidden && $("whatisee").checked && tab && tab.id != null;
+  if (seen) say("Reading the page…");
+  const r = await send(seen ? { type: "saveSeen", tabId: tab.id, url: cleaned.url, note: $("note").value, board: $("board").value }
+                            : { type: "save", url: cleaned.url, note: $("note").value, board: $("board").value });
   if (r.state === "ok") {
     show("done");
     const [name] = SOURCE[cleaned.source] || SOURCE.other;
     $("donetitle").textContent = r.savedCount > 1 ? "Saved again" : "Saved to Magpiary";
-    $("donesub").textContent = `${cleaned.source === "other" ? "Web page" : name + " " + (cleaned.kind || "post")}${r.savedCount > 1 ? ` · saved ${r.savedCount} times` : ""}`;
+    $("donesub").textContent = `${cleaned.source === "other" ? (seen && !r.linkOnly ? "The page as you see it" : "Web page") : name + " " + (cleaned.kind || "post")}${r.savedCount > 1 ? ` · saved ${r.savedCount} times` : ""}`
+      + (seen && r.linkOnly ? " · this page had nothing to read, so the link was saved" : "");
     setTimeout(() => window.close(), 1400);
   } else if (r.state === "offline") {
     say("Magpiary isn't answering. It will save when your Mac is ready.", "warn");
+  } else if (r.state === "full") {
+    say("Five pages are already waiting for Magpiary. Open Magpiary on this Mac, then save again.", "warn");
+    $("savego").disabled = false;
   } else if (r.state === "revoked") {
     say("This browser was removed in Magpiary. Unpair and pair it again.", "bad");
     $("savego").disabled = false;
