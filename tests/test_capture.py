@@ -260,3 +260,23 @@ def test_posts_from_other_sites_show_that_sites_name_and_icon(mac, tmp_path, mon
     assert asked[0] == "https://behance.net/favicon.ico"     # the site a post came from gets its icon, fetched once
     badge = ui.source_badge("other", "https://www.behance.net/gallery/1/x")
     assert '<img class="siteico' in badge and 'src="/icon/behance.net"' in badge
+
+
+def test_rows_and_pictures_side_by_side_are_kept_and_drawn_together(tmp_path):
+    from magpiary import reader
+
+    page = capture.clean_page({"blocks": [
+        {"t": "row", "items": ["Paper", "Craft", "<b>Slow</b>", 7]},
+        {"t": "img", "src": PIC1, "group": 3}, {"t": "img", "src": PIC2, "group": 3},
+        {"t": "img", "src": "https://img.example.net/alone.jpg"}]})
+    assert page["blocks"][0] == {"t": "row", "items": ["Paper", "Craft", "<b>Slow</b>"]}
+    assert [b.get("group") for b in page["blocks"][1:]] == [3, 3, None]
+    for name in ("media-01.jpg", "media-02.jpg", "media-03.jpg"):
+        (tmp_path / name).write_bytes(JPEG)
+    files = iter(["media-01.jpg", "media-02.jpg", "media-03.jpg"])
+    article = {"blocks": [b if b["t"] == "row" else {**b, "file": next(files)} for b in page["blocks"]]}
+    html = reader.blocks_html(article, tmp_path, lambda n: f"/m/{n}")
+    assert '<p class="rdrow"><span>Paper</span><span>Craft</span><span>&lt;b&gt;Slow&lt;/b&gt;</span></p>' in html
+    assert html.count('<div class="rdgal" style="--n:2">') == 1
+    assert html.index("/m/media-02.jpg") < html.index("</div>") < html.index("/m/media-03.jpg")   # the lone picture sits below
+    assert capture.Capture(tmp_path, page).text().startswith("Paper · Craft · <b>Slow</b>")

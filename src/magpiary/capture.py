@@ -76,8 +76,14 @@ def clean_page(page) -> dict:
             if kind == "li":
                 block["ordered"] = raw.get("ordered") is True
             blocks.append(block)
+        elif kind == "row" and isinstance(raw.get("items"), list):  # short items the page shows side by side
+            items = [t for t in (_text(i, 300).strip() for i in raw["items"][:20]) if t]
+            total += sum(map(len, items))
+            if items:
+                blocks.append({"t": "row", "items": items})
         elif kind == "img" and _http(raw.get("src")):
-            blocks.append({"t": "img", "src": raw["src"], "also": [u for u in map(_http, raw["also"][:8]) if u] if isinstance(raw.get("also"), list) else [],
+            group = raw.get("group") if isinstance(raw.get("group"), int) and 0 < raw["group"] < 100_000 else 0
+            blocks.append({"t": "img", "src": raw["src"], **({"group": group} if group else {}), "also": [u for u in map(_http, raw["also"][:8]) if u] if isinstance(raw.get("also"), list) else [],
                            "alt": _text(raw.get("alt"), 500), "caption": _text(raw.get("caption"), 2000)})
         elif kind == "video" and (_http(raw.get("src")) or _http(raw.get("poster"))):
             blocks.append({"t": "video", "src": _http(raw.get("src")), "poster": _http(raw.get("poster"))})
@@ -172,6 +178,8 @@ class Capture:
                 lines.append(b["text"])
             elif b["t"] == "li":
                 lines.append(f"- {b['text']}")
+            elif b["t"] == "row":
+                lines.append(" · ".join(b["items"]))
             elif b["t"] in BLOCK_TEXT:
                 lines.append(b["text"])
             elif b["t"] == "img" and b.get("caption"):

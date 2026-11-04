@@ -1,6 +1,7 @@
 /* "Save what I see": runs in the open tab only when the owner ticks the box and saves. It reads the page as it is drawn:
  * the main article or gallery, in reading order, as plain blocks (headings, paragraphs, lists, quotes, code, pictures,
- * videos). Menus, headers, footers, sidebars, buttons, forms and hidden parts are left out. It changes nothing on the
+ * videos). Things the page lays side by side (a row of tags, an author line, pictures in a grid) stay side by side.
+ * Menus, headers, footers, sidebars, buttons, forms, hidden and screen-reader-only text and lone counts are left out. It changes nothing on the
  * page, makes no request, and reads no cookies or storage. The last value is the result handed to the extension. */
 (() => {
   const MAX_BLOCKS = 4000, MAX_TEXT = 1500000, MIN_PICTURE = 120;
@@ -11,12 +12,16 @@
 
   const meta = (sel) => { const el = document.querySelector(sel); return el ? (el.getAttribute("content") || "").trim() : ""; };
   const tidy = (s) => String(s || "").replace(/[ \t ]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  const NOISE = /^[\d\s.,:;+%·•|()kKmM-]{0,8}$/;   // a count or a separator on its own ("62", "·") says nothing without its icon
   const http = (u) => { try { const x = new URL(u, location.href); return /^https?:$/.test(x.protocol) ? x.href : ""; } catch (_) { return ""; } };
 
   function hidden(el) {
     if (el.getAttribute("aria-hidden") === "true" || el.hidden) return true;
     const cs = getComputedStyle(el);
-    return cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0;
+    if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return true;
+    if (cs.display === "contents") return false;
+    const r = el.getBoundingClientRect();   // text only for screen readers: a box of a pixel, or clipped away
+    return (r.width <= 1 || r.height <= 1) && (cs.overflow === "hidden" || cs.position === "absolute" || cs.clip !== "auto" || cs.clipPath !== "none");
   }
 
   function skip(el, keepHeader) {
@@ -24,6 +29,7 @@
     if (el.tagName === "HEADER" && !(keepHeader && el.querySelector("h1"))) return true;   // a page's top bar, but not an article's title block
     const role = el.getAttribute("role") || "";
     if (SKIP_ROLES.test(role)) return true;
+    if ((role === "button" || role === "switch") && tidy(el.textContent).length < 40) return true;   // a control, not content
     const names = `${typeof el.className === "string" ? el.className : ""} ${el.id || ""}`;
     if (names.trim() && SKIP_NAMES.test(names)) return true;
     return hidden(el);
@@ -82,19 +88,58 @@
     if (blocks.length >= MAX_BLOCKS) return;
     if (block.text !== undefined) {
       block.text = tidy(block.text);
-      if (!block.text || text + block.text.length > MAX_TEXT) return;
+      if (!block.text || (block.t === "p" && NOISE.test(block.text)) || text + block.text.length > MAX_TEXT) return;
       text += block.text.length;
     }
     blocks.push(block);
   }
 
-  function picture(img) {
+  let group = 0;   // pictures the page shows side by side share a group number
+
+  function picture(img, inGroup = 0) {
     const src = bestSource(img);
     if (!src || !bigEnough(img) || blocks.some((b) => b.t === "img" && b.src === src)) return;
     // every other address the picture goes by: the browser's own copy of the page may hold any one of these sizes
     const also = [img.currentSrc, img.getAttribute("src"), ...(img.getAttribute("srcset") || "").split(/,\s+(?=\S)/).map((c) => c.trim().split(/\s+/)[0])]
       .map((u) => (u && !u.startsWith("data:") ? http(u) : "")).filter((u, i, all) => u && u !== src && all.indexOf(u) === i).slice(0, 8);
-    push({ t: "img", src, also, alt: (img.getAttribute("alt") || "").slice(0, 500) });
+    push({ t: "img", src, also, alt: (img.getAttribute("alt") || "").slice(0, 500), ...(inGroup ? { group: inGroup } : {}) });
+  }
+
+  /** An item's words, leaving out the controls and hidden parts inside it (a chip's "+" button, screen-reader text). */
+  function words(el) {
+    let out = "";
+    for (const n of el.childNodes) {
+      if (n.nodeType === Node.TEXT_NODE) out += n.textContent;
+      else if (n.nodeType === Node.ELEMENT_NODE && !skip(n, false)) out += (getComputedStyle(n).display.startsWith("inline") ? "" : " ") + words(n);
+    }
+    return out;
+  }
+
+  /** The one large picture an element holds, when it holds next to no text (a tile in a grid). */
+  function onlyPicture(el) {
+    if (el.tagName === "IMG") return bigEnough(el) ? el : null;
+    if (tidy(el.innerText).length > 2) return null;
+    const big = [...el.querySelectorAll("img")].filter(bigEnough);
+    return big.length === 1 ? big[0] : null;
+  }
+
+  /** Children the page draws side by side: all on one line, or in a row that wraps (a flex row of chips). Only short
+   *  items or pictures count, so a page's two big columns are still read one after the other. */
+  function sideBySide(el) {
+    const kids = [...el.children].filter((k) => !skip(k, false) && k.getBoundingClientRect().width > 0);
+    if (kids.length < 2 || kids.length > 24) return null;
+    const pics = kids.map(onlyPicture);
+    const texts = kids.map((k) => tidy(words(k)).replace(/\s+/g, " "));
+    const allPics = pics.every(Boolean), allShort = pics.every((p) => !p) && texts.every((w) => w.length <= 120);
+    if (!allPics && !allShort) return null;
+    const rs = kids.map((k) => k.getBoundingClientRect());
+    const cs = getComputedStyle(el);
+    const flexRow = (cs.display.includes("flex") && !cs.flexDirection.startsWith("column"))
+      || (cs.display.includes("grid") && rs.some((r, i) => i && Math.abs(r.top - rs[0].top) < 4));   // a grid with more than one column
+    const top = Math.max(...rs.map((r) => r.top)), bottom = Math.min(...rs.map((r) => r.bottom));
+    const oneLine = bottom - top >= 4 && rs.every((r, i) => !i || r.left >= rs[i - 1].right - 2);
+    if (!flexRow && !oneLine) return null;
+    return allPics ? { pics } : { words: texts };
   }
 
   function hasBlockChild(el) {
@@ -135,6 +180,18 @@
     if (tag === "P" || (!hasBlockChild(el) && tidy(el.innerText) && !["UL", "OL", "TABLE", "FIGURE", "PICTURE"].includes(tag))) {
       for (const img of el.querySelectorAll("img")) picture(img);   // a picture set inside a paragraph keeps its place
       push({ t: "p", text: el.innerText });
+      return;
+    }
+    const row = sideBySide(el);
+    if (row && row.pics) {
+      group += 1;
+      for (const img of row.pics) picture(img, group);
+      return;
+    }
+    if (row) {
+      const items = row.words.filter((w) => w && !NOISE.test(w));
+      if (items.length > 1) push({ t: "row", items: items.slice(0, 20).map((w) => w.slice(0, 300)) });
+      else if (items.length) push({ t: "p", text: items[0] });
       return;
     }
     for (const child of el.children) walk(child, depth + 1);

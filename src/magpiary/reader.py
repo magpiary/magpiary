@@ -28,6 +28,8 @@ def blocks_html(article: dict, folder: Path, src: Callable[[str], str], embed: C
     """The blocks in reading order. `src` turns a file in the post's folder into an address (a hub link, or the picture
     itself for a PDF); `embed` draws a link to something embedded on the page."""
     out, items, ordered = [], [], False
+    gallery: list[str] = []
+    gallery_id = None
 
     def close_list():
         nonlocal items
@@ -36,15 +38,27 @@ def blocks_html(article: dict, folder: Path, src: Callable[[str], str], embed: C
             out.append(f"<{tag}>{''.join(items)}</{tag}>")
             items = []
 
+    def close_gallery():
+        nonlocal gallery, gallery_id
+        if len(gallery) > 1:
+            out.append(f'<div class="rdgal" style="--n:{min(len(gallery), 4)}">{"".join(gallery)}</div>')
+        else:
+            out.extend(gallery)
+        gallery, gallery_id = [], None
+
     for b in article.get("blocks") or []:
         kind = b.get("t") if isinstance(b, dict) else None
         if kind != "li":
             close_list()
+        if not (kind == "img" and b.get("group") and b.get("group") == gallery_id):
+            close_gallery()
         if kind == "h":
             level = min(max(int(b.get("level") or 2), 2), 4)
             out.append(f'<h{level + 1}>{e(b.get("text", ""))}</h{level + 1}>')
         elif kind == "p":
             out.append(f'<p>{e(b.get("text", ""))}</p>')
+        elif kind == "row":
+            out.append('<p class="rdrow">' + "".join(f"<span>{e(i)}</span>" for i in b.get("items") or [] if isinstance(i, str)) + "</p>")
         elif kind == "li":
             if not items:
                 ordered = b.get("ordered") is True
@@ -64,10 +78,15 @@ def blocks_html(article: dict, folder: Path, src: Callable[[str], str], embed: C
             else:
                 media = f'<img src="{e(src(name))}" alt="{e(b.get("alt", ""))}" loading="lazy">'
             cap = f'<figcaption>{e(b.get("caption", ""))}</figcaption>' if b.get("caption") else ""
-            out.append(f"<figure>{media}{cap}</figure>")
+            if kind == "img" and b.get("group"):  # shown side by side on the page: kept together
+                gallery_id = b["group"]
+                gallery.append(f"<figure>{media}{cap}</figure>")
+            else:
+                out.append(f"<figure>{media}{cap}</figure>")
         elif kind == "embed" and embed and str(b.get("src", "")).startswith(("https://", "http://")):
             out.append(f'<p class="rdcap">{embed(str(b["src"]))}</p>')
     close_list()
+    close_gallery()
     return "".join(out)
 
 
@@ -87,6 +106,10 @@ blockquote { margin: 0 0 11px; padding: 1px 0 1px 12px; border-left: 3px solid #
 pre { background: #f5f5f3; border-radius: 6px; padding: 9px 11px; font: 9pt/1.45 Menlo, monospace; white-space: pre-wrap; margin: 0 0 11px; }
 figure { margin: 16px 0; break-inside: avoid; }
 figure img { display: block; max-width: 100%; max-height: 125mm; width: auto; height: auto; object-fit: contain; margin: 0 auto; border-radius: 4px; }
+.rdrow { display: flex; flex-wrap: wrap; gap: 6px; font: 9.5pt/1.3 -apple-system, "Helvetica Neue", sans-serif; margin: 0 0 12px; }
+.rdrow span { border: 1px solid #e2e2e2; border-radius: 999px; padding: 3px 10px; color: #444; }
+.rdgal { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 8px; margin: 16px 0; break-inside: avoid; }
+.rdgal figure { margin: 0; } .rdgal figure img { width: 100%; max-height: 90mm; object-fit: cover; }
 figcaption, .rdcap { font: 9pt/1.4 -apple-system, "Helvetica Neue", sans-serif; color: #777; text-align: center; margin-top: 6px; }
 .note { font: 10pt -apple-system, sans-serif; background: #fff4d6; padding: 10px 14px; border-radius: 8px; margin-bottom: 18px; }
 @media print { .note { display: none; } }

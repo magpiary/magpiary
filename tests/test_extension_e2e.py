@@ -252,12 +252,17 @@ ARTICLE = """<!doctype html><html lang="en"><head><title>Paper gardens | Writers
 <body style="margin:0;font:16px sans-serif">
 <header><nav><a href="/">Home</a> <a href="/me">Signed in as Reader Person</a></nav></header>
 <main><article>
+  <div style="display:flex;gap:8px"><div><a href="/t/paper">Paper</a><span role="button">+</span></div><div><a href="/t/craft">Craft</a></div><div><a href="/t/slow">Slow living</a></div></div>
   <h1>A quiet guide to paper gardens</h1>
+  <div style="display:flex;gap:10px;align-items:center"><span>Robin Example</span><div role="button">Follow</div><span>6 min read</span><span>·</span><span>2 days ago</span></div>
+  <div style="display:flex;gap:20px"><span><svg width="12" height="12"></svg>62</span><span><svg width="12" height="12"></svg>2</span></div>
   <p>Fold the stems first, then the petals, and keep the creases sharp so the flower stands on its own.</p>
+  <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Press enter to view image in full size</span>
   <h2>Tools</h2><ul><li>Bone folder</li><li>Thin paper</li></ul>
   <figure><img src="/tulip-small.png" srcset="/tulip-small.png 200w, /tulip.png 800w" width="400" height="300" alt="A folded tulip">
   <figcaption>The first fold</figcaption></figure>
   <p>Glue nothing. A good fold holds better than glue ever will, and it can be opened again later.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><img src="/grid-a.png" width="300" height="200" alt="left"></div><div><img src="/grid-b.png" width="300" height="200" alt="right"></div></div>
   <img src="/avatar.png" width="32" height="32" alt="author photo">
   <button>Follow</button>
 </article>
@@ -272,7 +277,7 @@ class Writers(BaseHTTPRequestHandler):
     def do_GET(self):
         png = self.path.endswith(".png")
         self.send_response(200)
-        self.send_header("Content-Type", "image/png" if png else "text/html")
+        self.send_header("Content-Type", "image/png" if png else "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(PIXEL if png else ARTICLE.encode())
 
@@ -317,8 +322,13 @@ def test_save_what_i_see_sends_the_article_screenshot_and_page_copy(tmp_path, en
     assert page_json["title"] == "A quiet guide to paper gardens" and page_json["byline"] == "Robin Example"
     words = json.dumps(page_json)
     assert "Reader Person" not in words and "footer" not in words and "Follow" not in words   # only the article
-    assert [b["t"] for b in page_json["blocks"]] == ["p", "h", "li", "li", "img", "p"]
-    assert page_json["blocks"][4]["src"] == "http://writers.example.org/tulip.png"   # the largest size offered
-    assert page_json["blocks"][4]["caption"] == "The first fold"
+    blocks = page_json["blocks"]
+    assert [b["t"] for b in blocks] == ["row", "row", "p", "h", "li", "li", "img", "p", "img", "img"]
+    assert blocks[0]["items"] == ["Paper", "Craft", "Slow living"]                    # chips side by side, the + control left out
+    assert blocks[1]["items"] == ["Robin Example", "6 min read", "2 days ago"]       # no Follow, no lone "·"
+    assert "62" not in words and "Press enter" not in words                           # bare counts and screen-reader text dropped
+    assert blocks[6]["src"] == "http://writers.example.org/tulip.png"   # the largest size offered
+    assert blocks[6]["caption"] == "The first fold"
+    assert blocks[8]["group"] == blocks[9]["group"] > 0 and "group" not in blocks[6]   # the grid stays side by side
     assert got.screen and got.screen.read_bytes()[:3] == b"\xff\xd8\xff"
-    assert got.backup() == {"http://writers.example.org/tulip.png": PIXEL}   # the picture, from the browser's own copy
+    assert got.backup() == {f"http://writers.example.org/{n}.png": PIXEL for n in ("tulip", "grid-a", "grid-b")}   # the picture, from the browser's own copy
