@@ -536,6 +536,25 @@ def test_tiles_carry_their_video_length_and_preview(mac, lib):
     assert f'data-flip-id="t{lib["ig"]}"' in body
 
 
+def test_help_page_lists_every_chapter_once_and_every_jump_lands(mac):
+    import re
+    from collections import Counter
+
+    from magpiary import help as helptext
+
+    listed = [k for _, keys in helptext.HELP_GROUPS for k in keys]
+    assert sorted(listed) == sorted(helptext.TOPICS)  # every topic in exactly one group
+    assert set(helptext.LOOK) == set(helptext.TOPICS)
+    body = page(mac, "/help")[2]
+    ids = Counter(re.findall(r' id="([^"]+)"', body))
+    assert [i for i, n in ids.items() if n > 1] == []  # no chapter shares an id with the top bar (#t-nest, #t-digest did)
+    jumps = re.findall(r'href="#(help-[^"]+)"', body)
+    assert len(jumps) > len(helptext.TOPICS) and all(ids[j] == 1 for j in jumps)
+    assert "What&#x27;s new" in body or "What's new" in body
+    assert "Ask Magpiary" in page(mac, "/settings/ask")[2] and "Turn Ask on" in page(mac, "/settings/ask")[2]
+    assert 'href="/help#help-nest"' in page(mac, "/help?frag=1&ctx=nest")[2]  # All help opens at the same chapter
+
+
 def test_help_column_on_settings_the_help_page_and_the_panel_for_each_page(mac):
     body = page(mac, "/settings/phones")[2]
     assert 'id="sethelp"' in body and "Pair an iPhone" in body and "Right now" in body and "All help" in body

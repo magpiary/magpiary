@@ -86,9 +86,10 @@ class ChecklistPages:
         return f'<aside class="gstart{" fin" if done else ""}" id="gstart" aria-label="Getting started">{inner}</aside>'
 
     def checklist_replay(self) -> str:
-        return ('<section class="hblock"><h4>Getting started</h4><p>Four quick steps that open the real parts of a post. '
+        """A note inside Help's Getting started chapter."""
+        return ('<div class="hcall"><p><b>The first-steps checklist</b>Four quick steps that open the real parts of a post. '
                 'They tick themselves as you go.</p>'
-                + self._form("/hub/checklist", {"action": "replay", "next": "/"}, "Show the checklist again", "btn sm") + "</section>")
+                + self._form("/hub/checklist", {"action": "replay", "next": "/"}, "Show the checklist again", "btn sm") + "</div>")
 
 
 def ui_safe(nxt: str) -> str:

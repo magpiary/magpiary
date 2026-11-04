@@ -33,7 +33,7 @@ TOPICS = {
              "your own key. The video never leaves the Mac."),
             ("Which apps can I share from?",
              "Instagram (reels and posts), Threads, YouTube (videos and Shorts), Reddit, X and LinkedIn. Other links are "
-             "kept too, with what can be read from them."),
+             "kept too, with what can be read from them. On the Mac, the Chrome extension saves any page you have open."),
             ("Do I need to keep the hub open?",
              "No. Magpiary runs in the background and starts when you log in. The hub is just a page to look at your "
              "library; close it any time."),
@@ -73,8 +73,7 @@ TOPICS = {
              "Yes. Search looks in the transcript, the words on screen, the caption and the summary, and shows the "
              "matching line on each result."),
             ("How do I change tile size or how piles look?",
-             "Use the grid buttons above the wall for tile size. Piles, the search style and page width are in Settings → "
-             "Appearance."),
+             "In Settings → Appearance: tile size, tile labels, glass, interface size and page width. Changes show at once."),
             ("A post shows “Needs you”. What do I do?",
              "Open it: it says what went wrong in plain words (for example, the post is private or the site wants a login) "
              "and offers Try again. The Nest's “Needs you” tab lists them all."),
@@ -108,8 +107,17 @@ TOPICS = {
                 "Open a post from the wall.",
                 "Summary has the caption, the key points and the moments worth jumping to.",
                 "Links lists what the post mentions; Related shows similar saves; Details shows when and how it was read."]),
+            ("Read a saved page, or keep it as a PDF", "For pages saved with Save what I see.", [
+                "Open the post. A page saved from Chrome with Save what I see opens on its Read tab.",
+                "It shows the page's words and pictures in their order, the way you saw them.",
+                "Press Download PDF to keep a copy; it is made on this Mac.",
+                "What I saw opens the picture of your screen taken when you saved it."]),
         ],
         "faqs": [
+            ("What is Deeper dive?",
+             "An extra, deeper reading of one post, on top of its normal summary, useful for long videos and podcasts. It runs only "
+             "when you choose Deeper dive… in the post's menu. It needs Claude Code or Codex allowed in Settings → AI & digest, "
+             "or a paid key; never a free key."),
             ("Why is there no summary?",
              "Either you're in Private mode, no AI key is added yet, or every key has reached its daily limit (it comes "
              "back tomorrow). The post is still searchable by what was said. Use Summarise again in the post’s menu once a key works."),
@@ -155,7 +163,7 @@ TOPICS = {
             ("Get a free Gemini key", "About two minutes.", [
                 "Open Settings → AI & digest and press Add a key.",
                 "Pick Google Gemini and press “Open the Google Gemini page”.",
-                "Sign in, press “Create API key”, and copy the key (it starts with “Alza”).",
+                "Sign in, press “Create API key”, and copy the key (it starts with “AIza”).",
                 "Paste it and press Check and save. Magpiary tests it before keeping it."]),
             ("Use more than one key", "So summaries keep going when one runs out.", [
                 "Add a second key (for example a free OpenRouter key).",
@@ -256,6 +264,17 @@ TOPICS = {
                 "In the Shortcuts app: Automation → New → Wi-Fi.",
                 "Pick your home network, choose “Is Joined” and “Run Immediately”.",
                 "Action: Run Shortcut → Magpiary, with no input. Turn off “Notify When Run”."]),
+            ("Save from Chrome", "Pair the extension once, then one click.", [
+                "Add the Magpiary extension to Chrome and pin it from the puzzle-piece menu.",
+                "On the Mac: Settings → Saving posts → Chrome → Pair Chrome, and copy the code. It works once, for 15 minutes.",
+                "Click the Magpiary icon in Chrome, paste the code and press Pair.",
+                "From then on, open a page or post, click the Magpiary icon and press Save. Or right-click a page or a "
+                "link and choose Save to Magpiary."]),
+            ("Save what I see", "Keep a page exactly as it is on your screen.", [
+                "Open the page in Chrome and click the Magpiary icon.",
+                "Tick Save what I see, then press Save.",
+                "Magpiary keeps the page's words and pictures as you see them, plus one picture of your screen.",
+                "Open the post to read it on its Read tab, or download it as a PDF."]),
         ],
         "faqs": [
             ("I shared away from home. Is it lost?",
@@ -271,6 +290,13 @@ TOPICS = {
             ("Which Wi-Fi name should I type?",
              "The exact name in the iPhone's Settings → Wi-Fi. The label at the top of the screen can be your phone "
              "company's instead."),
+            ("What does Save what I see send, and where?",
+             "Only when you tick it: the text and pictures of the page you have open, and a picture of the visible part of "
+             "your screen. They go to Magpiary on this Mac and nowhere else. It works on pages you are signed in to, so "
+             "what you can read is what is kept."),
+            ("Why is Save what I see not in the panel?",
+             "It shows on ordinary web pages. On a post from Instagram, Threads, YouTube, Reddit, X or LinkedIn, Magpiary "
+             "reads the post itself, so the box isn't needed."),
             ("Can I use the hub from my phone?",
              "Not yet: the hub only opens on this Mac. Opening it from your phone is planned for later."),
             ("Do I need a new code for a new phone?",
@@ -322,11 +348,11 @@ TOPICS = {
         "faqs": [
             ("When does a digest arrive?", "Monthly on the 1st at 9:00 by default. In Settings → AI & digest → "
              "Digest you can choose weekly, or both. If the Mac is asleep then, it's made as soon as the Mac wakes."),
-            ("Why doesn't the notification open the hub?", "Magpiary has no app of its own, so macOS can't open "
-             "anything when you click the notification. Open the hub yourself; the Digest button's dot shows "
-             "where to look."),
-            ("Who writes it?", "Claude Code on your Claude plan, if you have it; if that hasn't worked within a day, your "
-             "AI key. One run a digest. In Private mode there's no written part, only the words, numbers and piles."),
+            ("Why doesn't the notification open the hub?", "macOS shows it through its Script Editor, so clicking it "
+             "can't open the hub. Open the hub yourself; the Digest button's dot shows where to look."),
+            ("Who writes it?", "The first one ready in Settings → AI & digest → AI keys: Claude Code or Codex (once you allow "
+             "them there) or a paid key. With only free keys the Digest is off, unless you turn it on anyway. In Private "
+             "mode there's no written part, only the words, numbers and piles."),
             ("A period with no saves?", "It's kept quietly, with no dot and no notification."),
         ],
     },
@@ -425,6 +451,10 @@ TOPICS = {
                 "Open Settings → Library & this Mac.",
                 "Press Show in Finder next to Library, Notes or Models.",
                 "Notes are Markdown files; open the folder in Obsidian to browse them there."]),
+            ("Back up and restore", "A copy of your library, made in one press.", [
+                "Open Settings → Library & this Mac.",
+                "Press Back up now to make a copy.",
+                "To go back to an earlier copy, use Restore from a backup in the same place."]),
             ("Free up space", "Empty the Trash.", [
                 "Open Settings → Library & this Mac.",
                 "Press Empty next to the Trash, and confirm.",
@@ -435,7 +465,8 @@ TOPICS = {
              "In a Magpiary folder in your home folder: the database, the archived videos and photos, and a Markdown note "
              "per post."),
             ("Can I back it up?",
-             "Yes: back up the Magpiary folder with Time Machine or any copy. It holds everything."),
+             "Yes: Settings → Library & this Mac → Back up now, or back up the Magpiary folder with Time Machine. It holds "
+             "everything."),
             ("What are the models?",
              "The speech model that writes down what was said, and a small model that finds related posts and piles. "
              "Both run on the Mac."),
@@ -446,9 +477,10 @@ TOPICS = {
     "appearance": {
         "title": "Appearance",
         "guides": [
-            ("Make it yours", "Theme, tiles, glass and width.", [
+            ("Make it yours", "Theme, tiles, glass, size and width.", [
                 "Open Settings → Appearance.",
                 "Pick a theme (Indigo or Dark), a tile size and tile labels; changes show at once.",
+                "Turn glass on or off, and make the whole interface smaller or bigger with Interface size.",
                 "On a large screen, pick a page width, or Full width."]),
         ],
         "faqs": [
@@ -456,6 +488,29 @@ TOPICS = {
              "A width only shows when the window is wider than it. On a laptop, 1,600 px is the one that makes a difference."),
             ("Is there a light theme?",
              "Not yet. Indigo and Dark are the two looks for now."),
+        ],
+    },
+    "ask": {
+        "title": "Ask Magpiary",
+        "guides": [
+            ("Turn Ask on", "Questions about your saves, answered from them.", [
+                "Open Settings → Ask Magpiary and turn on Use Ask Magpiary.",
+                "It needs an AI key, or Claude Code or Codex allowed in Settings → AI & digest → AI keys.",
+                "Choose who answers under Who answers, and whether it may search the web."]),
+            ("Ask a question", "About a post, a pile, a board or everything.", [
+                "Press Ask Magpiary at the bottom right of any page.",
+                "Ask in plain words, such as “Which of my saves are about sourdough?”.",
+                "The answer lists the posts it came from; click one to open it."]),
+        ],
+        "faqs": [
+            ("What is sent when I ask?",
+             "Your question, the saves it needs to answer and your goals go to whoever answers: your AI key's service, or "
+             "Claude Code or Codex on your own plan. Nothing is sent until you ask."),
+            ("Does it use my AI quota?",
+             "Yes, each answer uses tokens from whoever answers. Settings → Ask Magpiary shows the tokens used today, this "
+             "week and this month, and can set a limit."),
+            ("What happens to my chats when I turn Ask off?",
+             "Every Ask button goes and any answer being written stops. Your chats are kept for when you turn it back on."),
         ],
     },
     "privacy": {
@@ -511,6 +566,11 @@ PAGE_TOPIC = {"wall": "library", "search": "library", "shelf": "library", "add":
 
 # What's new, shown once after an update (newest first). Plain words; one line each.
 CHANGES = [
+    ("0.1.5", ["Save what I see: tick it in the Chrome extension to keep a page as it is on your screen, signed-in pages included.",
+               "Saved pages open on a Read tab with their words and pictures in order, and download as a PDF in one click.",
+               "Posts from any website show that site's name and icon.",
+               "macOS permission prompts name Magpiary, and Help lists every prompt and why.",
+               "A clearer Help page: chapters on the left, and a guide for Ask Magpiary and the Chrome extension."]),
     ("0.1.4", ["A new welcome guide: save from Chrome or your iPhone, skip any step, and watch each step tick off as Magpiary sees it happen.",
                "Chrome can tell Magpiary it is installed and pinned (with the newer extension), and the iPhone step now ticks only when the phone has really reached your Mac.",
                "“Send when I get home” moved to Settings.",
@@ -547,21 +607,27 @@ LOOK = {
     "nest": ("var(--t-discussion)", "moon", "What Magpiary is doing, and what is waiting or stuck."),
     "ai": ("var(--t-design)", "sparkle", "Keys, limits, modes, and what is sent."),
     "agents": ("var(--t-tool)", "terminal", "Let an AI search your saves, save links and leave notes."),
-    "phones": ("var(--t-howto)", "phone", "Pairing, sharing, and getting posts home."),
+    "ask": ("var(--t-design)", "comment", "Ask questions about your saves, answered with the posts they came from."),
+    "phones": ("var(--t-howto)", "phone", "Your iPhone and Chrome, and getting posts home."),
     "links": ("var(--t-explainer)", "links", "How links are found, search keys and Instagram."),
     "digest": ("var(--t-design)", "digest", "What you saved, what it was about, and what's worth doing."),
     "profile": ("var(--t-place)", "people", "How friends see you, and what they can open."),
     "boards": ("var(--t-news_opinion)", "folder", "Boards you share with friends, and where they sync."),
     "storage": ("var(--t-discussion)", "folder", "Your files, the Trash, and removing Magpiary."),
-    "appearance": ("var(--t-tool)", "palette", "Theme, tiles, piles and width."),
-    "privacy": ("#5b5b5b", "lock", "What leaves this Mac, and how to delete your data."),
+    "appearance": ("var(--t-tool)", "palette", "Theme, tiles, glass, size and width."),
+    "privacy": ("var(--fg-2)", "lock", "What leaves this Mac, and how to delete your data."),
 }
 GUIDE_ICONS = {
     "Save your first post": "phone", "Add a post from the Mac": "plus", "Find something again": "search",
     "Sort what you've saved": "grid2", "Narrow the wall down": "filter", "Keep the wall tidy": "trash",
     "Fix a pile": "summary", "Start the piles over": "clock", "Read a post quickly": "frames",
     "Pause and resume": "moon", "Clear what needs you": "alert", "Get a free Gemini key": "sparkle",
-    "Use more than one key": "links", "Switch to Private": "lock", "Pair an iPhone": "phone", "Turn AI agents on or off": "sliders", "Hide private saves from AI": "lock", "Let an AI search your library": "terminal", "Connect Claude Code or Codex": "links", "Let an AI save links and leave notes": "plus", "Cut an AI off": "lock",
+    "Use more than one key": "links", "Switch to Private": "lock", "Pair an iPhone": "phone", "Turn AI agents on or off": "sliders",
+    "Hide private saves from AI": "lock", "Let an AI search your library": "terminal", "Connect Claude Code or Codex": "links",
+    "Let an AI save links and leave notes": "plus", "Save from Chrome": "ext", "Save what I see": "eye",
+    "Read a saved page, or keep it as a PDF": "openpage", "Back up and restore": "archive", "Turn Ask on": "sliders",
+    "Ask a question": "comment", "Change the topics on your profile": "sliders", "Lock the hub with a PIN": "fingerprint",
+    "macOS permission prompts": "info",
     "Send automatically when you get home": "download", "Add a free web search key": "search",
     "Connect your Instagram login": "check", "Open your files": "folder", "Free up space": "trash",
     "Make it yours": "palette", "See what leaves this Mac": "lock", "Read your digest": "digest",
@@ -569,4 +635,11 @@ GUIDE_ICONS = {
     "Use Cloudflare R2 instead": "folder", "Invite a friend": "people", "Make a board and fill it": "plus",
     "Share to a board from your iPhone": "phone",
 }
+# The /help page's chapter list, in reading order: (heading, topics). Every topic is in exactly one group.
+HELP_GROUPS = (
+    ("Using Magpiary", ("start", "phones", "library", "post", "piles", "nest")),
+    ("AI", ("ai", "digest", "ask", "links", "agents")),
+    ("With friends", ("boards", "profile")),
+    ("This Mac", ("storage", "appearance", "privacy")),
+)
 GUIDE_TINTS = ("var(--t-howto)", "var(--t-design)", "var(--t-explainer)", "var(--t-discussion)", "var(--t-tool)")

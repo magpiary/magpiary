@@ -171,7 +171,7 @@ def test_the_settings_page_holds_controls_and_the_how_to_lives_in_help(hub):
     for gone in ("Make a new key", "Full activity log", "Their key", "pile_"):                # one list, no key row, no pile list
         assert gone not in body, gone
     assert 'data-copycode="claude mcp add magpiary -- magpiary mcp"' in body and 'data-copycode="codex mcp add magpiary -- magpiary mcp"' in body  # one click to copy
-    assert 'href="/help#t-agents"' in body                                               # the explanation stays in Help
+    assert 'href="/help#help-agents"' in body                                               # the explanation stays in Help
     assert "claude mcp add magpiary -- magpiary mcp" in whole.split('id="sethelp"')[1]     # and is one tap away in the drawer
     assert "goes to the company behind that AI" not in body
     help_body = page(hub, "/help")[2]

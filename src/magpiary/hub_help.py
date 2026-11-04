@@ -36,13 +36,13 @@ class HelpPages:
         title = helptext.TOPICS[topic]["title"]
         colour, icon, blurb = helptext.LOOK[topic]
         close = '<button type="button" class="hclose" data-hclose aria-label="Close help">×</button>' if panel else ""
-        acts = (f'<div class="hacts"><a class="hbtn" href="/help">All help {ui.icon("ext")}</a>'
+        acts = (f'<div class="hacts"><a class="hbtn" href="/help#help-{topic}">All help {ui.icon("ext")}</a>'
                 f'<a class="hbtn" href="/doctor">{ui.icon("health")} Run a health check</a></div>')
         head = (f'<header class="hcard"><span class="hic">{ui.icon(icon)}</span><div class="htx"><small>Help</small><b>{e(title)}</b>'
                 f'<p>{e(blurb)}</p>{acts}</div>{close}</header>' if panel
                 else '<h2 class="hplain">Help</h2>')  # on Settings the page already names the section (owner, 26 Oct)
-        foot = ('<nav class="hfoot"><a href="/help">All help →</a><a href="/doctor">Run a health check</a></nav>' if panel
-                else '<a class="hall" href="/help">All help →</a>')
+        foot = (f'<nav class="hfoot"><a href="/help#help-{topic}">All help →</a><a href="/doctor">Run a health check</a></nav>' if panel
+                else f'<a class="hall" href="/help#help-{topic}">All help →</a>')
         return (f'<div class="hwrap {"hdrop" if panel else "hcol"}" style="--c:{colour}">{head}'
                 + self._help_topic(topic, compact=True) + ("" if panel else foot) + self._whats_new()
                 + self._help_status(topic) + "</div>")
@@ -99,20 +99,24 @@ class HelpPages:
     # ---- guides and FAQs --------------------------------------------------------------------
 
     def _help_topic(self, topic: str, compact: bool = False) -> str:
+        """One topic's guides and questions. On the /help page (not compact) it is a chapter: ids the chapter list jumps to
+        (help-<topic>, help-<topic>-<n> for a guide, help-<topic>-q for the questions), its title and one line."""
         t = helptext.TOPICS[topic]
+        gid = (lambda n: "") if compact else (lambda n: f' id="help-{topic}-{n}"')
         guides = "".join(
-            f'<details class="hguide hitem" style="--g:{helptext.GUIDE_TINTS[n % len(helptext.GUIDE_TINTS)]}"><summary>'
+            f'<details class="hguide hitem"{gid(n)} style="--g:{helptext.GUIDE_TINTS[n % len(helptext.GUIDE_TINTS)]}"><summary>'
             f'<span class="gic">{ui.icon(helptext.GUIDE_ICONS.get(title, "book"))}</span><span class="gt"><b>{e(title)}</b>'
             f'<span>{e(line)}</span></span><em>{len(steps)} steps</em></summary>'
             f'<ol class="hsteps">{"".join(f"<li><span>{e(s)}</span></li>" for s in steps)}</ol></details>'
             for n, (title, line, steps) in enumerate(t["guides"]))
         faqs = "".join(f'<details class="hfaq hitem"><summary>{e(q)}</summary><p>{e(a)}</p></details>' for q, a in t["faqs"])
-        colour, icon, _ = helptext.LOOK[topic]
-        head = ("" if compact else f'<h3 id="t-{topic}" style="--c:{colour}"><span class="hic">{ui.icon(icon)}</span>'
-                                   f'{e(t["title"])}</h3>')
-        return (f'<section class="hblock htopic" data-topic="{topic}">{head}'
+        colour, icon, blurb = helptext.LOOK[topic]
+        head = ("" if compact else f'<h3 style="--c:{colour}"><span class="hic">{ui.icon(icon)}</span>{e(t["title"])}</h3>'
+                                   f'<p class="hlead">{e(blurb)}</p>' + (self.checklist_replay() if topic == "start" else ""))
+        return (f'<section class="hblock htopic"{"" if compact else f" id=\"help-{topic}\""} data-topic="{topic}">{head}'
                 + (f'<h4>Guides</h4><div class="hguides">{guides}</div>' if guides else "")
-                + (f'<h4>Questions</h4><div class="hfaqs">{faqs}</div>' if faqs else "") + "</section>")
+                + (f'<h4{"" if compact else f" id=\"help-{topic}-q\""}>Questions</h4><div class="hfaqs">{faqs}</div>' if faqs else "")
+                + "</section>")
 
     # ---- What's new, once after an update -------------------------------------------------------
 
@@ -140,13 +144,37 @@ class HelpPages:
             topic = topic_for(q.get("ctx", ""), q.get("section", ""))
             return Response(200, self.help_column(topic, panel=True).encode(),
                             headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
-        chips = "".join(f'<a class="fchip" href="#t-{k}">{e(t["title"])}</a>' for k, t in helptext.TOPICS.items())
-        topics = "".join(self._help_topic(k) for k in helptext.TOPICS)
-        body = (f'<div class="helppage"><div class="hero hhero"><div><h1>Help</h1><p>Guides and answers for every part of Magpiary.'
-                f'</p></div><a class="hbtn" href="/doctor">{ui.icon("health")} Run a health check</a></div><label class="hsearch">{ui.icon("search")}<input type="search" id="helpq" placeholder="Search the help" '
-                f'aria-label="Search the help" autocomplete="off"></label><nav class="hchips">{chips}</nav>'
-                f'<p class="hnone" hidden>Nothing matches. Try another word.</p>{self.checklist_replay()}{topics}</div>')
+        # two columns (owner, 5 Nov 2026): the chapters on the left, grouped, each opening to its guides while it is the one
+        # being read; every chapter one after another on the right
+        def chapter(k: str) -> str:
+            t = helptext.TOPICS[k]
+            icon = helptext.LOOK[k][1]
+            sub = "".join(f'<li><a href="#help-{k}-{n}" data-guide>{e(g[0])}</a></li>' for n, g in enumerate(t["guides"]))
+            sub += f'<li><a href="#help-{k}-q">Questions</a></li>' if t["faqs"] else ""
+            return (f'<li data-t="{k}"><a class="hnl" href="#help-{k}"><span class="hni">{ui.icon(icon)}</span>'
+                    f'<span>{e(t["title"])}</span></a><ul class="hnsub">{sub}</ul></li>')
+        nav = "".join(f'<p class="hng">{e(name)}</p><ul class="hnlist">{"".join(chapter(k) for k in keys)}</ul>'
+                      for name, keys in helptext.HELP_GROUPS)
+        nav += (f'<ul class="hnlist hnlast"><li data-t="new"><a class="hnl" href="#help-new">'
+                f'<span class="hni">{ui.icon("sparkle")}</span><span>What\'s new</span></a></li></ul>')
+        topics = "".join(self._help_topic(k) for _, keys in helptext.HELP_GROUPS for k in keys)
+        body = (f'<div class="helppage"><aside class="hside" aria-label="Help chapters"><label class="hsearch">{ui.icon("search")}'
+                f'<input type="search" id="helpq" placeholder="Search the help" aria-label="Search the help" autocomplete="off"></label>'
+                f'<nav class="hnav" aria-label="Chapters">{nav}</nav>'
+                f'<a class="hbtn hdoc" href="/doctor">{ui.icon("health")} Run a health check</a></aside>'
+                f'<div class="hmain"><div class="hero hhero"><h1>Help</h1><p>Guides and answers for every part of Magpiary. '
+                f'Pick a chapter, or search.</p></div>'
+                f'<p class="hnone" hidden>Nothing matches. Try another word.</p>{topics}{self._changes()}</div></div>')
         return self.shell("Help", body, "help")
+
+    @staticmethod
+    def _changes() -> str:
+        """Every version's What's new, newest first: the last chapter of /help."""
+        versions = "".join(f'<div class="hver hitem"><h5>{e(v)}</h5><ul>{"".join(f"<li>{e(x)}</li>" for x in lines)}</ul></div>'
+                           for v, lines in helptext.CHANGES)
+        return (f'<section class="hblock htopic" id="help-new" data-topic="new"><h3 style="--c:var(--t-news_opinion)">'
+                f'<span class="hic">{ui.icon("sparkle")}</span>What\'s new</h3><p class="hlead">What changed in each version.</p>'
+                f'<div class="hvers">{versions}</div></section>')
 
     def help_post(self, path: str, form: dict) -> bool:
         if path == "/hub/whatsnew/seen":

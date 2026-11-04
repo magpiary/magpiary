@@ -1430,19 +1430,66 @@ body[data-page="settings"] #t-help { display: none; }
 @media (max-width: 860px) { .helpsheet { left: 8px; right: 8px !important; width: auto; max-height: calc(100vh - 140px); } }
 
 /* the /help page */
-.helppage { max-width: 900px; margin: 0 auto; }
-.hsearch { display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; border-radius: 999px; background: var(--chip); margin: 6px 0 16px; }
-.hsearch .ico { width: 20px; height: 20px; color: var(--fg-3); }
+/* /help in two columns (owner, 5 Nov 2026): the chapter list stays beside the reading column; the chapter being read
+   opens to its guides. Under 900 px the list becomes one row of chapters that scrolls sideways. */
+.helppage { --hgap: calc(var(--top-h, 64px) + 20px); max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 56px; align-items: start; }
+.hside { position: sticky; top: var(--hgap); max-height: calc(100vh - var(--hgap) - 16px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; display: flex; flex-direction: column; gap: 4px; padding: 6px 4px 16px 0; }
+.hmain { min-width: 0; max-width: 780px; }
+.hsearch { display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; border-radius: 999px; background: var(--chip); }
+.hsearch .ico { width: 20px; height: 20px; color: var(--fg-3); flex: none; }
 .hsearch input { flex: 1; border: 0; background: none; outline: none; font-size: 16px; color: var(--fg); min-width: 0; }
-.hchips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 34px; }
-.helppage .htopic { margin-bottom: 48px; scroll-margin-top: calc(var(--top-h, 64px) + 16px); }
-.helppage .htopic h3 { display: flex; align-items: center; gap: 12px; font: 800 28px var(--display); letter-spacing: -.02em; margin: 0 0 18px; scroll-margin-top: calc(var(--top-h, 64px) + 16px); }
+.hside .hsearch .ico { width: 17px; height: 17px; }
+.hside .hsearch { height: 44px; padding: 0 14px; margin: 0 0 8px; gap: 8px; }
+.hside .hsearch input { font-size: 14.5px; }
+.hng { font: 700 11px var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--fg-3); margin: 14px 10px 6px; }
+.hnlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.hnlast { margin-top: 14px; }
+.hnl { display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border-radius: 11px; color: var(--fg-2); text-decoration: none; font-size: 14.5px; font-weight: 600; transition: background .18s, color .18s; }
+.hnl:hover { background: var(--chip); color: var(--fg); }
+.hni { flex: none; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--fg-3); }  /* neutral: no chapter colours here (owner, 5 Nov) */
+.hni .ico { width: 15px; height: 15px; }
+.hnlist li.on > .hnl { background: var(--chip); color: var(--fg); }
+.hnl:hover .hni, .hnlist li.on > .hnl .hni { color: var(--fg); }
+.hnsub { list-style: none; margin: 4px 0 8px 19px; padding: 0 0 0 14px; border-left: 1px solid var(--line); display: none; }
+.hnlist li.on > .hnsub { display: grid; gap: 1px; }
+.hnsub a { display: block; padding: 5px 8px; border-radius: 8px; font-size: 13.5px; line-height: 1.35; color: var(--fg-3); text-decoration: none; }
+.hnsub a:hover { color: var(--fg); background: var(--chip); }
+.hnlist li.miss { display: none; }
+.hside .hdoc { align-self: flex-start; margin: 18px 6px 0; }
+.helppage .hero.hhero { display: block; margin-bottom: 8px; }
+.hlead { margin: -8px 0 22px; color: var(--fg-2); font-size: 15px; line-height: 1.5; }
+.hcall { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-radius: 16px; background: var(--chip); margin: 0 0 26px; }
+.hcall p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+.hcall b { display: block; color: var(--fg); margin-bottom: 2px; }
+.hcall form { flex: none; }
+.helppage .htopic { margin-bottom: 56px; scroll-margin-top: var(--hgap); }
+.helppage .htopic h3 { display: flex; align-items: center; gap: 12px; font: 800 28px var(--display); letter-spacing: -.02em; margin: 0 0 14px; }
 .helppage .htopic h3 .hic { width: 40px; height: 40px; border-radius: 13px; background: var(--c); color: #fff; display: grid; place-items: center; }
 .helppage .htopic h3 .hic .ico { width: 20px; height: 20px; }
-.helppage .hguides { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-items: start; }
+.helppage .hguide, .helppage .htopic h4 { scroll-margin-top: var(--hgap); }
+.helppage .hguides { grid-template-columns: minmax(0, 1fr); }
+.helppage .hguide.flash { animation: hflash 1.2s ease-out; }
+@keyframes hflash { from { box-shadow: inset 0 0 0 2px var(--g), 0 0 0 6px color-mix(in srgb, var(--g) 30%, transparent); } }
 .helppage .hfaq > summary { font-size: 15.5px; }
 .helppage .hfaq p { font-size: 14.5px; max-width: 70ch; }
+.hvers { display: grid; gap: 22px; }
+.hver h5 { font: 700 15px var(--display); margin: 0 0 6px; }
+.hver ul { margin: 0; padding-left: 18px; color: var(--fg-2); font-size: 14.5px; line-height: 1.55; }
+.hver li { margin: 3px 0; }
 .hnone { color: var(--fg-2); }
+@media (max-width: 900px) {
+  .helppage { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .hside { top: var(--top-h, 64px); z-index: 5; max-height: none; overflow: visible; padding: 8px 0; background: var(--bg); }
+  .hside .hsearch { margin: 0 0 6px; }
+  .hnav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .hnav::-webkit-scrollbar { display: none; }
+  .hng, .hnsub, .hside .hdoc { display: none !important; }
+  .hnlist { display: contents; }
+  .hnl { white-space: nowrap; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--chip); font-size: 13.5px; }
+  .hni { width: 24px; height: 24px; border-radius: 50%; }
+  .hcall { flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { .helppage .hguide.flash { animation: none; } }
 
 /* ---- the digest (M7c) ------------------------------------------------------------------------- */
 .dgbtn { position: relative; }

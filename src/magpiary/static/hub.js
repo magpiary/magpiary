@@ -461,6 +461,8 @@
     d.removeAttribute("open"); d.querySelector("form")?.reset();
   });
   addEventListener("popstate", (ev) => {
+    // a jump within the page (a #link, or Back after one) only scrolls; re-drawing the page would put it back at the top
+    if (location.pathname + location.search === shownAt) { const to = location.hash && document.getElementById(location.hash.slice(1)); to ? to.scrollIntoView() : scrollTo({ top: 0 }); return; }
     if (boardSwapped && location.pathname.startsWith("/board/")) { location.reload(); return; }
     if ($("#view") && hubPath(location.href)) go(location.href, { push: false });
   });
@@ -2514,13 +2516,60 @@
     requestAnimationFrame(frame);
   }
 
-  // the /help page: search as you type
-  function initHelpSearch() {
-    const input = $("#view #helpq"); if (!input || input.dataset.wired) return; input.dataset.wired = "1";
+  // the /help page (two columns, 5 Nov 2026): the chapter list follows the chapter being read, a chapter or guide is
+  // reached without a new page (a guide opens itself), and search filters the chapters and the list together
+  function helpJump(id, instant) {
+    const el = document.getElementById(id); if (!el) return;
+    if (el.tagName === "DETAILS") { el.open = true; el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+    const calm = instant || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: calm ? "instant" : "smooth", block: "start" });
+    history.replaceState(history.state, "", "#" + id);
+  }
+  function initHelp() {
+    const page = $("#view .helppage"); if (!page || page.dataset.wired) return; page.dataset.wired = "1";
+    const input = $("#helpq", page), nav = $(".hnav", page), side = $(".hside", page);
+    const chapters = $$(".htopic[id]", page);
+    const itemOf = (sec) => $(`li[data-t="${sec.id.slice(5)}"]`, nav);
+    let current = null;
+    const mark = (sec) => {
+      if (!sec || sec === current) return;
+      current = sec;
+      $$("li.on", nav).forEach((li) => { li.classList.remove("on"); $(".hnl", li).removeAttribute("aria-current"); });
+      const li = itemOf(sec); if (!li) return;
+      li.classList.add("on");
+      const link = $(".hnl", li); link.setAttribute("aria-current", "location");
+      if (nav.scrollWidth > nav.clientWidth + 1) nav.scrollTo({ left: link.offsetLeft - 16, behavior: "smooth" });  // narrow: one sideways row
+      else {
+        const r = link.getBoundingClientRect(), box = side.getBoundingClientRect();
+        if (r.top < box.top || r.bottom > box.bottom) side.scrollTo({ top: Math.max(0, side.scrollTop + r.top - box.top - 80), behavior: "smooth" });
+      }
+    };
+    const spy = () => {
+      const shown = chapters.filter((c) => !c.hidden);
+      if (!shown.length) return;
+      const line = innerHeight * .3;
+      let at = shown[0];
+      for (const c of shown) { if (c.getBoundingClientRect().top <= line) at = c; else break; }
+      if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) at = shown[shown.length - 1];  // the last chapters never reach the line
+      mark(at);
+    };
+    let frame = 0;
+    const onScroll = () => {
+      if (!page.isConnected) { removeEventListener("scroll", onScroll); return; }
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; spy(); });
+    };
+    addEventListener("scroll", onScroll, { passive: true });
+    page.addEventListener("click", (ev) => {
+      const a = ev.target.closest('a[href^="#help-"]'); if (!a) return;
+      ev.preventDefault();
+      const id = a.getAttribute("href").slice(1);
+      const sec = document.getElementById(id)?.closest(".htopic"); if (sec) mark(sec);
+      helpJump(id);
+    });
     input.addEventListener("input", () => {
       const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
       let shown = 0;
-      $$("#view .htopic").forEach((t) => {
+      chapters.forEach((t) => {
         let any = false;
         $$(".hitem", t).forEach((it) => {
           const hit = words.every((w) => it.textContent.toLowerCase().includes(w));
@@ -2529,9 +2578,22 @@
         });
         $$(".hguides, .hfaqs", t).forEach((list) => { const h = list.previousElementSibling; if (h) h.hidden = !$$(".hitem", list).some((it) => !it.hidden); });
         t.hidden = !any; if (any) shown++;
+        itemOf(t)?.classList.toggle("miss", !any);
       });
-      const none = $("#view .hnone"); if (none) none.hidden = shown > 0;
+      $(".hnone", page).hidden = shown > 0;
+      if (scrollY > 0) scrollTo({ top: 0, behavior: "instant" });
+      current = null; spy();
     });
+    if (location.hash.startsWith("#help-")) {  // arriving at a chapter: jump now, and again once fonts and pictures have moved it
+      const id = location.hash.slice(1);
+      let moved = false;
+      const stop = () => { moved = true; };
+      ["wheel", "keydown", "touchstart"].forEach((t) => addEventListener(t, stop, { once: true, passive: true }));
+      helpJump(id, true);
+      Promise.all([document.fonts?.ready, new Promise((r) => setTimeout(r, 400))])
+        .then(() => { if (!moved && page.isConnected) document.getElementById(id)?.scrollIntoView({ block: "start" }); });
+    }
+    spy();
   }
 
   // A dialog the hub draws over a page (a board card, an invite, a phone's QR code): focus goes into it, Tab stays in
@@ -3051,10 +3113,12 @@
     $("[data-sidetoggle]", side)?.setAttribute("aria-expanded", String(sideOpen));
   }
 
+  let shownAt = location.pathname + location.search;  // the address the view on screen was drawn for
   function initView(quiet) {
+    shownAt = location.pathname + location.search;
     placeAll(true); initSide(); initAdd(); initSynced(); initGone(); initBack(); initEnter(); initBMore();
     $("#view form[data-auto]")?.requestSubmit();  // the invite code is made as the invite dialog opens
-    initTiles(); initBanners(); initMore(); initMenus(); initProvider(); initQr(); initHelpSearch(); initDigest(); initProfile();
+    initTiles(); initBanners(); initMore(); initMenus(); initProvider(); initQr(); initHelp(); initDigest(); initProfile();
     if (page() === "wall") heroShrink();
     if (!quiet) kIndex = -1;
     $$("#view [data-standalone]").forEach(wireCard);

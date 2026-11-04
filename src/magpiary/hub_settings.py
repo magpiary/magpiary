@@ -279,7 +279,7 @@ class SettingsPages:
             "", _row(
                 "Let AI agents use Magpiary",
                 "Off until you turn it on. While it is off, every Magpiary command and tool an AI uses says so and does nothing."
-                + ("" if on else " Turn it on to choose what they may do.") + ' <a class="link" href="/help#t-agents">How it works</a>',
+                + ("" if on else " Turn it on to choose what they may do.") + ' <a class="link" href="/help#help-agents">How it works</a>',
                 switch("/hub/agents/on", on, {}, "Let AI agents use Magpiary"), lead=ui.icon("terminal"), sid="switch")
             + sub
             + "".join(_row(f"Connect {name}", f"Paste this into Terminal once: <code>{e(command)}</code>",

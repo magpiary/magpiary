@@ -282,13 +282,11 @@ html.navhid .crumbbar { top: 6px; }
 :root[data-theme] .sethead p { font-size: var(--type-body); color: var(--fg-2); }
 
 /* ---- Help: a calm guide, one colour, reading sizes ---- */
-:root[data-theme] .helppage { max-width: 840px; margin-inline: auto; }
+:root[data-theme] .helppage { max-width: 1180px; margin-inline: auto; }
 :root[data-theme] .helppage .hero h1 { font: 700 var(--type-display)/1.05 var(--display); letter-spacing: -.02em; }
 :root[data-theme] .helppage .htopic h3 { font: 700 var(--type-title)/1.15 var(--display); letter-spacing: -.015em; }
 :root[data-theme] .helppage h4 { font: 600 var(--type-micro) var(--sans); letter-spacing: .08em; color: var(--fg-3); }
 :root[data-theme] .hsearch { background: var(--tb); box-shadow: var(--tb-edge); }
-:root[data-theme] .hchips a { background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--fg-2); }
-:root[data-theme] .hchips a:hover { background: var(--chip); color: var(--fg); }
 :root[data-theme] .hguide, :root[data-theme] .hdrop .hguide { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; }
 :root[data-theme] .hguide:hover, :root[data-theme] .hdrop .hguide:hover { background: var(--chip); }
 :root[data-theme] .hguide[open] { background: var(--card); box-shadow: inset 0 0 0 1px rgba(247,243,232,.32); }
@@ -562,8 +560,6 @@ html.lhslim #wallctl .views a { height: 40px; padding: 0 20px; }
 .hdrop .hbtn { padding: 0; width: 36px; } .hdrop .hbtn .hl { display: none; }
 .hdrop .hclose { width: 36px; height: 36px; border-radius: 50%; background: var(--navglass); box-shadow: var(--navring); color: var(--fg-2); font-size: 20px; line-height: 1; }
 .hdrop .hclose:hover { color: var(--fg); }
-.hhero { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.hhero .hbtn { margin-top: 10px; }
 :root[data-theme] .hguide, :root[data-theme] .hdrop .hguide { background: color-mix(in srgb, var(--g) 8%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 22%, transparent); }
 :root[data-theme] .hguide:hover, :root[data-theme] .hdrop .hguide:hover { background: color-mix(in srgb, var(--g) 14%, var(--card)); }
 :root[data-theme] .hguide[open] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 55%, transparent); }
@@ -594,8 +590,6 @@ html[data-theme="indigo"]:has(body[data-page="settings"]) #bgfade, html.quiet[da
 :root[data-theme] .nfoot a.nflat { padding: 0 2px 0 6px; margin-left: auto; }
 .fsel, .actl-form .fsel, .askplace .fsel { background: none !important; border: 0 !important; padding: 0 !important; box-shadow: none !important; }
 .askplace .fsel-btn { height: 36px; }
-.hero.hhero { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.hero.hhero > div { min-width: 0; }
 
 /* ======== round 4 ======== */
 
@@ -621,7 +615,6 @@ html[data-theme="indigo"]:has(body[data-page="settings"]) #bgfade, html.quiet[da
 .hdrop .hbtn { width: auto; padding: 0 14px; } .hdrop .hbtn .hl { display: inline; }
 .hbtn { height: 34px; }
 :root[data-theme] .hdrop .hcard { padding: 22px 22px 20px 24px; align-items: flex-start; }
-.helppage .hhero .hbtn { margin-top: 10px; }
 /* the figures at the bottom: three to a row, one line each */
 .htiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .ht { padding: 9px 11px; }

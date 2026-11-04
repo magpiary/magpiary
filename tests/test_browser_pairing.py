@@ -73,7 +73,7 @@ def test_removed_browser_can_no_longer_save(env):
 
 def test_settings_shows_chrome_apart_from_phones_and_pairs_only_one(env):
     page = env.request("GET", "/settings/phones")[2].decode()
-    assert "Pair Chrome" in page and 'id="chrome"' in page          # its own group, with a button while unpaired
+    assert ">Pair Chrome</button>" in page and 'id="chrome"' in page          # its own group, with a button while unpaired
     assert page.index('id="phones"') < page.index('id="chrome"')
     where, code = add_browser(env)
     waiting = env.request("GET", where)[2].decode()
@@ -81,7 +81,7 @@ def test_settings_shows_chrome_apart_from_phones_and_pairs_only_one(env):
     assert env.mac.store.list_phones() == []                         # a code alone pairs nothing
     key = json.loads(redeem(env, code)[1])["key"]
     paired = env.request("GET", "/settings/phones")[2].decode()
-    assert "Paired" in paired and "Pair Chrome" not in paired        # one Chrome: no button once paired
+    assert "Paired" in paired and ">Pair Chrome</button>" not in paired        # one Chrome: no button once paired
     assert "Chrome on this Mac" not in paired and "saves on this Mac only" not in paired
     # a new code re-pairs the same Chrome: its key is replaced, still one row, the old key stops working
     _, again = add_browser(env)
