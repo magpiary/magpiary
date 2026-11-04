@@ -129,7 +129,8 @@ def test_once_per_post_and_its_words_reach_search_the_note_and_links(tmp_path):
     url, folder = saved(store, tmp_path, meta={"source": "instagram", "duration": 30})
     item_id = store.id_for(url)
     assert store.queue_deep(item_id) and not store.queue_deep(item_id)  # already queued
-    ask = Answers({"overview": "Quokka layouts explained.", "named": [{"name": "Grid Talk", "kind": "video"}, {"name": "Pebble", "kind": "tool"}]})
+    ask = Answers({"overview": "Quokka layouts explained.", "named": [{"name": "Grid Talk", "kind": "video"}, {"name": "Pebble", "kind": "tool"},
+                                                                 {"name": "Burrow Kit", "kind": "code", "role": "central", "what": "a layout library", "domain": "burrowkit.example"}]})
     notes = tmp_path / "notes"
     made = deep_due(store, notes, asker=ask)
     assert made == 1 and store.item_by_id(item_id)["deep_status"] == "done"
@@ -137,7 +138,9 @@ def test_once_per_post_and_its_words_reach_search_the_note_and_links(tmp_path):
     assert any(r["canonical_url"] == url for r in store.hub_items(query="quokka"))
     assert "## Deeper dive" in (notes / f"{folder.name}.md").read_text()
     merged = _with_deep(json.loads((folder / "record.json").read_text()), folder)
-    assert {"name": "Pebble", "kind": "tool", "role": "passing"} in merged["link_targets"]
+    assert {"name": "Pebble", "kind": "tool", "role": "passing", "what": "", "domain": ""} in merged["link_targets"]
+    assert {"name": "Burrow Kit", "kind": "code", "role": "central", "what": "a layout library",
+            "domain": "burrowkit.example"} in merged["link_targets"]  # central, with its site: the link search keeps it
     assert merged["list_items"][0]["name"] == "Grid Talk"
 
 
@@ -241,3 +244,9 @@ def test_codex_gets_a_strict_schema_and_its_empty_fields_are_dropped():
                 check(node["items"])
         check(strict_schema(json_schema(schema)))
     assert json.loads(drop_nulls('{"a": 1, "b": null, "c": [{"d": null, "e": 2}]}')) == {"a": 1, "c": [{"e": 2}]}
+
+
+def test_a_name_central_in_any_part_is_central():
+    named = deepdive.tidy_named([{"name": "Pebble", "kind": "tool", "role": "passing"}, {"name": "Burrow", "kind": "tool"},
+                                 {"name": "pebble", "kind": "tool", "role": "central", "domain": "pebble.example"}])
+    assert [(n["name"], n["role"], n["domain"]) for n in named] == [("Pebble", "central", "pebble.example"), ("Burrow", "passing", "")]
