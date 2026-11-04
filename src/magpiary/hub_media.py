@@ -25,6 +25,7 @@ MEDIA_TYPES = {
 MEDIA_NAME = re.compile(r"^(media-\d{2,3}\.[a-z0-9]{2,4}|thumbnail\.jpg)$")
 
 THUMB_WIDTH = 600
+THUMB_VERSION = 2  # in the address: browsers keep a tile's picture for a year, so a better copy needs a new address
 MEDIA_CACHE_SECONDS = 3600
 PHOTO_CACHE_SECONDS = 365 * 24 * 3600
 
@@ -111,7 +112,7 @@ class MediaPages:
     def thumb_url(self, item: dict) -> str:
         """A tile's picture: a 600 px copy, not the full-size one."""
         return (
-            self._media_url(item, item["thumb"]) + f"?w={THUMB_WIDTH}"
+            self._media_url(item, item["thumb"]) + f"?w={THUMB_WIDTH}&v={THUMB_VERSION}"
             if item.get("thumb") and item.get("archive_dir")
             else ""
         )
