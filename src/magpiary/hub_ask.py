@@ -123,6 +123,8 @@ class AskPages:
         chosen = self.store.get_setting(ENGINE, "") or default
         if chosen == "none":
             return None
+        if (chosen == "claude" and not claude) or (chosen == "codex" and not codex):
+            chosen = default  # the owner's pick was stopped in AI keys: the next in the shared order answers instead
         if chosen == "key" and not self.store.get_setting(askconfig.KEY, "") and first.startswith("key:"):
             self.store.set_setting(askconfig.KEY, first[4:])
         if chosen == "codex" and codex:

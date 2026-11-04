@@ -76,6 +76,9 @@ def fetch_due(store: Store, library: Path, get: Get = http_get, ytdlp: YtDlp | N
                 reason, detail, retry = _plain_failure(err, item, ytdlp is not base)
                 store.fetch_failed(url, reason, detail, retry=retry)
                 continue
+        except Exception as err:  # a timeout or a parse error on one post must not hold up every post after it
+            store.fetch_failed(url, "unknown", f"The download stopped: {type(err).__name__}", retry=True)
+            continue
         finally:
             if activity:
                 activity.end("fetch")
@@ -154,22 +157,25 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
     for item in store.due_for_brain():
         forced = bool(item.get("ai_force"))
         url = item["canonical_url"]
-        if not item.get("senses_status"):
+        senses = str(item.get("senses_status") or "")
+        if not senses or (senses.startswith("failed:") and senses[7:] < store._stamp()[:10]):  # failed: once a day
             if store.paused("transcribe") and not forced:
                 continue
             progress = activity.begin("process", item) if activity else NO_PROGRESS
             try:
                 prepare(item, progress)
-            except Exception as err:  # a broken file must not stop the others
+            except Exception as err:  # a broken file must not stop the others; it is tried again tomorrow
                 log(f"transcript failed: {type(err).__name__}")
+                store.senses_failed(url)
+            else:
+                store.senses_done(url, transcript_text(Path(item["archive_dir"])))
             finally:
                 if activity:
                     activity.end("process")
-            store.senses_done(url, transcript_text(Path(item["archive_dir"])))
         if item.get("ai_status") == "done" and not forced:
             continue
-        if not forced and (store.paused("summary") or not store.take_summary_turn()):
-            continue
+        if not forced and (store.paused("summary") or not modes.summarisers(store, key_source) or not store.take_summary_turn()):
+            continue  # nobody can write it now (Private, no key, all at their limit): the "next N" allowance is kept
         record, busy, repicked, last_busy = None, set(), set(), None
         while record is None:
             # Smart: the keys and the allowed Claude Code or Codex, in the owner's order; Private: nobody. One that was busy or

@@ -428,3 +428,23 @@ def test_an_instagram_photo_carousel_keeps_every_photo_and_the_details(tmp_path)
     assert not got.video and got.meta["author"] == "Tess Example" and got.meta["parts"] == 2
     folder = fetch_item(item(post, "instagram"), tmp_path, get, FakeYtDlp(infos={post: info}))
     assert json.loads((folder / "meta.json").read_text())["media"] == ["media-01.webp", "media-02.jpg"]
+
+
+def test_a_timeout_on_one_post_does_not_hold_up_the_posts_after_it(store, tmp_path):
+    """Review 4 Nov 2026: a yt-dlp timeout escaped and stopped the pass on the same oldest post every time."""
+    slow = "https://www.instagram.com/reel/Slow1/"
+    share(store, slow)
+    share(store, IG)
+
+    class Timing(FakeYtDlp):
+        def info(self, url):
+            if url == slow:
+                raise subprocess.TimeoutExpired("yt-dlp", 120)
+            return super().info(url)
+    assert fetch_due(store, tmp_path, pages({}), Timing(infos={IG: IG_INFO}), pause=lambda s: None) == 1
+    assert store.get_item(slow)["status"] == "needs_attention" and store.get_item(slow)["next_retry_at"]
+
+
+def test_one_malformed_link_is_refused_alone_and_the_rest_of_the_batch_is_saved(store):
+    results = store.receive(store.phone, [{"id": "ok1", "url": IG}, {"id": "bad1", "url": "https://example.com:abc/a"}])
+    assert [(r.id, r.status) for r in results] == [("ok1", "new"), ("bad1", "rejected")]

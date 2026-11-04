@@ -73,7 +73,7 @@ MIGRATIONS = ["ALTER TABLE items ADD COLUMN archive_dir TEXT", "ALTER TABLE item
               "ALTER TABLE items ADD COLUMN summary TEXT", "ALTER TABLE items ADD COLUMN ai_type TEXT",
               "ALTER TABLE items ADD COLUMN suggested_tags TEXT", "ALTER TABLE items ADD COLUMN entities_text TEXT",
               "ALTER TABLE items ADD COLUMN transcript_text TEXT", "ALTER TABLE items ADD COLUMN screen_text TEXT", "ALTER TABLE items ADD COLUMN processed_at TEXT",
-              # senses_status: NULL (not yet) or done; ai_force: the owner pressed "Try again" (goes first, even when paused)
+              # senses_status: NULL (not yet), done, or failed:<day> (tried again the next day); ai_force: the owner pressed "Try again" (goes first, even when paused)
               "ALTER TABLE items ADD COLUMN senses_status TEXT", "ALTER TABLE items ADD COLUMN ai_force INTEGER NOT NULL DEFAULT 0",
               # M3.5 links: links_status NULL (to do); save_found_links records the resolver's status
               "ALTER TABLE items ADD COLUMN links_status TEXT", "ALTER TABLE items ADD COLUMN links_force INTEGER NOT NULL DEFAULT 0",
@@ -814,7 +814,7 @@ class Store(ChatStore, StatsStore):
             return ItemResult(item_id, "empty")
         try:
             link = clean(url)
-        except UnsupportedLink:
+        except (UnsupportedLink, ValueError):  # ValueError: a malformed address (a bad port); only this item is refused
             return ItemResult(item_id, "rejected", "unsupported_link")
 
         seen = self._db.execute(
@@ -919,11 +919,15 @@ class Store(ChatStore, StatsStore):
                     target = self._db.execute(
                         "SELECT canonical_url FROM items WHERE canonical_url=?", (link.url,)).fetchone()
                     if target:
+                        # a re-share like any other: back out of the Trash, and the owner's note on the short link is kept
                         self._db.execute(
                             "UPDATE items SET saved_count=saved_count+?, updated_at=?, "
-                            "last_shared_at=MAX(COALESCE(last_shared_at,''), COALESCE(?,'')), "
-                            "last_phone_id=? WHERE canonical_url=?",
-                            (short["saved_count"], now, short["last_shared_at"], short["last_phone_id"], link.url))
+                            "last_shared_at=MAX(COALESCE(last_shared_at,''), COALESCE(?,'')), last_phone_id=?, "
+                            "shelf=CASE WHEN shelf IN ('trash', 'board') THEN 'inbox' ELSE shelf END, "
+                            "note=CASE WHEN ?='' OR note=? THEN note WHEN note='' THEN ? ELSE substr(note || char(10) || ?, 1, ?) END "
+                            "WHERE canonical_url=?",
+                            (short["saved_count"], now, short["last_shared_at"], short["last_phone_id"],
+                             short["note"] or "", short["note"] or "", short["note"] or "", short["note"] or "", MAX_NOTE_LEN, link.url))
                         self._merge_agent_note(short, link.url)
                         merged_note = bool(short["agent_note"])
                         self._db.execute("DELETE FROM items WHERE canonical_url=?", (short_url,))
@@ -1304,7 +1308,7 @@ class Store(ChatStore, StatsStore):
         reloads on this, not on every save elsewhere."""
         with self._lock:
             row = self._db.execute(
-                "SELECT status, ai_status, senses_status, links_status, screen_text IS NULL, processed_at, shelf, updated_at, "
+                "SELECT status, ai_status, senses_status, links_status, screen_text IS NULL, processed_at, shelf, updated_at, deep_status, "
                 "(SELECT COUNT(*) FROM board_events) FROM items WHERE rowid=?", (item_id,)).fetchone()
             tags = self._db.execute("SELECT COUNT(*) FROM tags t JOIN items i ON i.canonical_url=t.canonical_url WHERE i.rowid=?",
                                     (item_id,)).fetchone()[0]
@@ -1461,9 +1465,10 @@ class Store(ChatStore, StatsStore):
         with self._lock:
             rows = self._db.execute(
                 "SELECT rowid AS id, * FROM items WHERE status='archived' AND shelf != 'trash' AND "
-                "(senses_status IS NULL OR ai_force=1 OR ai_status IS NULL OR "
+                "(senses_status IS NULL OR (senses_status LIKE 'failed:%' AND senses_status < 'failed:' || ?) OR "
+                "ai_force=1 OR ai_status IS NULL OR "
                 "(ai_status='needs_attention' AND ai_next_at IS NOT NULL AND ai_next_at <= ?)) "
-                "ORDER BY ai_force DESC, created_at DESC", (now,)).fetchall()
+                "ORDER BY ai_force DESC, created_at DESC", (now[:10], now)).fetchall()
         return [dict(r) for r in rows]
 
     def screen_done(self, url: str, text: str) -> None:
@@ -1507,6 +1512,11 @@ class Store(ChatStore, StatsStore):
     def activity_clear(self) -> None:
         with self._lock, self._db:
             self._db.execute("DELETE FROM activity")
+
+    def senses_failed(self, url: str) -> None:
+        """Transcribing on this Mac failed: noted with the day, and tried again the next day (review 4 Nov 2026)."""
+        with self._lock:
+            self._db.execute("UPDATE items SET senses_status=? WHERE canonical_url=?", ("failed:" + self._stamp()[:10], url))
 
     def senses_done(self, url: str, transcript_text: str) -> None:
         """The transcript is saved and searchable as soon as it exists, whatever happens to the summary."""

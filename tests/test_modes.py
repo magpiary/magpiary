@@ -76,3 +76,43 @@ def test_settings_shows_two_modes_and_saves_the_choice(mac, monkeypatch):
     post(mac, "/hub/settings/mode", mode="balanced")
     assert mac.store.get_setting(modes.SETTING) == "private"
     assert "modestat private" in page(mac, "/settings/ai")[2] and modes.effective(mac.store) == "private"
+
+
+def test_the_next_n_allowance_is_kept_while_nobody_can_write_a_summary(store, tmp_path):
+    """Review 4 Nov 2026: "next 1" was used up in Private mode, so turning Smart on later found summaries paused."""
+    from magpiary.worker import brain_due
+
+    store.set_setting(modes.SETTING, "private")
+    store.set_setting("ai_budget", "1")
+    url = "https://www.instagram.com/reel/MODE2/"
+    folder = tmp_path / "g"
+    folder.mkdir()
+    store.add_link(url)
+    store.fetch_succeeded(url, str(folder))
+    store.senses_done(url, "")
+    brain_due(store, tmp_path, pause=lambda t: None, process=lambda item, key, p: None, key_source=Keys(["gemini"]))
+    assert store.summary_budget() == "1"
+
+
+def test_a_failed_transcript_is_not_marked_done_and_is_tried_again_the_next_day(store, tmp_path):
+    """Review 4 Nov 2026: a transcription that raised was marked done, so it never came back."""
+    from magpiary.worker import brain_due
+
+    url = "https://www.instagram.com/reel/MODE3/"
+    folder = tmp_path / "h"
+    folder.mkdir()
+    store.add_link(url)
+    store.fetch_succeeded(url, str(folder))
+    tries = []
+
+    def broken(item, progress):
+        tries.append(1)
+        raise RuntimeError("whisper fell over")
+    run = lambda: brain_due(store, tmp_path, pause=lambda t: None, process=lambda i, k, p: None,  # noqa: E731
+                            prepare=broken, key_source=Keys([]))
+    run()
+    run()
+    assert len(tries) == 1 and store.get_item(url)["senses_status"].startswith("failed:")
+    store._db.execute("UPDATE items SET senses_status='failed:2000-01-01' WHERE canonical_url=?", (url,))
+    run()
+    assert len(tries) == 2

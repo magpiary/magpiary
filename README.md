@@ -31,7 +31,7 @@ Share a reel, thread, video or link from your iPhone. Your Mac downloads it, tra
 
 ## Install
 
-Requires macOS (Apple Silicon recommended), an iPhone with Shortcuts, and about 1 GB free for the app and its models before your library.
+Requires a Mac with Apple Silicon (M1 or newer) on macOS 14 or later, an iPhone with Shortcuts, and about 1 GB free for the app and its models before your library.
 
 **The Mac app, with no warning from macOS (easiest).** Paste this into the Terminal app (it downloads the app from GitHub, checks its checksum and opens it; macOS only warns about files a browser downloaded):
 

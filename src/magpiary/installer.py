@@ -25,7 +25,7 @@ from magpiary.config import data_dir
 Emit = Callable[[dict], None]
 CHUNK = 1 << 20
 RETRY_DELAYS = (2, 5, 10, 20)  # seconds between the quiet retries; after the last one the error is shown
-MIN_MACOS = (12, 0)
+MIN_MACOS = (14, 0)  # the transcription libraries ship only for Apple Silicon on macOS 14+ (review 4 Nov 2026)
 HEADROOM = 1_500_000_000  # kept free beyond the downloads: unpacking, the first library, the system
 USER_AGENT = "Mozilla/5.0 (Macintosh) Magpiary"  # some download sites refuse Python's default (found in the M5 sandbox test)
 
@@ -107,8 +107,9 @@ def precheck(needed: int, home: Path | None = None, macos: str | None = None, ma
         if have < MIN_MACOS:
             problems.append({"kind": "macos", "message": f"Magpiary needs macOS {MIN_MACOS[0]} or newer; this Mac has {version}."})
     chip = machine or platform.machine()
-    if chip not in ("arm64", "x86_64"):
-        problems.append({"kind": "chip", "message": f"This Mac's processor ({chip}) isn't supported."})
+    if chip != "arm64":
+        problems.append({"kind": "chip", "message": "Magpiary needs a Mac with Apple Silicon (M1 or newer)"
+                         + (f"; this Mac has {chip}." if chip else ".")})
     need = needed + HEADROOM
     have_free = free_bytes(home or data_dir())
     if have_free < need:

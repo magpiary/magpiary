@@ -306,3 +306,17 @@ def test_independent_hub_save_clears_board_provenance(store, recorded):
     assert store.get_item(url)["via_board"] is None
     assert store.from_library(board) == 0
     assert store.get_item(url)["shelf"] == "inbox"
+
+
+def test_a_short_link_for_a_trashed_post_brings_it_back_with_its_note(store, recorded):
+    """Review 4 Nov 2026: the merge left the post in the Trash and dropped the owner's note on the short link."""
+    from magpiary.cleaner import clean
+
+    short, url = recorded["short"], recorded["urls"][0]
+    store.add_link(url)
+    store.set_shelf(store.id_for(url), "trash")
+    store.add_link(short)
+    store.set_note(store.id_for(short), "Watch the second half")
+    store.expansion_succeeded(short, clean(url))
+    item = store.get_item(url)
+    assert item["shelf"] == "inbox" and item["note"] == "Watch the second half"

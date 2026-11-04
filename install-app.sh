@@ -21,7 +21,7 @@ step() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 fail() { printf '\n\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
 
 [ "$(uname -s)" = "Darwin" ] || fail "Magpiary runs on macOS only."
-[ "$(uname -m)" = "arm64" ] || printf '\nNote: this Mac is not an Apple Silicon Mac. Magpiary is built for Apple Silicon and may not run.\n'
+[ "$(uname -m)" = "arm64" ] || { printf '\nMagpiary needs a Mac with Apple Silicon (M1 or newer).\n' >&2; exit 1; }
 
 WORK="$(mktemp -d)"
 MOUNT=""

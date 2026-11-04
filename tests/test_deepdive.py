@@ -282,3 +282,30 @@ def test_a_queued_deeper_dive_waits_in_private_mode(tmp_path):
     asked = []
     assert deep_due(store, tmp_path / "notes", asker=lambda *a: asked.append(a) or "{}") == 0
     assert asked == [] and store.item_by_id(store.id_for(url))["deep_status"] == "queued"
+
+
+def test_an_open_post_sees_its_deeper_dive_change(tmp_path):
+    """Review 4 Nov 2026: the post page polls item_signature, which ignored the dive, so "under way" stayed after it ended."""
+    store = Store(tmp_path / "m.db")
+    url, folder = saved(store, tmp_path, meta={"source": "instagram", "duration": 30})
+    item_id = store.id_for(url)
+    before = store.item_signature(item_id)
+    store.queue_deep(item_id)
+    queued = store.item_signature(item_id)
+    store.deep_done(url, "words")
+    assert len({before, queued, store.item_signature(item_id)}) == 3
+
+
+def test_a_two_hour_chapter_is_read_in_parts():
+    """Review 4 Nov 2026: one long chapter was one request, and its words past SECTION_CHARS were dropped."""
+    parts = deepdive.sections_for({"chapters": [{"title": "Talk", "start": 0}, {"title": "Q&A", "start": 7200}]}, 7800)
+    assert [p["title"] for p in parts][:2] == ["Talk (part 1 of 8)", "Talk (part 2 of 8)"] and parts[-1]["title"] == "Q&A"
+    assert parts[7]["end"] == 7200 and len(parts) == 9
+
+
+def test_names_in_other_scripts_keep_their_letters():
+    """Review 4 Nov 2026: norm() kept only a-z and 0-9, so 東京 became empty and was dropped from the link search."""
+    from magpiary.links import norm
+
+    assert norm("東京") == "東京" and norm("नमस्ते दुनिया") == "नमस्ते दुनिया"
+    assert norm("Café Skills") == "cafe skill" and norm("snake_case") == "snake case"  # Latin names match as before

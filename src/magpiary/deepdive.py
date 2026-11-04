@@ -195,8 +195,14 @@ def sections_for(meta: dict, duration: float | None) -> list[dict]:
     chapters = [c for c in meta.get("chapters") or [] if isinstance(c, dict)]
     if len(chapters) >= 2 and duration:
         starts = [float(c.get("start") or 0) for c in chapters]
-        return [{"title": c.get("title") or "", "start": s, "end": (starts[i + 1] if i + 1 < len(starts) else duration)}
-                for i, (c, s) in enumerate(zip(chapters, starts))]
+        out = []
+        for i, (c, start) in enumerate(zip(chapters, starts)):
+            end = starts[i + 1] if i + 1 < len(starts) else duration
+            n = round((end - start) / SECTION_SECONDS) if end - start > SECTION_SECONDS * 1.5 else 1
+            # a long chapter is read in parts too: one request holds at most SECTION_CHARS of what was said
+            out += [{"title": (c.get("title") or "") + (f" (part {k + 1} of {n})" if n > 1 else ""),
+                     "start": start + (end - start) * k / n, "end": start + (end - start) * (k + 1) / n} for k in range(n)]
+        return out
     if duration > SECTION_SECONDS * 1.5:
         n = round(duration / SECTION_SECONDS)
         return [{"title": "", "start": duration * i / n, "end": duration * (i + 1) / n} for i in range(n)]

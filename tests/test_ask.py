@@ -577,3 +577,15 @@ def test_a_failed_answer_says_what_to_do():
     text = AskPages._ask_failure("Gemini", BrainFailed("bad_key", "Gemini refused the key (HTTP 400)"))
     assert "Settings" in text and "kept" in text and "HTTP" not in text
     assert "limit" in AskPages._ask_failure("Gemini", BrainFailed("rate_limited", "x"))
+
+
+def test_ask_falls_back_when_its_engine_is_stopped_in_ai_keys(mac, lib, monkeypatch):
+    """Review 4 Nov 2026: Ask kept its old 'claude' pick after Claude Code was stopped, and answered with nothing."""
+    from magpiary import ask_codex, askconfig, engines
+
+    monkeypatch.setattr(ask_codex, "available", lambda: True)
+    monkeypatch.setattr(engines, "installed", lambda kind: True)
+    mac.store.set_setting(askconfig.ENGINE, "claude")
+    engines.disallow(mac.store, "claude_code")
+    engine = mac.server.hub.ask_engine()
+    assert engine is not None and engine["id"] == "codex"

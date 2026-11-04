@@ -21,7 +21,8 @@ step() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 fail() { printf '\n\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
 
 [ "$(uname -s)" = "Darwin" ] || fail "Magpiary runs on macOS only."
-case "$(uname -m)" in arm64|x86_64) ;; *) fail "This Mac's processor ($(uname -m)) is not supported." ;; esac
+[ "$(uname -m)" = "arm64" ] || fail "Magpiary needs a Mac with Apple Silicon (M1 or newer); this Mac has $(uname -m)."
+[ "$(sw_vers -productVersion | cut -d. -f1)" -ge 14 ] 2>/dev/null || fail "Magpiary needs macOS 14 or newer; this Mac has $(sw_vers -productVersion)."
 
 export PATH="$BIN:$PATH"
 

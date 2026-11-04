@@ -16,6 +16,7 @@ Everything fetched is untrusted data.
 import html
 import json
 import re
+import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from urllib.parse import quote, unquote, urljoin, urlsplit
@@ -133,10 +134,19 @@ class Page:
     anchors: list[tuple[str, str]] = field(default_factory=list)  # (address, link text)
 
 
+def _fold(token: str) -> str:
+    """Accents off a Latin word (café = cafe, as before); a word in another script (東京, नमस्ते) is kept whole."""
+    plain = "".join(ch for ch in unicodedata.normalize("NFKD", token) if not unicodedata.combining(ch))
+    return plain if plain.isascii() else unicodedata.normalize("NFC", token)
+
+
 def norm(text: str) -> str:
-    """Lower case, punctuation to spaces, and plural 's' dropped (skills = skill, anthropics = anthropic)."""
-    tokens = re.sub(r"[^a-z0-9]+", " ", text.lower()).split()
-    return " ".join(t[:-1] if len(t) > 3 and t.endswith("s") and not t.endswith("ss") else t for t in tokens)
+    """Lower case, punctuation to spaces, and plural 's' dropped (skills = skill, anthropics = anthropic). Letters of
+    any script count, so a name written in Japanese or Hindi is not lost (review 4 Nov 2026)."""
+    spaced = "".join(ch if ch.isalnum() or unicodedata.category(ch)[0] == "M" else " " for ch in text.lower())
+    tokens = [_fold(t) for t in spaced.split()]
+    tokens = [re.sub(r"[^a-z0-9]+", "", t) if t.isascii() else t for t in tokens]
+    return " ".join(t[:-1] if len(t) > 3 and t.endswith("s") and not t.endswith("ss") else t for t in tokens if t)
 
 
 BIG = {norm(n) for n in BIG_NAMES}
