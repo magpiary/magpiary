@@ -557,7 +557,7 @@
     ev.preventDefault();
     if (f.dataset.confirm) {
       const remove = /trash|delete/i.test(f.dataset.confirm);
-      if (!(await ask(f.dataset.confirm, remove ? (/empty|everything/i.test(f.dataset.confirm) ? "Delete for good" : "Move to Trash") : "Continue", remove))) return;
+      if (!(await ask(f.dataset.confirm, f.dataset.confirmOk || (remove ? (/empty|everything/i.test(f.dataset.confirm) ? "Delete for good" : "Move to Trash") : "Continue"), remove))) return;
     }
     const data = new FormData(f);
     if (ev.submitter?.name) data.append(ev.submitter.name, ev.submitter.value);

@@ -17,7 +17,7 @@ from magpiary.brain import TYPE_NAMES
 
 DAY, HOUR = "digest_day", "digest_hour"  # settings: weekday 0 (Monday) to 6 (Sunday); the hour on that day
 EVERY = "digest_every"                    # "monthly" (the default), "weekly", "both" (owner, 25 Oct) or "off" (1 Nov)
-EVERY_CHOICES = {"monthly": "Monthly, on the 1st", "weekly": "Weekly", "both": "Weekly and monthly", "off": "Off"}
+EVERY_CHOICES = {"monthly": "Monthly, on the 1st", "weekly": "Weekly", "both": "Weekly and monthly"}  # on/off: the Digest switch (engines.py)
 GOALS = "digest_goals"                    # the owner's own words on what they're working toward (owner, 25 Oct)
 GOALS_MAX = 500
 SINCE = "digest_since"                    # when this Mac first checked; no digest is owed for weeks before it
@@ -155,6 +155,10 @@ def weekly_due(store, now: datetime | None = None, key_source=None, alert=notify
     if not since:
         store.set_setting(SINCE, now.isoformat(timespec="seconds"))
         return None
+    from magpiary import engines
+
+    if modes.current(store) == "smart" and not engines.is_on(store, "digest"):
+        return None  # off: on by itself only with Claude Code or Codex allowed or a paid key (owner, 4 Nov 2026)
     made = None
     week = last_moment(store, now)
     month = first_of_month(store, now)
@@ -337,12 +341,14 @@ class _SkipClaude(Exception):
     """The owner chose to use only their AI key: Claude Code is not asked."""
 
 
-def story_due(store, now: datetime | None = None, key_source=None, claude=write_with_claude, key_writer=write_with_key,
+def story_due(store, now: datetime | None = None, key_source=None, claude=None, key_writer=None, codex=None,
               log=lambda m: None) -> int:
-    """Write the story for digests that wait for one. Claude Code first, every pass until it works; after a day,
-    the API key. Private mode writes nothing. Returns how many were written."""
-    from magpiary import keys as keyring
+    """Write the story for digests that wait for one, with the engine the Digest uses (engines.py: an allowed Claude Code or
+    Codex, else a paid key, else a free key the owner turned it on with). A failure is noted and tried again on the next
+    pass; another engine is never used without the owner's say. Private mode writes nothing. Returns how many were written."""
+    from magpiary import engines
 
+    claude, key_writer, codex = claude or write_with_claude, key_writer or write_with_key, codex or write_with_codex
     now = (now or datetime.now()).astimezone()
     written = 0
     for row in store.digests(10):
@@ -354,35 +360,75 @@ def story_due(store, now: datetime | None = None, key_source=None, claude=write_
             data["story_status"] = "private"
             store.update_digest(digest["id"], data)
             continue
+        chosen = engines.choice(store, "digest") if engines.is_on(store, "digest") else None
+        if chosen is None:
+            continue
         span = datetime.fromisoformat(digest["end"]) - datetime.fromisoformat(digest["start"])
         period = "month" if digest["kind"] == "monthly" or span > timedelta(days=20) else "week"
         prompt = story_input(store, data, _previous_themes(store, digest), period)
         tries = data.setdefault("story_tries", [])
-        use = claude_code.mode(store)
+        by = engines.SHORT.get(chosen["kind"], chosen["label"])
         try:
-            if use == "key":
-                raise _SkipClaude()
-            data["story"], data["story_by"] = _valid(claude(prompt)), "Claude Code"
+            if chosen["kind"] == "claude_code":
+                story = claude(prompt)
+            elif chosen["kind"] == "codex":
+                story = codex(prompt)
+            else:
+                story = key_writer(prompt, chosen["key"])
+            data["story"], data["story_by"] = _valid(story), by
             data["story_at"] = now.isoformat(timespec="seconds")
         except Exception as err:
-            if not isinstance(err, _SkipClaude):
-                tries.append({"at": now.isoformat(timespec="seconds"), "by": "Claude Code", "why": str(err)[:200]})
-            usable = modes.summarisers(store, key_source or keyring)
-            patience = timedelta(0) if use == "key" else timedelta(hours=claude_code.wait_hours(store))
-            if use == "only" or now - datetime.fromisoformat(digest["made_at"]).astimezone() < patience or not usable:
-                store.update_digest(digest["id"], data)
-                continue
-            try:
-                data["story"], data["story_by"] = _valid(key_writer(prompt, usable[0])), usable[0].name
-            except Exception as err2:
-                tries.append({"at": now.isoformat(timespec="seconds"), "by": usable[0].name, "why": str(err2)[:200]})
-                store.update_digest(digest["id"], data)
-                continue
+            tries.append({"at": now.isoformat(timespec="seconds"), "by": by, "why": str(err)[:200]})
+            store.update_digest(digest["id"], data)
+            continue
         data["story_status"] = "done"
         store.update_digest(digest["id"], data)
         log(f"digest {digest['id']} written by {data['story_by']}")
         written += 1
     return written
+
+
+def write_with_codex(prompt: str, run=subprocess.run) -> dict:
+    """Codex, headless and confined, on the owner's ChatGPT plan: no web, nothing saved. Raises ValueError with a plain reason."""
+    import json
+    import shutil
+    import tempfile
+
+    from magpiary import ask_codex
+    from magpiary.config import data_dir
+    from magpiary.providers import drop_nulls, json_schema, strict_schema
+
+    codex = ask_codex.binary()
+    if not codex:
+        raise ValueError("Codex is not installed")
+    base = data_dir() / "codex"
+    base.mkdir(parents=True, exist_ok=True)
+    work = Path(tempfile.mkdtemp(prefix="digest-", dir=base))
+    try:
+        (work / "schema.json").write_text(json.dumps(strict_schema(json_schema(_schema_upper(SCHEMA)))))
+        done = run([codex, "exec", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config", *ask_codex.profile_config(work),
+                    "-c", 'web_search="disabled"', "-c", "model_reasoning_effort=medium", "--output-schema", str(work / "schema.json"),
+                    "-o", str(work / "answer.json"), "-"],
+                   input="You write digests of saved posts as JSON.\n\n" + prompt, capture_output=True, text=True, timeout=900, cwd=work)
+        text = (work / "answer.json").read_text() if (work / "answer.json").exists() else ""
+    except (OSError, subprocess.SubprocessError) as err:
+        raise ValueError(f"Codex did not finish: {type(err).__name__}") from err
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    if done.returncode != 0 or not text.strip():
+        raise ValueError("Codex gave no answer (is it signed in?)")
+    return _valid(json.loads(drop_nulls(text)))
+
+
+def _schema_upper(schema: dict) -> dict:
+    """The digest's JSON Schema (lower-case types) in the shape providers.json_schema reads (upper-case types)."""
+    out = {k: v for k, v in schema.items() if k not in ("type", "properties", "items")}
+    out["type"] = str(schema.get("type", "object")).upper()
+    if "properties" in schema:
+        out["properties"] = {k: _schema_upper(v) for k, v in schema["properties"].items()}
+    if "items" in schema:
+        out["items"] = _schema_upper(schema["items"])
+    return out
 
 
 def word_saves(store, data: dict, word: str) -> list[str]:

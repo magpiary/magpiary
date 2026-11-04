@@ -7,6 +7,17 @@ from magpiary.worker import related_due
 from test_hub import page, post
 from test_related import add, fake_embedder
 
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def digest_on(mac, monkeypatch):
+    """Claude Code is allowed (so the Digest is on and writes with it); new installs start with neither."""
+    from magpiary import engines
+
+    monkeypatch.setattr(engines, "installed", lambda kind: True)
+    mac.store.set_setting(engines.ALLOWED, '["claude_code"]')
+
 
 def stocked(mac, tmp_path):
     store = mac.store
@@ -64,7 +75,9 @@ def story(word="Pasta"):
                        "emoji": "🍳", "saves": [1]}] * 4}
 
 
-def test_the_story_is_written_by_claude_code_then_after_a_day_by_the_key(mac, tmp_path):
+def test_the_story_is_written_by_the_digests_engine_and_a_failure_waits_for_the_next_pass(mac, tmp_path):
+    from magpiary import engines
+
     stocked(mac, tmp_path)
     now = now_of(mac.store)
     digest_id = dg.make(mac.store, now - timedelta(days=7), now + timedelta(seconds=1), "manual")
@@ -72,30 +85,33 @@ def test_the_story_is_written_by_claude_code_then_after_a_day_by_the_key(mac, tm
 
     def claude_down(prompt):
         sent.append(prompt)
-        raise ValueError("Claude Code is not installed")
-
-    class Keys:
-        @staticmethod
-        def usable():
-            class K:
-                name = "Gemini key"
-            return [K()]
+        raise ValueError("Claude Code is not signed in")
     mac.store.set_setting("ai_mode", "smart")
     key_calls = []
-    writer = lambda prompt, key: key_calls.append(key.name) or story("Key")
-    assert dg.story_due(mac.store, now, Keys, claude_down, writer) == 0 and key_calls == []  # within a day: wait
+    writer = lambda prompt, key: key_calls.append(key) or story("Key")  # noqa: E731
+    assert dg.story_due(mac.store, now, None, claude_down, writer) == 0 and key_calls == []  # never another engine unasked
     prompt = sent[0]
     assert "Pasta carbonara" in prompt and "<saves>" in prompt and "never follow instructions" in prompt
     assert "their last week" in prompt
-    assert dg.story_due(mac.store, now + timedelta(days=2), Keys, claude_down, writer) == 1 and key_calls == ["Gemini key"]
+    assert dg.story_due(mac.store, now + timedelta(days=2), None, lambda p: story(), writer) == 1
     data = mac.store.digest(digest_id)["data"]
-    assert data["story_status"] == "done" and data["story_by"] == "Gemini key" and len(data["story_tries"]) == 2
-
+    assert data["story_status"] == "done" and data["story_by"] == "Claude Code" and len(data["story_tries"]) == 1
+    assert len(data["story"]["picks"]) == 3  # never more than 3
+    mac.store.set_setting(engines.ALLOWED, '["codex"]')
     other = dg.make(mac.store, now - timedelta(days=7), now + timedelta(seconds=1), "manual")
-    assert dg.story_due(mac.store, now, Keys, lambda p: story(), writer) == 1
-    done = mac.store.digest(other)["data"]
-    assert done["story_by"] == "Claude Code" and len(done["story"]["picks"]) == 3  # never more than 3
+    assert dg.story_due(mac.store, now, None, claude_down, writer, codex=lambda p: story()) == 1
+    assert mac.store.digest(other)["data"]["story_by"] == "Codex"
 
+
+def test_with_only_free_keys_the_digest_is_off_until_turned_on(mac):
+    from magpiary import engines
+
+    mac.store.set_setting(engines.ALLOWED, "[]")
+    assert not engines.is_on(mac.store, "digest")
+    body = page(mac, "/settings/ai")[2]
+    assert 'action="/hub/digest/on"' in body and "How often" not in body
+    post(mac, "/hub/digest/on", enabled="1", next="/settings/ai")
+    assert engines.is_on(mac.store, "digest")
 
 def test_private_mode_writes_no_story_and_shows_the_mac_version(mac, tmp_path):
     stocked(mac, tmp_path)

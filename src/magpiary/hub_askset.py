@@ -30,12 +30,19 @@ class AskSettings:
     def _ask_section(self, q: dict) -> str:
         from magpiary.hub_settings import _adv, _group, _row
 
+        from magpiary import engines
+
         on = askconfig.enabled(self.store)
+        free = engines.only_free(self.store)
         switch = self._switch("/hub/askset", on, {"on": "0", "next": BACK}, {"on": "1", "next": BACK}, "Ask Magpiary",
-                              confirm="Turn off Ask Magpiary? This closes every open Ask panel, stops any answer being written, and "
-                                      "removes every Ask button. Your chats are kept for when you turn it back on." if on else "")
-        out = [_group("", _row("Use Ask Magpiary", "Ask about a post, a pile, a board or your whole library, and the web. "
-                                           "Switch it off and every Ask button and tab disappears from the hub.", switch), gid="onoff", cls="feat")]
+                              confirm=("Turn off Ask Magpiary? This closes every open Ask panel, stops any answer being written, and "
+                                       "removes every Ask button. Your chats are kept for when you turn it back on.") if on else
+                              engines.warning("ask") if free else "",
+                              ok="" if on else "I understand, turn it on")
+        why = ('<p class="small">Ask needs an AI key, or Claude Code or Codex allowed in AI keys.</p>'
+               if not on and not engines.options(self.store) else "")
+        out = [_group("", _row("Use Ask Magpiary", "Ask about a post, a pile, a board or your whole library, and the web.", switch,
+                               more=why), gid="onoff", cls="feat")]
         if not on:
             return "".join(out)
         out += [self._ask_engines(), self._ask_answers(), _adv(self._ask_model() + self._ask_usage(), "Model and effort, tokens and a limit")]
@@ -60,9 +67,12 @@ class AskSettings:
                     + ('<small class="ok">Active</small>' if on else "") + "</span>"
                     + self._engine_switch(on, name, fields_on, fields_off, back=back) + "</div>")
         state = self._claude_state() if ask_setup.installed("claude") else {"installed": False, "signed_in": False}
-        if state["installed"] and state["signed_in"] is not False and not askconfig.removed(self.store, "claude"):
+        from magpiary import engines
+
+        if state["installed"] and state["signed_in"] is not False and not askconfig.removed(self.store, "claude") \
+                and engines.is_allowed(self.store, "claude_code"):
             rows.append(row(ENGINE_LOGO["claude"], "Claude Code", active == "claude", {"engine": "claude"}, {"deactivate": "claude"}))
-        if ask_codex.available() and not askconfig.removed(self.store, "codex"):
+        if ask_codex.available() and not askconfig.removed(self.store, "codex") and engines.is_allowed(self.store, "codex"):
             rows.append(row(ENGINE_LOGO["codex"], "Codex", active == "codex", {"engine": "codex"}, {"deactivate": "codex"}))
         for k in keyring.usable():
             mine = active == "key" and engine["key"] is not None and engine["key"].id == k.id
@@ -118,10 +128,15 @@ class AskSettings:
                 return _row(title, e(job["text"]), ctl(remove=again), lead=logo)
             if not ready:
                 return _row(title, setup_note, ctl(switch=self._engine_switch(False, f"Set up {title}", {"setup": eid}, {}, confirm)), lead=logo)
+            if not engines.is_allowed(self.store, "claude_code" if eid == "claude" else "codex"):
+                return _row(title, "On this Mac, but not allowed. Magpiary never uses it until you allow it in AI keys.",
+                            ctl(remove='<a class="btn sm" href="/settings/ai#keys">Allow it</a>'), lead=logo)
             on = active == eid
             controls = ctl(green if on else "", self._askset_form({"remove": eid}, "Remove", "btn sm ghost"),
                            self._engine_switch(on, f"Use {title}", {"engine": eid}, {"deactivate": eid}))
             return _row(title, ready_note, controls, lead=logo)
+
+        from magpiary import engines
 
         state = self._claude_state() if ask_setup.installed("claude") else {"installed": False, "signed_in": False}
         claude_ready = state["installed"] and state["signed_in"] is not False and not askconfig.removed(self.store, "claude")
@@ -275,9 +290,13 @@ class AskSettings:
             why = self.ask_can_answer()
             if why:
                 return Response(303, b"", headers={"Location": f"{BACK}?error={quote(why)}"})
-            s.set_setting(askconfig.ON, "1")
+            from magpiary import engines
+
+            engines.set_on(s, "ask", True)
         elif form.get("on") == "0":
-            s.set_setting(askconfig.ON, "0")
+            from magpiary import engines
+
+            engines.set_on(s, "ask", False)
             self.ask_stop_all()  # an answer being written stops; open panels close themselves on their next check
         from magpiary import ask_setup
 

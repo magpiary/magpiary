@@ -338,6 +338,9 @@ class Hub(
             url = item["canonical_url"] if item else form.get("url", "")
             if url and self.store.retry(url):
                 self.wake()
+        elif path == "/hub/deep":
+            if self.store.queue_deep(item_id):
+                self.wake()
         elif path == "/hub/again":
             if self.store.summarise_again(item_id):
                 self.store.allow_one_more_summary()
@@ -542,9 +545,7 @@ class Hub(
             private = modes.current(self.store) == "private"
             if private:
                 writer = "Private mode is on, so nothing is written."
-            elif claude_code.mode(self.store) != "key" and claude_code.check()["installed"]:
-                writer = "Your Claude plan writes them (Claude Code), so it uses your plan's allowance."
-            else:
+            else:  # summaries are always written by the AI keys, in their order
                 usable = keyring.usable()
                 writer = (f"Your AI key {usable[0].name} writes them, and each one uses a request from its daily limit." if usable
                           else "No AI key is ready, so they would wait.")

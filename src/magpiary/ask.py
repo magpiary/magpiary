@@ -53,6 +53,14 @@ def post_text(item: dict, question: str, number: int, limit: int = PER_POST) -> 
     points = [f'{p.get("at") or ""} {p["text"]}'.strip() for p in record.get("key_points") or []]
     if points:
         lines.append("Key moments: " + "; ".join(points))
+    deep = (_read(folder / "deep.json") if folder else None) or {}
+    if deep.get("overview"):
+        lines.append("Deeper dive: " + deep["overview"][:1500])
+        if deep.get("sections"):
+            lines.append("Sections: " + "; ".join(f'{s.get("at") or ""} {s.get("title") or ""}: {s.get("summary") or ""}'.strip()
+                                                  for s in deep["sections"])[:2500])
+        if deep.get("takeaways"):
+            lines.append("Takeaways: " + "; ".join(deep["takeaways"])[:800])
     if meta.get("text") or item.get("caption"):
         lines.append("Caption: " + (meta.get("text") or item.get("caption"))[:600])
     if item.get("note"):
@@ -71,7 +79,7 @@ def post_text(item: dict, question: str, number: int, limit: int = PER_POST) -> 
             said.append(line)
             used += len(line)
         lines.append("Said: " + " | ".join(said))
-    return "\n".join(lines)[:limit]
+    return "\n".join(lines)[:limit + (4000 if deep.get("overview") else 0)]  # a deeper dive is worth the room
 
 
 def build_prompt(question: str, posts: list[str], history: list[tuple[str, str]], scope: str) -> str:

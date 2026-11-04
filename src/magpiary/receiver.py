@@ -33,7 +33,7 @@ from magpiary.web import Response, local_only
 from magpiary.store import TRASH_DAYS, ItemResult, Store
 from magpiary import update
 from magpiary.tools import update_ytdlp
-from magpiary.worker import brain_due, fetch_due, jitter_pause, links_due, process_due, related_due, screen_due, icons_due
+from magpiary.worker import brain_due, deep_due, fetch_due, jitter_pause, links_due, process_due, related_due, screen_due, icons_due
 
 MAX_BODY = 1_000_000  # bytes
 VOICE_FORM = 700_000  # a spoken question for Ask Magpiary (at most a minute of speech, as base64)
@@ -504,6 +504,9 @@ def process_loop(server: Server) -> None:
             if summarised:
                 log(f"summarised {summarised} item(s)")
                 server.boards_wanted.set()  # a post waiting for its board may be ready now
+            dived = deep_due(server.store, data_dir() / "notes", activity=server.activity, log=log)
+            if dived:
+                log(f"made {dived} deeper dive(s)")
             linked = links_due(server.store, activity=server.activity, log=log)
             if linked:
                 log(f"found links for {linked} item(s)")

@@ -55,6 +55,38 @@ def json_schema(schema: dict = SCHEMA) -> dict:
     return out
 
 
+def strict_schema(schema: dict) -> dict:
+    """A standard JSON Schema in OpenAI's strict form, which Codex's --output-schema demands: every field listed as
+    required, and the ones that were optional allowed to be null instead."""
+    out = dict(schema)
+    if "properties" in schema:
+        needed = set(schema.get("required", []))
+        props = {}
+        for name, sub in schema["properties"].items():
+            sub = strict_schema(sub)
+            if name not in needed:
+                sub = dict(sub, type=[sub["type"], "null"]) if isinstance(sub.get("type"), str) else sub
+                if "enum" in sub:
+                    sub["enum"] = [*sub["enum"], None]
+            props[name] = sub
+        out.update(properties=props, required=list(schema["properties"]), additionalProperties=False)
+    if "items" in schema:
+        out["items"] = strict_schema(schema["items"])
+    return out
+
+
+def drop_nulls(text: str) -> str:
+    """A strict-schema answer with the empty optional fields left out again, as the readers expect."""
+    def clean(v):
+        if isinstance(v, dict):
+            return {k: clean(x) for k, x in v.items() if x is not None}
+        return [clean(x) for x in v] if isinstance(v, list) else v
+    try:
+        return json.dumps(clean(json.loads(text)))
+    except ValueError:
+        return text
+
+
 def _images(parts: list[dict]):
     """(kind, value) in order: ("text", str) or ("image", (mime type, base64 data))."""
     for p in parts:
@@ -94,15 +126,16 @@ def _chat_headers(provider: str, secret: str) -> dict:
 
 
 def ask_chat(provider: str, parts: list[dict], history: list[tuple[str, str]], secret: str, model: str,
-             request: Request = http_request) -> str:
-    """One request to OpenRouter or OpenAI. `history` is earlier (role, text) turns after the evidence."""
+             request: Request = http_request, system: str = PROMPT, schema: dict = SCHEMA) -> str:
+    """One request to OpenRouter or OpenAI. `history` is earlier (role, text) turns after the evidence. `system` and
+    `schema` default to the summary's; a deeper dive passes its own."""
     service = NAMES[provider]
     content = [{"type": "text", "text": v} if kind == "text" else
                {"type": "image_url", "image_url": {"url": f"data:{v[0]};base64,{v[1]}"}}
                for kind, v in _images(parts)]
-    messages = [{"role": "system", "content": PROMPT}, {"role": "user", "content": content},
+    messages = [{"role": "system", "content": system}, {"role": "user", "content": content},
                 *({"role": "assistant" if r == "model" else "user", "content": t} for r, t in history)]
-    formats = [{"type": "json_schema", "json_schema": {"name": "record", "strict": False, "schema": json_schema()}},
+    formats = [{"type": "json_schema", "json_schema": {"name": "record", "strict": False, "schema": json_schema(schema)}},
                {"type": "json_object"}]  # a model without schema support may still promise JSON
     for n, response_format in enumerate(formats):
         body = {"model": model, "messages": messages, "response_format": response_format}
@@ -180,7 +213,8 @@ def _claude_failure(err: Exception) -> BrainFailed:
     return BrainFailed("unknown", f"Claude: {type(err).__name__}")
 
 
-def ask_claude(parts: list[dict], history: list[tuple[str, str]], secret: str, model: str, client=None) -> str:
+def ask_claude(parts: list[dict], history: list[tuple[str, str]], secret: str, model: str, client=None,
+               system: str = PROMPT, schema: dict = SCHEMA, effort: str = "low") -> str:
     content = [{"type": "text", "text": v} if kind == "text" else
                {"type": "image", "source": {"type": "base64", "media_type": v[0], "data": v[1]}}
                for kind, v in _images(parts)]
@@ -188,8 +222,8 @@ def ask_claude(parts: list[dict], history: list[tuple[str, str]], secret: str, m
                 *({"role": "assistant" if r == "model" else "user", "content": t} for r, t in history)]
     try:
         response = (client or _claude_client(secret)).messages.create(
-            model=model, max_tokens=16000, system=PROMPT, messages=messages,
-            output_config={"effort": "low", "format": {"type": "json_schema", "schema": json_schema()}})
+            model=model, max_tokens=16000, system=system, messages=messages,
+            output_config={"effort": effort, "format": {"type": "json_schema", "schema": json_schema(schema)}})
     except Exception as err:  # the library's errors, mapped to the shared reasons
         raise _claude_failure(err) from err
     if response.stop_reason == "refusal":

@@ -28,11 +28,27 @@ def current(store) -> str:
     return "smart"  # the default before modes existed (and the earlier "balanced": keys first)
 
 
+def effective(store) -> str:
+    """What the owner sees: Smart only when it is chosen and something can write a summary (an AI key, or Claude Code or
+    Codex allowed); with nothing to write one it reads Private."""
+    if current(store) == "private":
+        return "private"
+    from magpiary import engines
+
+    return "smart" if engines.options(store) else "private"
+
+
 def summarisers(store, key_source) -> list:
     """Who can write the next summary, best first, in the current mode (empty: no summary now).
     A local model would be added here, later."""
     if current(store) == "private":
         return []
+    from magpiary import keys as keyring
+
+    if key_source is keyring:  # the real keys: the owner's one order, with Claude Code and Codex where they were dragged
+        from magpiary import engines
+
+        return engines.summarisers(store)
     return list(key_source.usable())
 
 

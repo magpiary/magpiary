@@ -38,7 +38,11 @@ def depth(store) -> str:
 
 
 def enabled(store) -> bool:
-    return store.get_setting(ON, "0") == "1"
+    """On by itself once Claude Code or Codex is allowed or a paid key is saved; with only free keys, only when the owner
+    turned it on (engines.py). The old ask_on switch no longer counts: everyone starts again (owner, 4 Nov 2026)."""
+    from magpiary import engines
+
+    return engines.is_on(store, "ask")
 
 
 def claude_model(store) -> str:

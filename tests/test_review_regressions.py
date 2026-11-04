@@ -66,7 +66,7 @@ def test_all_items_transcribe_without_a_summariser(store, tmp_path, recorded, mo
 @pytest.mark.parametrize("chosen,wanted", [("key", "selected"), ("key", ""), ("claude", "selected"), ("codex", "selected")])
 def test_ask_never_substitutes_an_unselected_key(store, recorded, monkeypatch, chosen, wanted):
     hub = Hub(store)
-    store.set_setting(askconfig.ON, "1")
+    store.set_setting("ask_state", "on")
     store.set_setting(askconfig.ENGINE, chosen)
     store.set_setting(askconfig.KEY, wanted)
     selected, other = [SimpleNamespace(**k) for k in recorded["keys"]]
@@ -256,44 +256,6 @@ def test_expansion_migrates_and_deduplicates_board_pending(store, recorded, exis
     assert next(r for r in rows if r["board_id"] == "other-board")["note"] == "Another board"
     store.expansion_succeeded(short, clean(url))
     assert store.board_pending() == rows
-
-
-@pytest.mark.parametrize("naive_now,naive_made", [(False, False), (True, False), (False, True)])
-@pytest.mark.parametrize("elapsed,written", [(2, 0), (26, 1)])
-def test_digest_fallback_accepts_naive_and_aware_times(store, recorded, naive_now, naive_made, elapsed, written):
-    made = datetime.fromisoformat(recorded["made_at"])
-    store._now = lambda: made.astimezone().replace(tzinfo=None) if naive_made else made
-    store.save_digest("weekly", (made - timedelta(days=7)).isoformat(), made.isoformat(),
-                      {"groups": [], "story_status": "waiting"})
-    now = made + timedelta(hours=elapsed)
-    now = now.astimezone().replace(tzinfo=None) if naive_now else now
-    used = []
-
-    def unavailable(prompt):
-        raise ValueError("Recorded Claude unavailable")
-
-    assert digest.story_due(store, now, Keys([SimpleNamespace(name="Recorded key")]), unavailable,
-                            lambda prompt, key: used.append(key.name) or recorded["story"]) == written
-    assert len(used) == written
-
-
-def test_digest_default_clock_handles_aware_stored_times(store, recorded, monkeypatch):
-    made = datetime.fromisoformat(recorded["made_at"])
-    store._now = lambda: made
-    store.save_digest("weekly", (made - timedelta(days=7)).isoformat(), made.isoformat(),
-                      {"groups": [], "story_status": "waiting"})
-
-    class Clock(datetime):
-        @classmethod
-        def now(cls):
-            return (made + timedelta(hours=26)).astimezone().replace(tzinfo=None)
-
-    def unavailable(prompt):
-        raise ValueError("Recorded Claude unavailable")
-
-    monkeypatch.setattr(digest, "datetime", Clock)
-    assert digest.story_due(store, key_source=Keys([SimpleNamespace(name="Recorded key")]), claude=unavailable,
-                            key_writer=lambda prompt, key: recorded["story"]) == 1
 
 
 def test_profile_events_keep_only_sanitized_extras(store, recorded):
