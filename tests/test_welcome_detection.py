@@ -59,3 +59,12 @@ def test_the_page_signature_changes_when_a_step_ticks(env):
     before = hub._sig(hub._welcome_state())
     _post(env, "/v1/hello", json.dumps({"v": "0.1.4", "pinned": True}))
     assert hub._sig(hub._welcome_state()) != before
+
+
+def test_the_chrome_step_leads_with_the_web_store_and_folds_the_hand_install(mac):
+    from test_hub import page
+    from magpiary.hub_welcome import CHROME_STORE
+
+    body = page(mac, "/welcome/browser")[2]
+    assert CHROME_STORE in body and "coming soon" not in body
+    assert body.index(CHROME_STORE) < body.index("Or add it by hand") < body.index("Load unpacked")

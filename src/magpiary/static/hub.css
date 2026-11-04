@@ -4178,6 +4178,14 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .wel .mini { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
 .wel .mini li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 14px; color: var(--fg-2); align-items: start; margin: 0; }
 .wel .mini li > span { width: 22px; height: 22px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font: 800 12px var(--display); color: var(--fg); }
+.wel .handadd { margin-top: 12px; }
+.wel .handadd > summary { cursor: pointer; font-size: 13px; color: var(--fg-2); list-style: none; display: inline-flex; gap: 6px; align-items: center; }
+.wel .handadd > summary::-webkit-details-marker { display: none; }
+.wel .handadd > summary::after { content: "›"; transition: transform .2s ease; }
+.wel .handadd[open] > summary::after { transform: rotate(90deg); }
+.wel .handadd > summary:hover { color: var(--fg); }
+.wel .handadd .mini { margin-top: 10px; }
+.wel .wsteps .btn svg { width: 15px; height: 15px; margin-right: 6px; }
 .wel .mini .inl { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .wel .mini code { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font: 600 13.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg); }
 .wel .ws .btn:not(.next):not(.dark) { background: var(--bg); }

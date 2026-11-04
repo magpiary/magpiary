@@ -713,12 +713,15 @@ class SettingsPages:
                                            confirm="Remove Chrome? The extension can no longer save links until you pair it again."))
             rows += _row("Chrome", "", _stat("Paired", "ok") + _menu("More for Chrome", items), lead=ui.icon("ext"), cls="phone2")
         elif not code:
-            steps = ("<ol class=\"small\"><li>In Chrome's extensions page (it opens for you), turn on <b>Developer mode</b> at the top right.</li>"
+            steps = ("<ol class=\"small\"><li>Press <b>Show the folder</b>: Chrome's extensions page opens too. Turn on <b>Developer mode</b> at the top right.</li>"
                      "<li>Press <b>Load unpacked</b> and choose the folder that opens: <code>Magpiary › chrome-extension</code>.</li>"
                      "<li>Pin Magpiary from the puzzle-piece menu.</li><li>Then press <b>Pair Chrome</b> here and paste the code into the extension.</li></ol>")
-            rows += _row("Get the extension", "It comes with Magpiary. Chrome needs it added once, by hand, because it is not in the Chrome Web Store.",
-                         self._form("/hub/extension/get", back, "Get the extension", "btn sm"), lead=ui.icon("ext"), cls="phone2",
-                         more=steps)
+            from magpiary.hub_welcome import CHROME_STORE
+
+            rows += _row("Get the extension", "Free from the Chrome Web Store.",
+                         f'<a class="btn sm" href="{CHROME_STORE}" target="_blank" rel="noopener">Chrome Web Store</a>',
+                         lead=ui.icon("ext"), cls="phone2",
+                         more=_more(steps + self._form("/hub/extension/get", back, "Show the folder", "btn sm"), "Or add it by hand"))
             rows += _row("Chrome", "Save the page you're on, or one post from a feed, straight to this Mac.",
                          self._form("/hub/browsers/add", back, "Pair Chrome", "btn sm dark"), lead=ui.icon("ext"), cls="phone2")
         else:

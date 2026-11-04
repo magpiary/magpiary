@@ -3,7 +3,7 @@ every screen skippable:
 
 0. Hello.
 1. How posts are read: Smart (your AI key) or Private (no AI).
-2. Save from this Mac: the Chrome extension (hand-install guide until it is in the Chrome Web Store).
+2. Save from this Mac: the Chrome extension, from the Chrome Web Store (adding it by hand stays as a fold).
 3. Add your iPhone (optional): one card, QR code, Shortcut, "allow everything once"; says plainly when iCloud is off.
 4. First save: from Chrome, the phone or a pasted link, checked live.
 
@@ -20,6 +20,8 @@ from magpiary.web import Response, e
 DONE_SETTING = "setup_done"
 STEPS = (("reading", "Reading"), ("browser", "Browser"), ("phone", "iPhone"), ("share", "First save"))
 
+
+CHROME_STORE = "https://chromewebstore.google.com/detail/magpiary/elfmjdafgmbmfkpanlbfdpcoihmikgah"  # live 4 Nov 2026
 
 class WelcomePages:
     """Needs Hub's store, csrf, shell, _form and setup; `keep_awake` is set by the service when it has one."""
@@ -177,14 +179,16 @@ class WelcomePages:
         code = q.get("chromecode", "")
         code = code if len(code) == 14 and all(ch.isalnum() or ch == "-" for ch in code) else ""
         back = {"next": "/welcome/browser"}
-        hand = ('<small>The Chrome Web Store version is coming soon. For now, add it by hand. It takes about a minute.</small>'
+        hand = (f'<small>Free from the Chrome Web Store. Press <b>Add to Chrome</b> there, then come back here.</small>'
+                f'<div style="margin-top:8px"><a class="btn sm dark" href="{CHROME_STORE}" target="_blank" rel="noopener">'
+                f'{ui.icon("ext")}Get it from the Chrome Web Store</a></div>'
+                '<details class="handadd"><summary>Or add it by hand</summary>'
                 '<ol class="mini"><li><span>a</span><div>Open Chrome\'s extensions page. Copy the address, paste it into Chrome\'s '
                 'address bar and press Enter.<div class="inl"><code>chrome://extensions</code><button type="button" class="btn sm" '
                 'data-copycode="chrome://extensions" data-copywhat="Address">Copy</button></div></div></li>'
                 '<li><span>b</span><div>Turn on <b>Developer mode</b>, the switch at the top right of that page.</div></li>'
                 '<li><span>c</span><div>Click <b>Load unpacked</b>, then choose the <b>chrome-extension</b> folder inside Magpiary.'
-                f'<div class="inl">{self._form("/hub/extension/get", back, "Show the folder", "btn sm")}</div></div></li></ol>'
-                '<button class="btn sm" type="button" disabled style="margin-top:12px">Chrome Web Store · coming soon</button>')
+                f'<div class="inl">{self._form("/hub/extension/get", back, "Show the folder", "btn sm")}</div></div></li></ol></details>')
         pin_btn = ("" if x["pinned"] or not x["added"] else
                    f'<div style="margin-top:8px">{self._form("/hub/welcome/pinned", back, "I\'ve pinned it", "btn sm")}</div>')
         if x["paired"]:
