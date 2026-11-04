@@ -12,7 +12,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from magpiary import claude_code, modes
+from magpiary import modes
 from magpiary.brain import TYPE_NAMES
 
 DAY, HOUR = "digest_day", "digest_hour"  # settings: weekday 0 (Monday) to 6 (Sunday); the hour on that day
@@ -335,10 +335,6 @@ def _previous_themes(store, digest: dict) -> list[str]:
             if story:
                 return [t.get("name", "") for t in story.get("themes", [])]
     return []
-
-
-class _SkipClaude(Exception):
-    """The owner chose to use only their AI key: Claude Code is not asked."""
 
 
 def story_due(store, now: datetime | None = None, key_source=None, claude=None, key_writer=None, codex=None,

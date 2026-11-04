@@ -5,7 +5,6 @@ boards, Appearance, Library & this Mac (folders, backup, Trash, keep awake, the 
 where data lives, deleting it)."""
 
 import json
-import os
 import re
 import sqlite3
 import subprocess

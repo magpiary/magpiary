@@ -7,7 +7,6 @@ import os
 import plistlib
 import subprocess
 import time
-import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 

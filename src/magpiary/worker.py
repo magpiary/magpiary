@@ -163,8 +163,8 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
     for item in store.due_for_brain():
         forced = bool(item.get("ai_force"))
         url = item["canonical_url"]
-        senses = str(item.get("senses_status") or "")
-        if not senses or (senses.startswith("failed:") and senses[7:] < store._stamp()[:10]):  # failed: once a day
+        heard = str(item.get("senses_status") or "")  # not "senses": that name is the transcriber called by prepare()
+        if not heard or (heard.startswith("failed:") and heard[7:] < store._stamp()[:10]):  # failed: once a day
             if store.paused("transcribe") and not forced:
                 continue
             progress = activity.begin("process", item) if activity else NO_PROGRESS
@@ -244,7 +244,6 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
     return done
 
 
-LONG_VIDEO_MINUTES = 20  # longer videos wait for the owner's "Read it" (0 in Settings: read everything)
 
 
 class _DeepStopped(Exception):

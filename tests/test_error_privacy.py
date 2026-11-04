@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from magpiary import ask, ask_codex, ask_open, boardsync, brain, claude_code, digest, providers
+from magpiary import ask, ask_codex, ask_open, boardsync, brain, digest, providers
 
 PRIVATE = "synthetic-context-" + "x" * 40
 
@@ -38,8 +38,7 @@ def test_streamed_cli_errors_do_not_echo_remote_messages():
     assert PRIVATE not in str(err.value)
 
 
-def test_cli_writers_and_check_do_not_persist_raw_diagnostics(tmp_path):
-    from magpiary.store import Store
+def test_cli_writers_and_check_do_not_persist_raw_diagnostics(tmp_path, monkeypatch):
 
     def failure(*args, **kwargs):
         return SimpleNamespace(returncode=1, stdout=json.dumps({"is_error": True, "result": PRIVATE}), stderr=PRIVATE)
@@ -50,12 +49,10 @@ def test_cli_writers_and_check_do_not_persist_raw_diagnostics(tmp_path):
     with pytest.raises(ValueError) as err:
         digest.write_with_claude("synthetic question", run=failure)
     assert PRIVATE not in str(err.value)
-    store = Store(tmp_path / "library.db")
-    try:
-        result = claude_code.tiny_test(store, run=failure)
-        assert not result["ok"]
-        assert PRIVATE not in json.dumps(result)
-        assert PRIVATE not in store.get_setting(claude_code.TEST)
-    finally:
-        store.close()
+    from magpiary import engines
+
+    monkeypatch.setattr(engines, "installed", lambda kind: True)
+    for kind in ("claude_code", "codex"):  # the allow dialog's test run never shows what the engine printed
+        ok, why = engines.test_run(kind, run=failure)
+        assert not ok and PRIVATE not in why
     assert PRIVATE not in boardsync._why(RuntimeError(PRIVATE))

@@ -217,15 +217,6 @@ def test_the_free_checks_read_installed_signed_in_and_the_plan(monkeypatch):
     assert odd["signed_in"] is None and odd["why"]
 
 
-def test_the_tiny_test_is_remembered_and_never_runs_by_itself(mac, tmp_path, monkeypatch):
-    monkeypatch.setenv("MAGPIARY_HOME", str(tmp_path / "home"))
-    assert claude_code.last_test(mac.store) is None
-    result = claude_code.tiny_test(mac.store, fake_run({"prompt": (0, "ok")}))
-    assert result["ok"] and claude_code.last_test(mac.store)["ok"]
-    failed = claude_code.tiny_test(mac.store, fake_run({"prompt": (1, "", "Not logged in")}))
-    assert not failed["ok"] and "Check that it is signed in" in failed["text"]
-
-
 def test_a_digest_written_by_claude_code_records_when(mac, tmp_path, monkeypatch):
     digest_on(mac, monkeypatch)
     stocked(mac, tmp_path)
@@ -234,7 +225,6 @@ def test_a_digest_written_by_claude_code_records_when(mac, tmp_path, monkeypatch
     d = dg.make(mac.store, now - timedelta(days=7), now + timedelta(seconds=1), "manual")
     dg.story_due(mac.store, now, None, lambda p: story(), None)
     assert mac.store.digest(d)["data"]["story_at"] == now.isoformat(timespec="seconds")
-    assert claude_code.last_run(mac.store)["ok"] == now.isoformat(timespec="seconds")
 
 
 def test_the_health_check_streams_its_results_and_ends_with_a_summary(mac, monkeypatch):

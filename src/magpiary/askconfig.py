@@ -3,7 +3,6 @@ spend guard. All kept in the store's settings; this module only knows the names,
 
 from datetime import datetime, timedelta
 
-ON = "ask_on"
 ENGINE = "ask_engine"            # "claude" (Claude Code on the owner's plan), "codex" (Codex on the ChatGPT plan) or "key" (an AI key)
 KEY = "ask_key"                  # which saved key answers, when the engine is "key"
 CLAUDE_MODEL = "ask_claude_model"

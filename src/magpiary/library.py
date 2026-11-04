@@ -3,7 +3,6 @@ Everything here only reads: the commands open the database read-only. Saved text
 carries a notice that it is data, never instructions."""
 
 import json
-import socket
 
 
 from magpiary import agent_policy

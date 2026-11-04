@@ -49,9 +49,6 @@
     if (y0 !== null && a.isConnected) scrollTo({ top: scrollY + a.getBoundingClientRect().top - y0, behavior: "instant" });
     return scrollY - s0;
   }
-  // Flip remembers positions on the page, not on screen: after the page scrolled by d, move what it remembers
-  // by d too, so everything starts from where it was seen
-  const shiftState = (state, d) => { if (state && d) state.elementStates.forEach((es) => { if (es.matrix) es.matrix.f += d; }); };
 
   // ---- toasts and the confirm dialog ------------------------------------------------------------------
   let toastBox = $("#toasts");
@@ -1074,7 +1071,6 @@
     });
   }
   const askWriting = (p) => !!$(".askm.live, [data-thinking]", p), askAnswered = (p) => !!$(".askm.ai:not(.live):not(.thinking):not(.askerr)", p);
-  const CLOSE_ASK = ["Close this chat?", "It is saved under Past chats, where you can read it. You won't be able to continue it.", "Close chat", "Keep chatting"];
   // X: the chat is kept in the list (if it has an answer) and the sheet goes away; the next opening starts a new chat.
   // Minimise keeps the chat as it is. Both slide down to the bar.
   const fall = (p, done) => { if (!G()) { done(); return; } G().to(p, { opacity: 0, y: 28, scale: .96, transformOrigin: "100% 100%", duration: .22, ease: "power2.in", onComplete: done }); };

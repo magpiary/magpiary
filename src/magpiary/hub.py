@@ -534,7 +534,7 @@ class Hub(
         """What a bulk job would take and cost, for the confirmation box. `job` is refresh (stats) or again (summaries)."""
         import json as _json
 
-        from magpiary import claude_code, keys as keyring, modes, stats
+        from magpiary import keys as keyring, modes, stats
 
         ids = [int(x) for x in q.get("ids", "").split(",") if x.strip().isdigit()][:5000]
         items = [i for i in self.store.items_by_ids(ids) if i and i["status"] == "archived"]

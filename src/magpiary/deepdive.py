@@ -24,7 +24,7 @@ from pathlib import Path
 
 from magpiary.brain import BrainFailed, _clock
 
-ON, ENGINE, MODEL, EFFORT = "deep_on", "deep_engine", "deep_model", "deep_effort"
+MODEL, EFFORT = "deep_model", "deep_effort"
 EFFORTS = {"low": "Low", "medium": "Medium", "high": "High"}
 DEFAULT_EFFORT = "medium"
 LONG = "long_video_minutes"

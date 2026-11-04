@@ -457,11 +457,6 @@ class CardPages:
             out.append('<a class="pvprimary find" href="#links" data-tabto="links"><span><b>Add a link yourself</b></span></a>')
         return f'<div class="pvactions">{"".join(out)}</div>' if out else ""
 
-    @staticmethod
-    def _duration(item: dict) -> float | None:
-        meta = _read_json(Path(item["archive_dir"]) / "meta.json") if item.get("archive_dir") else None
-        return (meta or {}).get("duration")
-
     def _state(self, item: dict, record: dict | None, here: str) -> str:
         """Why this post is not finished yet, in plain words, with what to do about it."""
         if item["status"] == "needs_attention" and item.get("login_only") != 2:
@@ -586,7 +581,6 @@ class CardPages:
                 f'<p class="it-sum">{e(why)}{e(what)}</p><p class="small muted">{e(cost)}. Once per post.</p>{failed}{button}</div>')
 
     def _deep_result(self, result: dict) -> str:
-        from magpiary.deepdive import NAMED_KINDS  # noqa: F401  (kinds shown as written)
 
         def secs(at: str) -> float:
             try:

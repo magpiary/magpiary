@@ -768,12 +768,6 @@ class Store(ChatStore, StatsStore):
                 "SELECT 1 FROM deliveries d JOIN phones p ON p.id = d.phone_id WHERE p.name=? AND p.revoked_at IS NULL "
                 "AND d.received_at >= ? LIMIT 1", (name, since)).fetchone() is not None
 
-    def last_home_wifi(self) -> str:
-        with self._lock:
-            row = self._db.execute(
-                "SELECT home_wifi FROM phones WHERE home_wifi != '' ORDER BY id DESC LIMIT 1").fetchone()
-        return row["home_wifi"] if row else ""
-
     # ---- settings -----------------------------------------------------------------------
 
     def get_setting(self, key: str, default: str = "") -> str:
@@ -1886,10 +1880,6 @@ class Store(ChatStore, StatsStore):
     def urls_with_links(self) -> set[str]:
         with self._lock:
             return {r[0] for r in self._db.execute("SELECT DISTINCT canonical_url FROM links WHERE removed=0")}
-
-    def has_links(self, url: str) -> bool:
-        with self._lock:
-            return self._db.execute("SELECT 1 FROM links WHERE canonical_url=? AND removed=0 LIMIT 1", (url,)).fetchone() is not None
 
     # ---- related content and piles (M4) -----------------------------------------------------
 

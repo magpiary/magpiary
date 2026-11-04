@@ -65,13 +65,6 @@ def local_facets(duration, has_speech: bool | None, is_video: bool) -> dict[str,
     return out
 
 
-def text_of(facets: dict[str, list[str]], look: str = "") -> str:
-    """Facet values and the look sentence as plain words, for search and for the meaning model."""
-    parts = [look] if look else []
-    parts += [", ".join(v) for k, v in facets.items() if k != "length" and v]
-    return ". ".join(p for p in parts if p)
-
-
 def labelled(facets: dict[str, list[str]]) -> list[tuple[str, str, list[str]]]:
     """(key, label, values) in display order, only those that have values."""
     return [(k, FACETS[k], facets[k]) for k in ORDER if facets.get(k)]

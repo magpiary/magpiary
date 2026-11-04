@@ -130,3 +130,20 @@ def test_a_transcript_whisper_could_not_make_is_failed_not_done(store, tmp_path)
     brain_due(store, tmp_path, pause=lambda t: None, process=lambda i, k, p: None,
               prepare=lambda item, progress: ([], [], "whisper exited 1"), key_source=Keys([]))
     assert store.get_item(url)["senses_status"].startswith("failed:")
+
+
+def test_the_real_transcriber_is_called_not_shadowed(store, tmp_path, monkeypatch):
+    """Found by pyflakes in review 7, 4 Nov 2026: a local variable named `senses` hid process.senses, so the default
+    prepare() called a string and every transcript failed. The default path is used here, with senses() stubbed."""
+    from magpiary import process
+    from magpiary.worker import brain_due
+
+    called = []
+    monkeypatch.setattr(process, "senses", lambda folder, meta, progress=None: called.append(folder) or ([], [], ""))
+    url = "https://www.instagram.com/reel/MODE5/"
+    folder = tmp_path / "s"
+    folder.mkdir()
+    store.add_link(url)
+    store.fetch_succeeded(url, str(folder))
+    brain_due(store, tmp_path, pause=lambda t: None, process=lambda i, k, p: None, key_source=Keys([]))
+    assert called and store.get_item(url)["senses_status"] == "done"

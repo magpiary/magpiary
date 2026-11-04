@@ -21,7 +21,6 @@ from magpiary.tools import Run, default_run, find
 
 BROWSER = "chrome"
 DEFAULT = "instagram.com"
-DOMAINS = (DEFAULT,)
 HEADER = "# Netscape HTTP Cookie File\n"
 SETTING = "instagram_login_on"
 TWO_PART = {"co", "com", "org", "net", "ac", "gov", "edu"}  # co.uk, com.au, ... : keep three labels
