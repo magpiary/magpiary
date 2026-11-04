@@ -309,3 +309,46 @@ def test_names_in_other_scripts_keep_their_letters():
 
     assert norm("東京") == "東京" and norm("नमस्ते दुनिया") == "नमस्ते दुनिया"
     assert norm("Café Skills") == "cafe skill" and norm("snake_case") == "snake case"  # Latin names match as before
+
+
+def test_claude_code_may_read_only_its_own_folder_and_nothing_without_frames(tmp_path, monkeypatch):
+    """Review 3, 4 Nov 2026: Read was allowed everywhere, so a hostile caption could ask for ~/.config/magpiary/.env."""
+    from types import SimpleNamespace
+
+    from magpiary import config
+
+    monkeypatch.setattr(config, "data_dir", lambda: tmp_path)
+    seen = []
+
+    def run(cmd, **kw):
+        seen.append(cmd)
+        return SimpleNamespace(returncode=0, stdout=json.dumps({"structured_output": {"overview": "x"}}), stderr="")
+    frame = tmp_path / "f.jpg"
+    frame.write_bytes(b"\xff\xd8")
+    ask = deepdive.claude_code_asker("haiku", "low", run=run)
+    for images in ([frame], []):
+        try:
+            ask("s", deepdive.OVERVIEW_SCHEMA, [{"text": "t"}], images)
+        except Exception:
+            pass
+    with_frames, without = seen
+    assert "dontAsk" in with_frames and "Read(./**)" in with_frames and with_frames.count("Read") == 1
+    assert without[without.index("--tools") + 1] == "" and "Read(./**)" not in without
+
+
+def test_switching_to_private_mid_dive_stops_the_next_request(tmp_path):
+    """Review 3, 4 Nov 2026: a running dive kept sending after Private was chosen."""
+    from magpiary import modes
+    from magpiary.worker import deep_due
+
+    store = Store(tmp_path / "m.db")
+    url, folder = saved(store, tmp_path, meta={"source": "youtube", "duration": 3600})
+    store.queue_deep(store.id_for(url))
+    asked = []
+
+    def ask(*args):
+        asked.append(1)
+        store.set_setting(modes.SETTING, "private")  # chosen while the first request runs
+        return json.dumps({"title": "Part", "summary": "S.", "overview": "x", "takeaways": [], "quotes": [], "named": []})
+    deep_due(store, tmp_path / "notes", asker=ask)
+    assert len(asked) == 1 and store.item_by_id(store.id_for(url))["deep_status"] == "queued"  # stopped, waiting

@@ -415,12 +415,16 @@ def chrome_render(url: str) -> bytes:
     binary = next((b for b in BROWSERS if Path(b).exists()), None)
     if not binary:
         return b""
+    from magpiary.network import PublicProxy
+
     profile = tempfile.mkdtemp(prefix="magpiary-render-")
     try:
-        result = subprocess.run([binary, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
-                                 "--disable-extensions", "--mute-audio", f"--user-data-dir={profile}",
-                                 "--virtual-time-budget=10000", "--dump-dom", url],
-                                capture_output=True, timeout=60)
+        with PublicProxy() as proxy:  # every request, loopback included, may reach public addresses only
+            result = subprocess.run([binary, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
+                                     "--disable-extensions", "--mute-audio", f"--user-data-dir={profile}",
+                                     f"--proxy-server=http://{proxy}", "--proxy-bypass-list=<-loopback>",
+                                     "--virtual-time-budget=10000", "--dump-dom", url],
+                                    capture_output=True, timeout=60)
         return result.stdout[:MAX_PAGE_BYTES] if result.returncode == 0 else b""
     except (OSError, subprocess.SubprocessError):
         return b""

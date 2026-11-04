@@ -88,3 +88,83 @@ def public_urlopen(request, *, timeout: float, redirects: bool = True):
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}), _HTTPHandler(), _HTTPSHandler(), _Redirect(redirects and not authenticated))
     return opener.open(request, timeout=timeout)
+
+
+# ---- a public-only proxy for the page renderer -------------------------------------------------------------------
+# Headless Chrome draws pages made by scripts (sources.chrome_render). A page could point Chrome at this Mac's hub or
+# the home network. Every request Chrome makes, loopback included, goes through this proxy, which connects only to
+# public addresses it checked itself (review 3, 4 Nov 2026). Chrome ignores PAC scripts headless, so a proxy it is.
+
+import select  # noqa: E402
+import socketserver  # noqa: E402
+import threading  # noqa: E402
+
+_PIPE_SECONDS = 30
+
+
+def _pipe(a: socket.socket, b: socket.socket) -> None:
+    sockets = [a, b]
+    while True:
+        ready, _, broken = select.select(sockets, [], sockets, _PIPE_SECONDS)
+        if broken or not ready:
+            return
+        for s in ready:
+            data = s.recv(65536)
+            if not data:
+                return
+            (b if s is a else a).sendall(data)
+
+
+class _ProxyHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        client = self.request
+        client.settimeout(_PIPE_SECONDS)
+        head = b""
+        while b"\r\n\r\n" not in head and len(head) < 65536:
+            chunk = client.recv(4096)
+            if not chunk:
+                return
+            head += chunk
+        line, _, rest = head.partition(b"\r\n")
+        try:
+            method, target, version = line.decode("latin-1").split(" ", 2)
+            if method == "CONNECT":
+                host, _, port = target.rpartition(":")
+                upstream = _connect_public((host.strip("[]"), int(port)), timeout=_PIPE_SECONDS)
+                client.sendall(b"HTTP/1.1 200 Connection established\r\n\r\n")
+                extra = rest.partition(b"\r\n\r\n")[2]
+            else:
+                _check_url(target)
+                parts = urlsplit(target)
+                upstream = _connect_public((parts.hostname, parts.port or 80), timeout=_PIPE_SECONDS)
+                path = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
+                extra = f"{method} {path} {version}\r\n".encode("latin-1") + rest
+        except (ValueError, OSError, urllib.error.URLError):
+            client.sendall(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            return
+        try:
+            if extra:
+                upstream.sendall(extra)
+            _pipe(client, upstream)
+        except OSError:
+            pass
+        finally:
+            upstream.close()
+
+
+class _ProxyServer(socketserver.ThreadingTCPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
+class PublicProxy:
+    """`with PublicProxy() as address:` a proxy on 127.0.0.1 for the length of one render."""
+
+    def __enter__(self) -> str:
+        self._server = _ProxyServer(("127.0.0.1", 0), _ProxyHandler)
+        threading.Thread(target=self._server.serve_forever, daemon=True).start()
+        return f"127.0.0.1:{self._server.server_address[1]}"
+
+    def __exit__(self, *exc) -> None:
+        self._server.shutdown()
+        self._server.server_close()

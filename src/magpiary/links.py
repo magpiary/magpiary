@@ -400,14 +400,27 @@ def targets_for(record: dict, caption: str, transcript: str, comments: list[dict
     for citation in citations(caption):
         add(Target(citation, "source", "passing"))
     urls = []
-    sources = [caption, transcript, " ".join((record.get("entities") or {}).get("links") or []),
-               (record.get("extras") or {}).get("tool_url") or ""]
-    sources += [c.get("text", "") for c in comments or []]
+    sources = [caption, transcript, *(c.get("text", "") for c in comments or [])]
     for text in sources:
         for url in urls_in(text):
             if url not in urls:
                 urls.append(url)
+    # An address the AI proposes is fetched only if the post itself gives it: otherwise a hostile answer could hide
+    # private text in an address and have this Mac send it there (review 3, 4 Nov 2026)
+    given = set(urls)
+    for url in urls_in(" ".join((record.get("entities") or {}).get("links") or []) + " "
+                       + ((record.get("extras") or {}).get("tool_url") or "")):
+        if (url in given or _bare_site(url)) and url not in urls:  # a bare site read off the screen is fine: nothing fits in it
+            urls.append(url)
     return targets, urls[:30]
+
+
+def _bare_site(url: str) -> bool:
+    """https://name.example.com and nothing more: no path, query or fragment, a short host. Too small to carry text out."""
+    parts = urlsplit(_http(url))
+    labels = (parts.hostname or "").split(".")
+    return (parts.path in ("", "/") and not parts.query and not parts.fragment and 2 <= len(labels) <= 4
+            and all(0 < len(label) <= 24 for label in labels))
 
 
 def citations(caption: str) -> list[str]:

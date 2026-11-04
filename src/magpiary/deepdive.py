@@ -401,7 +401,11 @@ def claude_code_asker(model: str = "", effort: str = "", run=subprocess.run) -> 
                                                + ", ".join(names) if names else ""))
             done = run([claude_code.command(), "-p", "--model", model or "sonnet", "--effort", effort or DEFAULT_EFFORT,
                         "--system-prompt", system,
-                        "--tools", "Read", "--allowedTools", "Read", "--strict-mcp-config", "--setting-sources", "project",
+                        # Read only inside this call's own folder, and nothing else is ever asked or allowed: a hostile caption cannot
+                        # make it open a key file or another save (review 3, 4 Nov 2026; checked live: an outside read is refused)
+                        *(["--tools", "Read", "--permission-mode", "dontAsk", "--allowedTools", "Read(./**)"] if names
+                          else ["--tools", ""]),
+                        "--strict-mcp-config", "--setting-sources", "project",
                         "--no-session-persistence", "--output-format", "json", "--json-schema", json.dumps(json_schema(schema))],
                        input=prompt, capture_output=True, text=True, timeout=1800, cwd=work)
         except FileNotFoundError as err:

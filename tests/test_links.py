@@ -448,3 +448,14 @@ def test_a_failed_or_empty_search_keeps_the_links_already_found(store, monkeypat
         monkeypatch.setattr("magpiary.links.find_links", broken)
         links_due(store, get=pages({}), pause=lambda s: None)
         assert [l["url"] for l in store.links_for(store.url)] == ["https://cursor.com"]
+
+
+def test_an_address_only_the_ai_proposed_is_fetched_only_when_it_is_a_bare_site():
+    """Review 3, 4 Nov 2026: an AI answer could put private text in an address and have this Mac request it."""
+    from magpiary.links import targets_for
+
+    record = {"entities": {"links": ["https://collector.test/c?note=PRIVATE", "https://pebbledesk.example.com",
+                                     "https://given.example.com/page/2"]}}
+    _, urls = targets_for(record, "See https://given.example.com/page/2", "", None)
+    assert "https://pebbledesk.example.com" in urls and "https://given.example.com/page/2" in urls
+    assert not any("collector" in u for u in urls)

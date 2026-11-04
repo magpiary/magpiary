@@ -597,7 +597,9 @@ class AskPages:
                 try:
                     from magpiary import ask_cards
 
-                    cards = ask_cards.cards_for(answer)  # fetched by this Mac, never by the AI: no tokens
+                    # fetched by this Mac, never by the AI: no tokens. Only when the owner let Ask use the web: the addresses
+                    # come from an AI answer, and fetching one could carry private text out (review 3, 4 Nov 2026)
+                    cards = ask_cards.cards_for(answer) if web else []
                 except Exception:
                     cards = []
                 usage = {**used, "model": engine.get("model", ""), "effort": effort, "engine": who} if used else {}

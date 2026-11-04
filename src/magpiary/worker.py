@@ -4,6 +4,7 @@ then fetching and archiving posts."""
 import json
 import random
 import time
+from urllib.parse import urlsplit
 from collections.abc import Callable
 from pathlib import Path
 
@@ -94,7 +95,14 @@ def _get_with_login(get: Get, site: str) -> Get:
     header = login.cookie_header(site)
     if not header or get is not http_get:
         return get
-    return lambda url, *rest: http_get(url, *rest, cookie=header)
+
+    def fetch(url, *rest):
+        # the login goes only to that site and its subdomains, never to an image or page on another host that the
+        # post points at (review 3, 4 Nov 2026: a members' page's og:image could collect the session cookie)
+        if login.site_of(url) != site or urlsplit(url).scheme != "https":
+            return http_get(url, *rest)
+        return http_get(url, *rest, cookie=header)
+    return fetch
 
 
 def with_login(ytdlp: YtDlp, domain: str = "instagram.com") -> YtDlp:
@@ -241,6 +249,10 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
 LONG_VIDEO_MINUTES = 20  # longer videos wait for the owner's "Read it" (0 in Settings: read everything)
 
 
+class _DeepStopped(Exception):
+    """The owner switched to Private, turned Deeper dive off, or stopped its engine while a dive was running."""
+
+
 def deep_due(store: Store, notes_dir: Path, activity=None, log: Callable[[str], None] = lambda m: None, asker=None) -> int:
     """Deeper dives the owner asked for, one at a time with the engine chosen in Settings. Returns how many were made."""
     from magpiary import deepdive
@@ -257,8 +269,22 @@ def deep_due(store: Store, notes_dir: Path, activity=None, log: Callable[[str], 
         store.deep_running(url)
         progress = activity.begin("process", item) if activity else NO_PROGRESS
         try:
-            ask = asker or deepdive.asker_for(deepdive.engine(store))
+            chosen = None if asker else deepdive.engine(store)
+            real = asker or deepdive.asker_for(chosen)
+
+            def ask(*args, real=real, chosen=chosen):
+                # checked again before every request, not only at the start: Private, Deeper dive off, or its engine
+                # stopped in AI keys mid-dive sends nothing more (review 3, 4 Nov 2026)
+                now = None if asker else deepdive.engine(store)
+                if modes.current(store) == "private" or (asker is None and (
+                        not deepdive.enabled(store) or not now or now["kind"] != chosen["kind"] or now.get("key") != chosen.get("key"))):
+                    raise _DeepStopped
+                return real(*args)
             result = deepdive.run(item, store, ask, progress=progress)
+        except _DeepStopped:
+            store.deep_requeue(url)
+            log("deeper dive stopped: Private mode, switched off, or its engine changed; it waits")
+            return done
         except BrainFailed as err:
             store.deep_failed(url, err.detail)
             log(f"deeper dive failed: {err.reason}")

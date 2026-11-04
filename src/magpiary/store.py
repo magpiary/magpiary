@@ -1689,6 +1689,11 @@ class Store(ChatStore, StatsStore):
                              "WHERE canonical_url=?", (text, url))
         self._reindex(url)
 
+    def deep_requeue(self, url: str) -> None:
+        """A running dive was stopped by a setting: it waits, queued, to start again when allowed."""
+        with self._lock:
+            self._db.execute("UPDATE items SET deep_status='queued', deep_detail='' WHERE canonical_url=?", (url,))
+
     def deep_failed(self, url: str, detail: str) -> None:
         with self._lock:
             self._db.execute("UPDATE items SET deep_status='failed', deep_detail=? WHERE canonical_url=?", (detail[:200], url))

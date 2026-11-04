@@ -448,3 +448,18 @@ def test_a_timeout_on_one_post_does_not_hold_up_the_posts_after_it(store, tmp_pa
 def test_one_malformed_link_is_refused_alone_and_the_rest_of_the_batch_is_saved(store):
     results = store.receive(store.phone, [{"id": "ok1", "url": IG}, {"id": "bad1", "url": "https://example.com:abc/a"}])
     assert [(r.id, r.status) for r in results] == [("ok1", "new"), ("bad1", "rejected")]
+
+
+def test_a_saved_login_is_sent_only_to_its_own_site(monkeypatch):
+    """Review 3, 4 Nov 2026: a page fetched with the login passed the cookie to every host it pointed at."""
+    from magpiary import login, worker
+
+    sent = []
+    monkeypatch.setattr(login, "cookie_header", lambda site: "session=abcd")
+    monkeypatch.setattr(worker, "http_get", lambda url, *rest, cookie=None: sent.append((url, cookie)))
+    get = worker._get_with_login(worker.http_get, "example.com")
+    for url in ("https://www.example.com/post", "https://img.example.com/a.jpg", "https://collector.test/i.jpg",
+                "http://example.com/plain"):
+        get(url)
+    assert sent == [("https://www.example.com/post", "session=abcd"), ("https://img.example.com/a.jpg", "session=abcd"),
+                    ("https://collector.test/i.jpg", None), ("http://example.com/plain", None)]
