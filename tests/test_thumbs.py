@@ -23,8 +23,8 @@ def test_a_small_copy_is_made_once_and_kept_beside_the_original(tmp_path, monkey
     calls = []
     first = thumbs.small(original, 600, fake_ffmpeg(calls))
     again = thumbs.small(original, 600, fake_ffmpeg(calls))
-    assert first == again == tmp_path / ".thumbs" / "thumbnail-600.jpg" and len(calls) == 1
-    assert "scale='min(600,iw)':-2" in calls[0] and "-ss" not in calls[0]
+    assert first == again == tmp_path / ".thumbs" / "thumbnail-600x800.jpg" and len(calls) == 1
+    assert "max(600/iw,800/ih)" in " ".join(calls[0]) and "-ss" not in calls[0]  # tall enough to fill a portrait tile
 
 
 def test_a_video_gets_its_first_moment_and_odd_sizes_or_a_failure_give_nothing(tmp_path, monkeypatch):
@@ -40,8 +40,9 @@ def test_a_video_gets_its_first_moment_and_odd_sizes_or_a_failure_give_nothing(t
     assert thumbs.small(broken, 160, lambda *a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired("x", 1))) is None
 
 
-@pytest.mark.parametrize("video,width", [(False, 600), (True, 160)])
-def test_real_ffmpeg_produces_a_decodable_cached_jpeg(tmp_path, monkeypatch, video, width):
+@pytest.mark.parametrize("video,width,size", [(False, 600, (640, 480)), (True, 160, (160, 120))])
+def test_real_ffmpeg_produces_a_decodable_cached_jpeg(tmp_path, monkeypatch, video, width, size):
+    """A tile copy is never larger than the original (640 x 480 here: not enough to fill 800 high, so kept whole)."""
     ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
     if not ffmpeg or not ffprobe:
         pytest.skip("ffmpeg and ffprobe are not installed")
@@ -62,6 +63,6 @@ def test_real_ffmpeg_produces_a_decodable_cached_jpeg(tmp_path, monkeypatch, vid
     info = subprocess.run([ffprobe, "-v", "error", "-select_streams", "v:0", "-show_entries",
                            "stream=width,height", "-of", "json", str(small)],
                           check=True, capture_output=True, text=True, timeout=30)
-    assert json.loads(info.stdout)["streams"] == [{"width": width, "height": width * 3 // 4}]
+    assert json.loads(info.stdout)["streams"] == [{"width": size[0], "height": size[1]}]
     assert thumbs.small(original, width, run=convert) == small and len(calls) == 1
     assert original.read_bytes() == original_bytes
