@@ -299,7 +299,8 @@ TOPICS = {
              "reads the post itself, so the box isn't needed."),
             ("Can someone on my Wi-Fi pretend to be my phone?",
              "No. Since 0.1.5 the Shortcut never sends its key: it signs each send with it, and your Mac refuses a send that "
-             "is unsigned, changed, or more than 10 minutes old. The links themselves still travel unencrypted on your Wi-Fi, so "
+             "is unsigned, changed, or more than 10 minutes old. Adding a phone is the one moment its secret travels over Wi-Fi, so "
+             "add phones at home, on a Wi-Fi you trust. The links themselves still travel unencrypted on your Wi-Fi, so "
              "someone on the same network could see which links you send. A phone set up before 0.1.5 is marked in Settings → "
              "Saving posts until you install its new Shortcut."),
             ("Can I use the hub from my phone?",
