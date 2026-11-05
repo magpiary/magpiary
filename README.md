@@ -14,7 +14,8 @@ Share a reel, thread, video or link from your iPhone. Your Mac downloads it, tra
 **Capture**
 - Share to Magpiary from any iPhone app. The phone queues links and hands them to your Mac when both are on the same Wi-Fi, even if the Mac was asleep.
 - Sources: Instagram, Threads, YouTube, Reddit, X, LinkedIn and ordinary web pages, fetched logged out. An optional Instagram login is used only when you retry one blocked post yourself.
-- A Chrome extension saves pages from the desktop. It comes with Magpiary: Settings, Phones, Chrome, **Get the extension** copies it to `~/Magpiary/chrome-extension` and opens Chrome's extensions page (turn on Developer mode, then Load unpacked).
+- A Chrome extension saves pages from the desktop. Get it from the Chrome Web Store, or from Magpiary: Settings, Saving posts, Chrome, **Get the extension** copies it to `~/Magpiary/chrome-extension` and opens Chrome's extensions page (turn on Developer mode, then Load unpacked). Tick **Save what I see** (extension 0.1.5 or newer; the copy in Settings is always current, the Web Store copy follows its review) to keep a page exactly as it is on your screen, signed-in pages included; it opens on a Read tab and downloads as a PDF.
+- Your iPhone signs each send to your Mac with a secret derived from its pairing key and never sends the key itself.
 - Tracking is stripped from every link, and a link saved twice is one save.
 
 **Understand**
@@ -39,7 +40,7 @@ Requires a Mac with Apple Silicon (M1 or newer) on macOS 14 or later, an iPhone 
 curl -fsSL https://raw.githubusercontent.com/magpiary/magpiary/main/install-app.sh | sh
 ```
 
-**Or the disk image.** Download `Magpiary-0.1.4.dmg` from the [latest release](https://github.com/magpiary/magpiary/releases/latest), open it and drag Magpiary to Applications. The app is not signed with a paid Apple account, so macOS blocks the first open. Open Magpiary once, then go to System Settings > Privacy & Security, scroll down, click **Open Anyway** and enter your password. The app then downloads about 720 MB of tools and models and opens the setup page in your browser. One Magpiary per Mac for now: do not install it for two accounts on the same Mac.
+**Or the disk image.** Download `Magpiary-0.1.5.dmg` from the [latest release](https://github.com/magpiary/magpiary/releases/latest), open it and drag Magpiary to Applications. The app is not signed with a paid Apple account, so macOS blocks the first open. Open Magpiary once, then go to System Settings > Privacy & Security, scroll down, click **Open Anyway** and enter your password. The app then downloads about 720 MB of tools and models and opens the setup page in your browser. One Magpiary per Mac for now: do not install it for two accounts on the same Mac.
 
 **Or from Terminal:**
 
@@ -76,7 +77,7 @@ Update with `magpiary update`; remove with `magpiary uninstall` (your library st
 - Downloading and archiving content may break a platform's terms of service or copyright rules. Save only what you are allowed to keep, and check each platform's terms. You are responsible for how you use Magpiary.
 - Sites change often; some posts (private, age-restricted, deleted) cannot be fetched logged out.
 - Transcription is evaluated on English; other languages are untested.
-- macOS and iPhone only. The Chrome extension is loaded manually and is not on the Chrome Web Store.
+- macOS and iPhone only.
 
 ## Troubleshooting
 
