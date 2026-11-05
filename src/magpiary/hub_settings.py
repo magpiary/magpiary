@@ -32,6 +32,8 @@ PAGES = {**SECTIONS, "privacy": "Privacy"}  # Privacy sits apart, under the list
 SECTION_ICONS = {"profile": ("people", "var(--t-place)"), "ai": ("sparkle", "var(--t-design)"), "ask": ("comment", "var(--t-design)"), "agents": ("terminal", "var(--t-tool)"), "phones": ("phone", "var(--t-howto)"),
                  "storage": ("library", "var(--t-discussion)"), "boards": ("folder", "var(--t-news_opinion)"), "appearance": ("palette", "var(--t-tool)"),
                  "privacy": ("lock", "#3d3d3d")}
+SUPPORT_URL = "https://www.buymeacoffee.com/magpiary"  # opens in the browser on click; nothing is sent from the app
+
 SECTION_BLURBS = {"profile": "What friends see on a board, and what your AI knows about your goals.",
                   "phones": "How posts reach this Mac: your phones, Chrome, and the optional Instagram login.",
                   "ai": "Your AI keys, Smart or Private summaries, the digest, Ask, Deeper dive and finding links.",
@@ -980,6 +982,9 @@ class SettingsPages:
         restore = self._restore_row(folders["backups"])
         checking = self.store.get_setting(update.CHECK_SETTING, "1") != "0"
         about = (_row("Magpiary", f"Version {e(__version__)}", lead=ui.icon("info"))
+                 + _row("Support Magpiary", "Free, with no ads. If it helps you, a coffee covers the costs of keeping it going. Opens in your browser.",
+                        f'<a class="btn sm" href="{SUPPORT_URL}" target="_blank" rel="noopener">Buy me a coffee ↗</a>',
+                        lead=ui.icon("heart"), sid="support")
                  + _row("Check for new versions", "The switch asks GitHub for the latest version number once a day. Nothing about you is sent.",
                         ui.button_form(self.csrf, "/hub/versioncheck/now", {}, "Check now", "btn sm", busy="Checking…")
                         + self._switch("/hub/versioncheck", checking, {"enabled": "0", "next": "/settings/storage"},

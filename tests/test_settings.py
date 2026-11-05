@@ -377,3 +377,9 @@ def test_long_videos_get_a_deeper_dive_suggested_after_the_minutes_set(mac):
     post(mac, "/hub/settings/long-video", minutes="-5")
     post(mac, "/hub/settings/long-video", minutes="9999")
     assert mac.store.get_setting("long_video_minutes") == "0"  # nonsense is ignored
+
+
+def test_about_has_a_support_link_that_is_a_plain_outbound_link(mac):
+    here = page(mac, "/settings/storage")[2]
+    assert 'id="support"' in here
+    assert 'href="https://www.buymeacoffee.com/magpiary" target="_blank" rel="noopener"' in here
