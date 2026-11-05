@@ -750,7 +750,8 @@
   let seekAfterOpen = null;  // a cited moment in an Ask answer: the post opens and jumps there
   function wireCard(host) {
     const main = $(".main", host); if (!main) return;
-    const want = new URLSearchParams(location.search).get("tab") || host.dataset.tab || "sum";
+    // the tab the server opened (Read, for a page saved as the owner saw it) wins over Summary
+    const want = new URLSearchParams(location.search).get("tab") || host.dataset.tab || $("[data-tab].on", host)?.dataset.tab || "sum";
     const tabs = $$("[data-tab]", host), bar = $(".tabs", host);
     if (bar && !$(".tline", bar)) { const i = document.createElement("i"); i.className = "tline"; bar.prepend(i); }
     const show = (k, animate) => {
@@ -3245,7 +3246,8 @@
   }
   if (g && page() === "welcome") g.from($$(".w-body > div > *"), { opacity: 0, y: 18, duration: .5, ease: "power3.out", stagger: .06, clearProps: "opacity,transform" });
   // Download PDF on a page saved as the owner saw it: the Mac draws it (a few seconds), so the button says so, then the file
-  // arrives as a download. With no browser on the Mac to draw it, the print-ready page opens instead (Save as PDF from there).
+  // arrives as a download. With no browser on the Mac to draw it, the print-ready page opens in this tab (Save as PDF from there).
+  // A POST with the page's token: a GET of the same address only shows the print-ready page, so no other site can start a browser.
   document.addEventListener("click", async (ev) => {
     const a = ev.target.closest("a[data-pdf]"); if (!a) return;
     ev.preventDefault(); ev.stopPropagation();
@@ -3253,9 +3255,11 @@
     const label = a.querySelector("span"), was = label.textContent;
     a.classList.add("making"); a.setAttribute("aria-busy", "true"); label.textContent = "Making the PDF…";
     try {
-      const r = await fetch(a.href, { cache: "no-store" });
-      if (!r.ok) throw new Error(String(r.status));
-      if (!(r.headers.get("Content-Type") || "").startsWith("application/pdf")) { open(a.href, "_blank", "noopener"); label.textContent = was; return; }
+      const id = /\/item\/(\d+)\/pdf/.exec(a.getAttribute("href"))?.[1] || "";
+      const r = await fetch("/hub/pdf", { method: "POST", body: new URLSearchParams({ csrf, id }), headers: FORM, cache: "no-store" });
+      if (r.status === 429) { label.textContent = "Making another PDF…"; setTimeout(() => { label.textContent = was; }, 3000); return; }
+      if (r.status === 503) { location.href = a.href; return; }  // no browser to draw it: the print-ready page, in this tab (no pop-up to block)
+      if (!r.ok || !(r.headers.get("Content-Type") || "").startsWith("application/pdf")) throw new Error(String(r.status));
       const name = /filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") || "")?.[1] || "saved-page.pdf";
       const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: name });
       document.body.append(link); link.click(); link.remove();

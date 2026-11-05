@@ -147,3 +147,33 @@ def test_the_real_transcriber_is_called_not_shadowed(store, tmp_path, monkeypatc
     store.fetch_succeeded(url, str(folder))
     brain_due(store, tmp_path, pause=lambda t: None, process=lambda i, k, p: None, key_source=Keys([]))
     assert called and store.get_item(url)["senses_status"] == "done"
+
+
+def test_a_summary_of_a_page_captured_again_meanwhile_is_dropped(tmp_path):
+    """The owner saves the page again (Save what I see) while its old summary is being written: that summary must not
+    mark the new copy as summarised (review, 5 Nov 2026)."""
+    from datetime import datetime, timedelta
+
+    from magpiary.worker import brain_due
+
+    t = [datetime(2026, 11, 5, 10, 0).astimezone()]
+    store = Store(tmp_path / "m.db", now=lambda: t[0])
+    url = "https://writers.example.org/paper-gardens"
+    folder = tmp_path / "f"
+    folder.mkdir()
+    store.add_link(url)
+    store.fetch_succeeded(url, str(folder))
+    store.senses_done(url, "")
+
+    def process(item, key, progress):  # the capture lands and is archived while the AI is writing
+        store.recaptured(url)
+        t[0] += timedelta(seconds=30)
+        store.fetch_succeeded(url, str(folder))
+        return {"title": "Old page", "summary": "about the old page", "entities": {}}
+
+    from types import SimpleNamespace
+
+    key = SimpleNamespace(id="k1", name="Gemini", tier="free", provider="gemini", model="m")
+    brain_due(store, tmp_path, pause=lambda t_: None, process=process, key_source=Keys([key]))
+    assert store.get_item(url)["ai_status"] is None   # still to be summarised, from the new copy
+    store.close()

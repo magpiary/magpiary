@@ -147,6 +147,18 @@ def test_the_extension_sends_a_capture_and_the_link_is_saved_with_it(mac):
     assert status == 200 and reply["capture"] == "c-1" and mac.counts() == {URL: 1}
 
 
+def test_a_capture_sent_again_after_the_mac_used_it_changes_nothing(mac):
+    """The reply was lost after the Mac had already archived from the capture: the retry is acknowledged, and the post
+    is not read or summarised again (review, 5 Nov 2026)."""
+    _, key = mac.store.add_phone("Chrome", kind="browser")
+    assert mac.raw_post(key, body(), "/v1/capture")[0] == 200
+    capture.done(capture.latest(URL))                          # the fetch lane used it
+    mac.store.fetch_succeeded(URL, "/nowhere")
+    status, reply = mac.raw_post(key, body(), "/v1/capture")   # the extension never heard back, so it sends again
+    assert status == 200 and reply["capture"] == "c-1"
+    assert capture.latest(URL) is None and mac.store.items()[0]["status"] == "archived" and mac.counts() == {URL: 1}
+
+
 def test_only_the_paired_browser_sends_captures(mac):
     _, phone_key = mac.store.add_phone("Phone")
     assert mac.raw_post(phone_key, body(), "/v1/capture")[0] == 403
@@ -208,22 +220,26 @@ def captured_post(mac, tmp_path):
 
 
 def test_download_pdf_is_made_on_the_mac_and_falls_back_to_a_print_page(mac, tmp_path, monkeypatch):
-    from magpiary import reader
-    from test_hub import page, request
+    from magpiary import hub_card, reader
+    from test_hub import page, post, request
 
     item_id, _ = captured_post(mac, tmp_path)
     assert f'href="/item/{item_id}/pdf" data-pdf download' in page(mac, f"/item/{item_id}")[2]
     made = []
     monkeypatch.setattr(reader, "make_pdf", lambda html: made.append(html) or b"%PDF-1.7 made")
-    status, headers, data = request(mac, "GET", f"/item/{item_id}/pdf")
+    status, headers, data = request(mac, "GET", f"/item/{item_id}/pdf")      # a GET never starts a browser: any site can ask for one
+    assert status == 200 and made == [] and "Save as PDF" in data.decode() and "default-src 'none'" in headers["Content-Security-Policy"]
+    status, headers, data = post(mac, "/hub/pdf", id=str(item_id))
     assert status == 200 and data == b"%PDF-1.7 made" and headers["Content-Type"] == "application/pdf"
     assert headers["Content-Disposition"] == 'attachment; filename="A-quiet-guide-to-paper-gardens.pdf"'
     assert "data:image/jpeg;base64," in made[0] and "/media/" not in made[0]   # every picture inside: no network needed
     assert "&lt;script&gt;" in made[0] and "<script>" not in made[0]
+    assert request(mac, "POST", "/hub/pdf", {"id": str(item_id)})[0] == 403  # without the page's token
+    with hub_card.PDF_LOCK:                                                   # one drawing at a time
+        assert post(mac, "/hub/pdf", id=str(item_id))[0] == 429
     monkeypatch.setattr(reader, "make_pdf", lambda html: None)                 # no browser on this Mac
-    status, headers, data = request(mac, "GET", f"/item/{item_id}/pdf")
-    assert status == 200 and "Save as PDF" in data.decode() and "default-src 'none'" in headers["Content-Security-Policy"]
-    assert request(mac, "GET", "/item/999/pdf")[0] == 404
+    assert post(mac, "/hub/pdf", id=str(item_id))[0] == 503
+    assert request(mac, "GET", "/item/999/pdf")[0] == 404 and post(mac, "/hub/pdf", id="999")[0] == 404
 
 
 def test_a_real_pdf_is_drawn_offline_when_a_browser_is_installed(tmp_path):

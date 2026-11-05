@@ -24,6 +24,28 @@
     return (r.width <= 1 || r.height <= 1) && (cs.overflow === "hidden" || cs.position === "absolute" || cs.clip !== "auto" || cs.clipPath !== "none");
   }
 
+  /** Whether nothing between this node and the page hides it (a picture or text inside a hidden box was never seen). */
+  function shown(node) {
+    for (let n = node; n && n !== document.body; n = n.parentElement) if (n.nodeType === Node.ELEMENT_NODE && hidden(n)) return false;
+    return true;
+  }
+
+  /** The text of an element as seen: hidden descendants left out (innerText keeps text that is only transparent or
+   *  clipped away). pre: keep the spacing, for code. */
+  function seen(el, pre = false) {
+    let out = "";
+    for (const n of el.childNodes) {
+      if (n.nodeType === Node.TEXT_NODE) out += pre ? n.textContent : n.textContent.replace(/\s+/g, " ");
+      else if (n.nodeType !== Node.ELEMENT_NODE || SKIP_TAGS.has(n.tagName) || hidden(n)) continue;
+      else if (n.tagName === "BR") out += "\n";
+      else {
+        const block = !getComputedStyle(n).display.startsWith("inline");
+        out += (block ? "\n" : "") + seen(n, pre) + (block ? "\n" : "");
+      }
+    }
+    return out;
+  }
+
   function skip(el, keepHeader) {
     if (SKIP_TAGS.has(el.tagName)) return true;
     if (el.tagName === "HEADER" && !(keepHeader && el.querySelector("h1"))) return true;   // a page's top bar, but not an article's title block
@@ -98,7 +120,7 @@
 
   function picture(img, inGroup = 0) {
     const src = bestSource(img);
-    if (!src || !bigEnough(img) || blocks.some((b) => b.t === "img" && b.src === src)) return;
+    if (!src || !bigEnough(img) || !shown(img) || blocks.some((b) => b.t === "img" && b.src === src)) return;
     // every other address the picture goes by: the browser's own copy of the page may hold any one of these sizes
     const also = [img.currentSrc, img.getAttribute("src"), ...(img.getAttribute("srcset") || "").split(/,\s+(?=\S)/).map((c) => c.trim().split(/\s+/)[0])]
       .map((u) => (u && !u.startsWith("data:") ? http(u) : "")).filter((u, i, all) => u && u !== src && all.indexOf(u) === i).slice(0, 8);
@@ -151,7 +173,7 @@
     if (depth > 60 || blocks.length >= MAX_BLOCKS || skip(el, true)) return;
     const tag = el.tagName;
     if (/^H[1-6]$/.test(tag)) {
-      const t = tidy(el.innerText);
+      const t = tidy(seen(el));
       if (tag === "H1" && !title) { title = t; return; }
       push({ t: "h", level: Number(tag[1]), text: t });
       return;
@@ -166,20 +188,20 @@
     if (tag === "IFRAME") { const src = http(el.getAttribute("src") || ""); if (src) push({ t: "embed", src }); return; }
     if (tag === "FIGCAPTION") {
       const last = blocks[blocks.length - 1];
-      const t = tidy(el.innerText);
+      const t = tidy(seen(el));
       if (last && last.t === "img" && !last.caption) last.caption = t.slice(0, 2000); else push({ t: "caption", text: t });
       return;
     }
-    if (tag === "PRE") { push({ t: "code", text: el.innerText }); return; }
-    if (tag === "BLOCKQUOTE" && !hasBlockChild(el)) { push({ t: "quote", text: el.innerText }); return; }
+    if (tag === "PRE") { push({ t: "code", text: seen(el, true) }); return; }
+    if (tag === "BLOCKQUOTE" && !hasBlockChild(el)) { push({ t: "quote", text: seen(el) }); return; }
     if (tag === "LI") {
-      push({ t: "li", ordered: el.parentElement && el.parentElement.tagName === "OL", text: el.innerText });
+      push({ t: "li", ordered: el.parentElement && el.parentElement.tagName === "OL", text: seen(el) });
       for (const img of el.querySelectorAll("img")) picture(img);
       return;
     }
     if (tag === "P" || (!hasBlockChild(el) && tidy(el.innerText) && !["UL", "OL", "TABLE", "FIGURE", "PICTURE"].includes(tag))) {
       for (const img of el.querySelectorAll("img")) picture(img);   // a picture set inside a paragraph keeps its place
-      push({ t: "p", text: el.innerText });
+      push({ t: "p", text: seen(el) });
       return;
     }
     const row = sideBySide(el);

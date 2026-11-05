@@ -291,6 +291,8 @@ class Hub(
             if form.get("note", "").isdigit():
                 self.store.ask_note_delete(int(form["note"]))
             return Response(303, b"", headers={"Location": back})
+        if path == "/hub/pdf":
+            return self.pdf_make(item_id)
         if path == "/hub/panel/save":
             return self.panel_save(form.get("url", ""))
         if path == "/hub/add":

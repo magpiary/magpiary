@@ -183,8 +183,13 @@ function flushCaptures() {
       }
       if (reply.status === 401) return { state: "revoked", waiting: waiting.length - results.length, results };
       if (reply.status === 400 || reply.status === 413) {   // the Mac can't take this capture: keep the save as a plain link
+        // the link is queued before the capture goes, so a stop in between leaves the save in one queue or both, never neither;
+        // the same id twice is one save on the Mac
+        await withOutbox(async () => {
+          const { outbox = [] } = await store.get(["outbox"]);
+          if (!outbox.some((i) => i.id === c.item.id)) await store.set({ outbox: [...outbox, c.item] });
+        });
         await captures("readwrite", (s) => s.delete(c.capture));
-        await withOutbox(async () => { const { outbox = [] } = await store.get(["outbox"]); await store.set({ outbox: [...outbox, c.item] }); });
         await flush();
         results.push({ id: c.item.id, status: "link_only" });
         continue;

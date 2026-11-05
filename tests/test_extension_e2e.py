@@ -261,7 +261,8 @@ ARTICLE = """<!doctype html><html lang="en"><head><title>Paper gardens | Writers
   <h2>Tools</h2><ul><li>Bone folder</li><li>Thin paper</li></ul>
   <figure><img src="/tulip-small.png" srcset="/tulip-small.png 200w, /tulip.png 800w" width="400" height="300" alt="A folded tulip">
   <figcaption>The first fold</figcaption></figure>
-  <p>Glue nothing. A good fold holds better than glue ever will, and it can be opened again later.</p>
+  <p>Glue nothing. A good fold holds better than glue ever will<span style="opacity:0">Invisible aside for bots</span>, and it can be opened again later.</p>
+  <div style="opacity:0"><img src="/ghost.png" width="400" height="300" alt="never on screen"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><img src="/grid-a.png" width="300" height="200" alt="left"></div><div><img src="/grid-b.png" width="300" height="200" alt="right"></div></div>
   <img src="/avatar.png" width="32" height="32" alt="author photo">
   <button>Follow</button>
@@ -326,6 +327,7 @@ def test_save_what_i_see_sends_the_article_screenshot_and_page_copy(tmp_path, en
     assert [b["t"] for b in blocks] == ["row", "row", "p", "h", "li", "li", "img", "p", "img", "img"]
     assert blocks[0]["items"] == ["Paper", "Craft", "Slow living"]                    # chips side by side, the + control left out
     assert blocks[1]["items"] == ["Robin Example", "6 min read", "2 days ago"]       # no Follow, no lone "·"
+    assert "Invisible aside" not in words and not any(b.get("src", "").endswith("/ghost.png") for b in blocks)  # hidden inside a block
     assert "62" not in words and "Press enter" not in words                           # bare counts and screen-reader text dropped
     assert blocks[6]["src"] == "http://writers.example.org/tulip.png"   # the largest size offered
     assert blocks[6]["caption"] == "The first fold"

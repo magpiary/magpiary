@@ -249,6 +249,11 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
                     activity.end("process")
         if record is None:
             continue
+        now = store.get_item(url) or {}
+        if now.get("status") != "archived" or now.get("archived_at") != item.get("archived_at"):
+            # captured again while this summary was being written: it describes the old page; the new one is summarised next
+            log(f"{url}: saved again while it was being summarised; that summary is dropped")
+            continue
         store.brain_succeeded(url, record, transcript_text(Path(item["archive_dir"])), apply_tags)
         done += 1
     return done

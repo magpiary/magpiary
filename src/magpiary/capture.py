@@ -120,6 +120,11 @@ def _private_dir(path: Path) -> None:
     path.chmod(0o700)
 
 
+def stored(url: str, capture_id) -> bool:
+    """Whether this capture is waiting on disk now (it is gone once the Mac has archived it)."""
+    return isinstance(capture_id, str) and bool(ID.fullmatch(capture_id)) and (_folder(url) / capture_id).exists()
+
+
 def save(url: str, capture_id: str, page, screen=None, mhtml=None) -> Path:
     """Write one capture for this canonical URL. Written under a temporary name and swapped in, so a half-written
     capture is never read. Raises BadCapture for a capture of the wrong shape."""

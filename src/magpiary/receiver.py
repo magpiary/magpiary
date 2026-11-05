@@ -511,6 +511,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(400, {"error": "bad request"})
             return
         try:
+            waiting = capture.stored(link.url, body.get("capture"))
             folder = capture.save(link.url, body.get("capture"), body.get("page"), body.get("screen"), body.get("mhtml"))
         except capture.BadCapture as err:
             log(f"POST /v1/capture from {phone.name} -> 400 ({err})")
@@ -519,8 +520,13 @@ class Handler(BaseHTTPRequestHandler):
         results = store.receive(phone, [item])
         if results[0].status == "rejected":
             shutil.rmtree(folder, ignore_errors=True)
-        elif results[0].status in ("again", "replay"):
-            store.recaptured(link.url)  # saved before: archive it again from what the owner sees now
+        elif results[0].status == "replay":
+            # the same send again (its reply was lost): nothing new to read. If the Mac already used this capture, the copy
+            # just written goes, and the post is not read (or summarised) again
+            if not waiting:
+                shutil.rmtree(folder, ignore_errors=True)
+        elif results[0].status == "again":
+            store.recaptured(link.url)  # saved before, now with what the owner sees: archive it again from this
         if results[0].status != "rejected":
             self.server.work_wanted.set()
             if item.get("board"):

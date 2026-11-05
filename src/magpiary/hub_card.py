@@ -4,6 +4,7 @@ same address opens it as a page of its own. Without JavaScript every tab is show
 
 import re
 import json
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlsplit
@@ -22,6 +23,7 @@ from magpiary.web import Response, e
 from magpiary.config import load_json as _read_json  # noqa: E402  (one reader for the library's JSON files)
 
 VIDEO = (".mp4", ".webm", ".mov")
+PDF_LOCK = threading.Lock()  # one headless browser drawing a PDF at a time
 AI_REASONS = {"busy": "the AI was too busy or slow; trying again later", "no_key": "no AI key yet",
               "bad_key": "the key was refused", "rate_limited": "the AI's limit was reached",
               "blocked": "the AI declined this post", "invalid": "the AI's answer was not usable",
@@ -135,22 +137,44 @@ class CardPages:
 
     # ---- the post as a page: breadcrumb, and the posts before and after it ---------------------------------------------
 
-    def pdf_page(self, item_id: int) -> Response:
-        """A saved page as a PDF, made on this Mac. With no browser to draw it, the same page opens ready for Save as PDF."""
-        from magpiary import reader
-
+    def _saved_page(self, item_id: int) -> tuple[dict, Path, str] | None:
         item = self.store.item_by_id(item_id)
         folder = Path(item["archive_dir"]) if item and item.get("archive_dir") else None
         article = _read_json(folder / "article.json") if folder else None
-        if not isinstance(article, dict) or not article.get("blocks"):
+        return (article, folder, item["canonical_url"]) if isinstance(article, dict) and article.get("blocks") else None
+
+    def pdf_page(self, item_id: int) -> Response:
+        """GET: the saved page ready for the browser's Save as PDF. Cheap on purpose: any page can make a browser ask for an
+        address, so a GET never starts a browser (review, 5 Nov 2026). The one-click PDF is pdf_make, a POST."""
+        from magpiary import reader
+
+        saved = self._saved_page(item_id)
+        if saved is None:
             return Response(404, b"not found", "text/plain")
-        data = reader.make_pdf(reader.print_html(article, folder, item["canonical_url"]))
-        if data:
-            return Response(200, data, "application/pdf", {
-                "Content-Disposition": f'attachment; filename="{reader.filename(article)}"', "Cache-Control": "no-store"})
-        note = "No Chrome, Chromium, Edge or Brave was found to make the PDF. Press ⌘P, then choose Save as PDF."
-        return Response(200, reader.print_html(article, folder, item["canonical_url"], note).encode(), "text/html; charset=utf-8",
+        article, folder, url = saved
+        note = "Press ⌘P, then choose Save as PDF."
+        return Response(200, reader.print_html(article, folder, url, note).encode(), "text/html; charset=utf-8",
                         {"Cache-Control": "no-store", "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; frame-ancestors 'none'"})
+
+    def pdf_make(self, item_id: int) -> Response:
+        """POST (with the page's token): the saved page as a PDF, drawn by a browser on this Mac, one at a time.
+        429 while another is being drawn; 503 when no browser could draw it (the page then opens pdf_page)."""
+        from magpiary import reader
+
+        saved = self._saved_page(item_id)
+        if saved is None:
+            return Response(404, b"not found", "text/plain")
+        article, folder, url = saved
+        if not PDF_LOCK.acquire(blocking=False):
+            return Response(429, b"busy", "text/plain")
+        try:
+            data = reader.make_pdf(reader.print_html(article, folder, url))
+        finally:
+            PDF_LOCK.release()
+        if not data:
+            return Response(503, b"no browser", "text/plain")
+        return Response(200, data, "application/pdf", {
+            "Content-Disposition": f'attachment; filename="{reader.filename(article)}"', "Cache-Control": "no-store"})
 
     def _crumbs(self, item: dict, frm: str) -> tuple[str, str, str]:
         """Library › Example pile › Post title: where you came from, each part a link, ending at this post."""
