@@ -767,6 +767,9 @@ class SettingsPages:
                         f'<p class="hint">Running Magpiary by hand from the Shortcuts app, with nothing shared, always tries to send now.</p></div>',
                         cls="padv")
             sub = (f'<span class="pmuted">Paired {e(paired)}</span>' if paired else "")
+            if p.get("last_seen_at") and not p.get("signed_at"):  # it has sent, the old way: its key crosses the Wi-Fi as it is
+                sub += ('<span class="pold">Older Shortcut: it sends its key as it is over Wi-Fi. Choose New install code in '
+                        'its ⋯ menu and install the new Shortcut, which signs each send instead.</span>')
             rows.append(_row(e(p["name"]) + line, sub, where + _menu(f"More for {p['name']}", items), lead=ui.icon("phone"), cls="phone2", more=adv))
         if not rows:
             rows.append(_row("No phone yet", "Add one to share posts straight to this Mac.", cls="emptyrow"))

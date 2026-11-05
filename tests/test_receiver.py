@@ -95,7 +95,7 @@ def test_junk_is_rejected_and_retired_from_the_outbox(mac, phone):
     msg = phone.run("not a link at all")
     assert mac.counts() == {} and phone.waiting() == 0
     reply = json.loads(phone.sent_bodies[-1])
-    status, answer = mac.raw_post(phone.key, json.dumps(reply))
+    answer = phone.post(json.dumps(reply))  # signed, as the Shortcut sends (its key alone is refused once it signs)
     assert answer["rejected"] == [{"id": reply["items"][0]["id"], "reason": "unsupported_link"}]
     assert "can't save" in msg
 
@@ -297,3 +297,41 @@ def test_a_short_link_to_a_post_already_stored_merges_the_counts(mac, phone):
     fetch = replay_fetch({SHORT_STORED: (302, THREADS_POST)})
     process_due(mac.store, fetch, pause=lambda: None)
     assert mac.counts() == {THREADS_POST: 2}
+
+
+# ---- signed sends (0.1.5): the key never crosses the Wi-Fi ------------------------------------
+
+def send(mac, headers: dict, data: bytes, path: str = "/v1/items", method: str = "POST") -> int:
+    req = urllib.request.Request(mac.url + path, data=data if method == "POST" else None, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return r.status
+    except urllib.error.HTTPError as e:
+        return e.code
+
+
+def test_a_signed_send_is_stored_and_its_board_list_read(mac, phone):
+    phone.run(A)
+    assert mac.counts() == {A: 1}
+    assert send(mac, phone.signed("GET /v1/boards"), b"", "/v1/boards", "GET") == 200
+
+
+def test_a_changed_body_a_wrong_clock_or_another_request_is_refused(mac, phone):
+    data = body(item(B)).encode()
+    signed = phone.signed("POST /v1/items", data)
+    assert send(mac, signed, body(item(A)).encode()) == 401                   # someone swapped the body
+    assert send(mac, phone.signed("GET /v1/boards"), data) == 401             # a GET's signature on a POST
+    assert send(mac, {**signed, "X-Magpiary-Device": "0" * 24}, data) == 401  # not a phone of this Mac
+    mac.clock.advance(11 * 60)
+    assert send(mac, signed, data) == 401                                     # older than ten minutes
+    assert send(mac, phone.signed("POST /v1/items", data), data) == 200       # signed again, now
+    assert mac.counts() == {B: 1}
+
+
+def test_an_old_shortcut_key_works_until_that_phone_first_signs(mac, phone):
+    bearer = {"Authorization": f"Bearer {phone.key}"}
+    assert send(mac, bearer, body(item(A)).encode()) == 200                   # an older Shortcut, not yet updated
+    phone.run(B)                                                              # the new Shortcut signs
+    assert send(mac, bearer, body(item(A, "id-2")).encode()) == 401           # a key seen on the Wi-Fi is now useless
+    assert send(mac, bearer, b"", "/v1/boards", "GET") == 401
+    assert mac.store.list_phones()[0]["signed_at"]

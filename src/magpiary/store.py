@@ -251,8 +251,9 @@ class Store(ChatStore, StatsStore):
         if "kind" not in {r["name"] for r in self._db.execute("PRAGMA table_info(phones)")}:
             # what this device is: "phone" (the Shortcut), "browser" (the Chrome extension on this Mac) or "agent" (`magpiary add` / `note` for AI agents)
             self._db.execute("ALTER TABLE phones ADD COLUMN kind TEXT NOT NULL DEFAULT 'phone'")
-        for column in ("first_seen_at", "last_seen_at"):
-            # when this device first and last reached the Mac with its key (the Welcome guide ticks "paired" from the first)
+        for column in ("first_seen_at", "last_seen_at", "signed_at"):
+            # when this device first and last reached the Mac with its key (the Welcome guide ticks "paired" from the first);
+            # signed_at: its first signed send, after which its key alone is refused (phone send signing, 0.1.5)
             if column not in {r["name"] for r in self._db.execute("PRAGMA table_info(phones)")}:
                 self._db.execute(f"ALTER TABLE phones ADD COLUMN {column} TEXT")
         for column, ddl in (("shared", "INTEGER NOT NULL DEFAULT 1"), ("archived_at", "TEXT NOT NULL DEFAULT ''"),
@@ -589,6 +590,46 @@ class Store(ChatStore, StatsStore):
             self._touch_phone(found.id)
         return found
 
+    def phone_for_signature(self, tag: str, stamp: str, sig: str, request: str, body: bytes | None) -> tuple[Phone | None, str]:
+        """The active phone that signed this request, and "" ; or None and why (for the log). A signed send marks the phone,
+        so its key alone is refused from then on (see phone_signs)."""
+        from magpiary.protocol import SIGN_WINDOW, _sha, device_tag, sign_text
+
+        if not (tag and stamp and sig) or len(tag) > 64 or len(stamp) > 40 or len(sig) > 128:
+            return None, "unsigned"
+        try:
+            sent = datetime.fromisoformat(stamp.strip().replace("Z", "+00:00"))
+            if sent.tzinfo is None:
+                raise ValueError("no zone")
+        except ValueError:
+            return None, "bad time"
+        if abs((self._now() - sent).total_seconds()) > SIGN_WINDOW:
+            return None, "clock: the phone's time is more than 10 minutes off this Mac's"
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT id, name, key_hash FROM phones WHERE revoked_at IS NULL AND kind='phone'").fetchall()
+        row = next((r for r in rows if hmac.compare_digest(device_tag(r["key_hash"]), tag.strip().lower())), None)
+        if row is None:
+            return None, "unknown device"
+        inner = None if body is None else _sha(body)
+        given = sig.strip().lower()
+        # iOS's Generate Hash may give the body's hash in capitals: accept either spelling of that inner part
+        good = any(hmac.compare_digest(_sha(sign_text(row["key_hash"], request, stamp.strip(), h)), given)
+                   for h in ([None] if inner is None else [inner, inner.upper()]))
+        if not good:
+            return None, "bad signature"
+        now = self._stamp()
+        with self._lock:
+            self._db.execute("UPDATE phones SET signed_at=COALESCE(signed_at, ?) WHERE id=?", (now, row["id"]))
+        self._touch_phone(row["id"])
+        return Phone(row["id"], row["name"]), ""
+
+    def phone_signs(self, phone_id: int) -> bool:
+        """True once this phone has sent a signed request: its key alone is no longer accepted."""
+        with self._lock:
+            row = self._db.execute("SELECT signed_at FROM phones WHERE id=?", (phone_id,)).fetchone()
+        return bool(row and row["signed_at"])
+
     def _touch_phone(self, phone_id: int) -> None:
         """Note that this device reached the Mac with its key. Written at most about once a minute."""
         now = self._stamp()
@@ -642,7 +683,7 @@ class Store(ChatStore, StatsStore):
                 "SELECT id FROM phones WHERE name=? AND revoked_at IS NULL", (name,)).fetchone()
             if row is None:
                 return None
-            self._db.execute("UPDATE phones SET key_hash=? WHERE id=?", (_hash(key), row["id"]))
+            self._db.execute("UPDATE phones SET key_hash=?, signed_at=NULL WHERE id=?", (_hash(key), row["id"]))
         return Phone(row["id"], name), key
 
     def save_offer(self, invite: str, board_id: str, name: str, sender: str) -> bool:
@@ -721,7 +762,8 @@ class Store(ChatStore, StatsStore):
     def list_phones(self) -> list[dict]:
         with self._lock:
             rows = self._db.execute(
-                "SELECT name, home_wifi, wifi_mode, retry_wait, kind, created_at, revoked_at, first_seen_at, last_seen_at FROM phones ORDER BY id").fetchall()
+                "SELECT name, home_wifi, wifi_mode, retry_wait, kind, created_at, revoked_at, first_seen_at, last_seen_at, signed_at "
+                "FROM phones ORDER BY id").fetchall()
         return [dict(r) for r in rows]
 
     def get_phone(self, name: str) -> dict | None:

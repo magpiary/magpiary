@@ -68,11 +68,12 @@ class Env:
         return status, headers, data
 
     def baked_in_key(self, data):
+        """What the Shortcut holds to sign with: sha256 of the phone's key (the key itself is never in it)."""
         wf = plistlib.loads(data)
-        post = next(a for a in wf["WFWorkflowActions"] if a["WFWorkflowActionIdentifier"].endswith("downloadurl")
-                and a["WFWorkflowActionParameters"]["WFHTTPMethod"] == "POST")
-        return post["WFWorkflowActionParameters"]["WFHTTPHeaders"]["Value"]["WFDictionaryFieldValueItems"][0][
-            "WFValue"]["Value"]["string"].removeprefix("Bearer ")
+        text = next(a["WFWorkflowActionParameters"]["WFTextActionText"]["Value"]["string"] for a in wf["WFWorkflowActions"]
+                    if a["WFWorkflowActionIdentifier"].endswith("gettext") and isinstance(a["WFWorkflowActionParameters"]["WFTextActionText"], dict)
+                    and "|POST /v1/items|" in a["WFWorkflowActionParameters"]["WFTextActionText"]["Value"]["string"])
+        return text.split("|", 1)[0]
 
 
 @pytest.fixture
@@ -106,7 +107,7 @@ def test_add_a_phone_scan_install_and_send_a_share(env):
 
     key = env.baked_in_key(data)
     assert key not in page and key not in install.decode()   # a key is never shown on a page
-    Phone(env.mac, key).run(A + "?igsh=x")
+    Phone(env.mac, secret=key).run(A + "?igsh=x")
     assert env.mac.counts() == {A: 1}
     assert [i["phone"] for i in env.mac.store.items()] == ["Alex Example iPhone"]
 
@@ -149,15 +150,15 @@ def test_a_new_install_code_replaces_the_phones_key(env):
     status, headers, _ = env.post("/hub/phones/new-code", name="Test iPhone")
     new_key = env.baked_in_key(env.shortcut_for(env.token_from(headers["Location"]))[2])
     assert status == 303 and new_key != old_key
-    assert "didn't accept" in Phone(env.mac, old_key).run(A)
-    assert "Saved to Magpiary" in Phone(env.mac, new_key).run(A)
+    assert "didn't accept" in Phone(env.mac, secret=old_key).run(A)
+    assert "Saved to Magpiary" in Phone(env.mac, secret=new_key).run(A)
 
 
 def test_removing_a_phone_cuts_it_off_and_frees_the_name(env):
     key = env.baked_in_key(env.shortcut_for(env.token_from(env.add_phone()[1]))[2])
     status, headers, _ = env.post("/hub/phones/remove", name="Test iPhone")
     assert status == 303 and headers["Location"].startswith("/settings/phones")
-    assert "didn't accept" in Phone(env.mac, key).run(A)
+    assert "didn't accept" in Phone(env.mac, secret=key).run(A)
     assert env.mac.store.get_phone("Test iPhone") is None
     assert "qr=" in env.add_phone("Test iPhone")[1]
 
@@ -303,7 +304,7 @@ def test_the_pairing_window_ticks_off_page_download_and_first_share(env):
     assert state()["opened"] and not state()["downloaded"]
     _, _, data = env.shortcut_for(token)
     assert state()["downloaded"] and not state()["shared"]
-    Phone(env.mac, env.baked_in_key(data)).run(A)
+    Phone(env.mac, secret=env.baked_in_key(data)).run(A)
     assert state()["shared"]
     page = env.request("GET", location)[2].decode()
     assert 'class="dlg pairdlg paired"' in page and "First share arrived" in page

@@ -38,20 +38,70 @@ def test_it_survives_being_written_as_a_shortcut_file():
     assert plistlib.loads(plistlib.dumps(wf, fmt=plistlib.FMT_BINARY)) == wf
 
 
-def test_it_posts_to_this_mac_with_this_phones_key():
+def headers_of(action) -> dict:
+    return {h["WFKey"]["Value"]["string"]: h["WFValue"]["Value"]
+            for h in params(action)["WFHTTPHeaders"]["Value"]["WFDictionaryFieldValueItems"]}
+
+
+def test_it_posts_to_this_mac_signed_never_with_the_key():
+    import hashlib
+
+    from magpiary.protocol import device_tag
+
     post = next(a for a in actions() if ident(a) == "downloadurl" and params(a)["WFHTTPMethod"] == "POST")
     assert params(post)["WFURL"] == "http://test-mac.local:8765/v1/items"
-    assert params(post)["WFHTTPMethod"] == "POST"
-    header = params(post)["WFHTTPHeaders"]["Value"]["WFDictionaryFieldValueItems"][0]
-    assert header["WFValue"]["Value"]["string"] == "Bearer KEY-abc_123"
+    sent = headers_of(post)
+    assert set(sent) == {"X-Magpiary-Device", "X-Magpiary-Time", "X-Magpiary-Signature"}
+    assert sent["X-Magpiary-Device"]["string"] == device_tag(hashlib.sha256(b"KEY-abc_123").hexdigest())
+    assert "Authorization" not in repr(share_shortcut(CONFIG))
 
 
-def test_the_key_appears_only_in_the_authorization_header():
+def test_the_key_itself_is_nowhere_in_the_shortcut():
+    import hashlib
+
+    wf = repr(share_shortcut(CONFIG))
+    assert "KEY-abc_123" not in wf
+    secret = hashlib.sha256(b"KEY-abc_123").hexdigest()
+    assert wf.count(secret) == 2  # only in the two signing texts (the board list GET, the POST)
     requests = [a for a in actions() if ident(a) == "downloadurl"]
-    assert len(requests) == 2  # the board list (GET), then sending (POST)
-    assert repr(share_shortcut(CONFIG)).count("KEY-abc_123") == 2
-    assert all(params(a)["WFHTTPHeaders"]["Value"]["WFDictionaryFieldValueItems"][0]["WFValue"]["Value"]["string"]
-               == "Bearer KEY-abc_123" for a in requests)
+    assert len(requests) == 2 and all("X-Magpiary-Signature" in headers_of(a) for a in requests)
+
+
+def test_what_the_phone_hashes_is_what_the_mac_checks(tmp_path):
+    """Read the signing steps out of the Shortcut, do on the computer what the phone does, and send it to a Mac."""
+    import hashlib
+
+    from magpiary.protocol import device_tag
+    from magpiary.store import Store
+
+    acts = actions()
+    texts = {params(a)["UUID"]: params(a)["WFTextActionText"]["Value"] for a in acts
+             if ident(a) == "gettext" and isinstance(params(a)["WFTextActionText"], dict)}
+    hashes = [a for a in acts if ident(a) == "hash"]
+    assert {params(h)["WFHashType"] for h in hashes} == {"SHA256"}
+    post_src = next(t for t in texts.values() if t["string"].count("|POST /v1/items|"))
+    get_src = next(t for t in texts.values() if t["string"].count("|GET /v1/boards|"))
+    store = Store(tmp_path / "m.db")
+    phone, key = store.add_phone("Test phone")
+    secret = hashlib.sha256(key.encode()).hexdigest()
+    stamp = store._now().isoformat(timespec="seconds")
+    body = b'{"items":[{"id":"1","url":"https://example.com/p/1"}]}'
+    sha = lambda b: hashlib.sha256(b).hexdigest()  # noqa: E731
+    obj = shortcut.OBJ
+
+    def fill(src: dict, values: list) -> str:  # the phone fills each variable in order; the secret is the phone's own
+        out = src["string"].replace(hashlib.sha256(b"KEY-abc_123").hexdigest(), secret)
+        for v in values:
+            out = out.replace(obj, v, 1)
+        return out
+
+    post_sig = sha(fill(post_src, [stamp, sha(body)]).encode())
+    got, why = store.phone_for_signature(device_tag(secret), stamp, post_sig, "POST /v1/items", body)
+    assert got and got.id == phone.id and why == ""
+    get_sig = sha(fill(get_src, [stamp]).encode())
+    assert store.phone_for_signature(device_tag(secret), stamp, get_sig, "GET /v1/boards", None)[0]
+    caps = sha(fill(post_src, [stamp, sha(body).upper()]).encode())  # iOS may give the body hash in capitals
+    assert store.phone_for_signature(device_tag(secret), stamp, caps, "POST /v1/items", body)[0]
 
 
 def go_conditions(acts, upto=None):

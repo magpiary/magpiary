@@ -7,6 +7,7 @@ reply carries the ack string, and exactly one notification is shown per run. The
 written from memory and verified on the phone; see docs/findings/S2-S3-S6-shortcut.md.
 """
 
+import hashlib
 import plistlib
 import re
 import subprocess
@@ -15,7 +16,7 @@ import time
 import uuid
 from pathlib import Path
 
-from magpiary.protocol import ACK, BOARDS_PATH, DEFAULT_RETRY_WAIT, ITEMS_PATH
+from magpiary.protocol import ACK, BOARDS_PATH, DEFAULT_RETRY_WAIT, ITEMS_PATH, SIGN_DEVICE, SIGN_SIG, SIGN_TIME, device_tag
 
 OBJ = "￼"  # placeholder character for an inline variable
 OUTBOX = "magpiary-outbox.txt"
@@ -83,6 +84,26 @@ def act(identifier: str, **params) -> dict:
     return {"WFWorkflowActionIdentifier": f"is.workflow.actions.{identifier}", "WFWorkflowActionParameters": params}
 
 
+def sign_steps(i, p: str, secret: str, request: str, body: str = "") -> list:
+    """Sign one request on the phone (0.1.5): the time now, the body's hash when there is a body, and the hash of
+    "S|request|time[|body hash]" (protocol.sign_text). Generate Hash runs on the phone: nothing is asked, nothing is sent."""
+    steps = [act("date", UUID=i(p + "now"), WFDateActionMode="Current Date"),
+             act("gettext", UUID=i(p + "stamp"), WFTextActionText=tstr(date_var(i(p + "now"), "yyyy-MM-dd'T'HH:mm:ssXXX")))]
+    parts = [secret + f"|{request}|", var(i(p + "stamp"), "Text")]
+    if body:
+        steps.append(act("hash", UUID=i(p + "bhash"), WFHashType="SHA256", WFInput=output_of(body, "Text")))
+        parts += ["|", var(i(p + "bhash"), "Hash")]
+    return steps + [act("gettext", UUID=i(p + "src"), WFTextActionText=tstr(*parts)),
+                    act("hash", UUID=i(p + "sig"), WFHashType="SHA256", WFInput=output_of(i(p + "src"), "Text"))]
+
+
+def signed_headers(i, p: str, tag: str) -> dict:
+    """Who is sending, when, and the signature; never the key."""
+    fields = ((SIGN_DEVICE, tstr(tag)), (SIGN_TIME, tstr(var(i(p + "stamp"), "Text"))), (SIGN_SIG, tstr(var(i(p + "sig"), "Hash"))))
+    return {"Value": {"WFDictionaryFieldValueItems": [{"WFItemType": 0, "WFKey": tstr(k), "WFValue": v} for k, v in fields]},
+            "WFSerializationType": "WFDictionaryFieldValue"}
+
+
 def queue_folder() -> dict:
     """The top level of On My iPhone: needs nothing created by hand (phone test B, 22 Oct 2026).
     A folder path that does not exist fails, and so does leaving the folder out."""
@@ -100,7 +121,8 @@ def queue_folder() -> dict:
 def share_shortcut(config: dict) -> dict:
     """The share-sheet Shortcut: queue first, send only at home, show at most ONE notification.
 
-    config: host (the Mac's .local name), port, key, and optionally home_wifi.
+    config: host (the Mac's .local name), port, key, and optionally home_wifi. The Shortcut holds only sha256(key) and
+    signs each request with it (sign_steps); the key itself is never in it, so it never crosses the Wi-Fi.
 
     Every run builds one JSON line from the shared link (an empty url when run with no input, which the
     Mac ignores), appends it to the outbox file and saves. Then `send_gate` decides: with a home_wifi, send on
@@ -117,18 +139,13 @@ def share_shortcut(config: dict) -> dict:
             "g_go", "e_go", "g_ack", "e_ack", "g_note", "e_note",
             "bfile", "btext", "bactive", "blines", "bnames", "bmenu", "bsplit", "bpick", "bid0", "bid", "g_link", "e_link", "g_any", "e_any", "blist", "blist2", "bsave",
             "g_fgo", "e_fgo", "fget", "fdict", "fval", "ftext", "fsave", "g_fack", "e_fack",
-            "oset0", "bline", "bline2", "braw", "btrim", "bqsave", "oset1")
+            "oset0", "bline", "bline2", "braw", "btrim", "bqsave", "oset1",
+            "snow", "sstamp", "sbhash", "ssrc", "ssig", "fnow", "fstamp", "fsrc", "fsig")
     ids = {k: new_id() for k in keys}
     endpoint = f"http://{config['host']}:{config['port']}{ITEMS_PATH}"
     home = config.get("home_wifi", "")
-    headers = {
-        "Value": {"WFDictionaryFieldValueItems": [{
-            "WFItemType": 0,
-            "WFKey": tstr("Authorization"),
-            "WFValue": tstr(f"Bearer {config['key']}"),
-        }]},
-        "WFSerializationType": "WFDictionaryFieldValue",
-    }
+    secret = hashlib.sha256(config["key"].encode()).hexdigest()
+    tag = device_tag(secret)
 
     def i(k: str) -> str:
         return ids[k]
@@ -148,9 +165,10 @@ def share_shortcut(config: dict) -> dict:
         act("text.replace", UUID=i("joined"), WFInput=tstr({"Type": "Variable", "VariableName": "outbox"}),
             WFReplaceTextFind="\\s*\\n\\s*", WFReplaceTextReplace=",", WFReplaceTextRegularExpression=True),
         act("gettext", UUID=i("body"), WFTextActionText=tstr('{"items":[', var(i("joined"), "Updated Text"), "]}")),
+        *sign_steps(i, "s", secret, f"POST {ITEMS_PATH}", body=i("body")),
         *try_mark(i, "b"),
         act("downloadurl", UUID=i("post"), WFURL=endpoint, WFHTTPMethod="POST", WFHTTPBodyType="File",
-            WFRequestVariable=output_of(i("body"), "Text"), WFHTTPHeaders=headers),
+            WFRequestVariable=output_of(i("body"), "Text"), WFHTTPHeaders=signed_headers(i, "s", tag)),
         act("detect.dictionary", UUID=i("reply"), WFInput=output_of(i("post"), "Contents of URL")),
         *try_clear(i, "b"),
         act("getvalueforkey", UUID=i("msg"), WFDictionaryKey="message", WFInput=output_of(i("reply"), "Dictionary")),
@@ -228,7 +246,8 @@ def share_shortcut(config: dict) -> dict:
         # the post is queued: only now ask about boards (a Mac that can't be reached loses nothing)
         *board_question(i, today=date_var(i("now"), "yyyyMMdd"), item_id=var(i("idt"), "Text"),
                         url=var(i("clean"), "Updated Text"),
-                        refresh=fresh_boards(i, f"http://{config['host']}:{config['port']}{BOARDS_PATH}", headers, True)),
+                        refresh=fresh_boards(i, f"http://{config['host']}:{config['port']}{BOARDS_PATH}",
+                                             signed_headers(i, "f", tag), True, sign_steps(i, "f", secret, f"GET {BOARDS_PATH}"))),
         *tail,
     ]
     return {
@@ -315,11 +334,12 @@ def send_gate(i, home: str, wait: int = DEFAULT_RETRY_WAIT) -> list:
     ]
 
 
-def fresh_boards(i, endpoint: str, headers: dict, gated: bool) -> list:
+def fresh_boards(i, endpoint: str, headers: dict, gated: bool, signing: list = ()) -> list:
     """Ask the Mac for its latest board list before the question, so a board made a moment ago shows on the very
     next share (owner, 25 Oct 2026), when the send decision says go. Otherwise the saved copy is used. The list
     (and where this phone may send) is saved only from a reply carrying the ack."""
     fetch = [
+        *signing,
         *try_mark(i, "a"),
         act("downloadurl", UUID=i("fget"), WFURL=endpoint, WFHTTPMethod="GET", WFHTTPHeaders=headers),
         act("detect.dictionary", UUID=i("fdict"), WFInput=output_of(i("fget"), "Contents of URL")),

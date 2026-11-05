@@ -4287,3 +4287,5 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .reader .rdgal figure { margin: 0; } .reader .rdgal img { width: 100%; height: 100%; object-fit: cover; }
 @media (max-width: 640px) { .reader .rdgal { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .reader figcaption, .reader .rdcap { color: var(--fg-3); font-size: 13px; text-align: center; margin-top: 8px; }
+
+.pold { display: block; margin-top: 4px; font-size: 13px; line-height: 1.45; color: var(--warn, #f0b35a); max-width: 60ch; }

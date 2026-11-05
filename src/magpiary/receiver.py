@@ -1,7 +1,8 @@
 """The Mac receiver: a small HTTP server on the standard library.
 
     GET  /v1/ping     no key; reveals nothing stored
-    POST /v1/items    Authorization: Bearer <phone key>; {"items": [{id, url, shared_at, note, ...}]}
+    POST /v1/items    signed by the phone (X-Magpiary-Device, -Time, -Signature; see protocol.py), or an older Shortcut's
+                      Authorization: Bearer <phone key>; {"items": [{id, url, shared_at, note, ...}]}
     POST /v1/capture  the Chrome extension's key, from this Mac only; {"capture", "item", "page", "screen", "mhtml"}:
                       one save with the page as the owner saw it ("Save what I see")
 
@@ -28,7 +29,7 @@ from magpiary.hub import Hub, backfill_details
 from magpiary.power import KeepAwake
 from magpiary import agent_policy, capture
 from magpiary.cleaner import clean
-from magpiary.protocol import ACK, BOARDS_PATH, DEFAULT_PORT
+from magpiary.protocol import ACK, BOARDS_PATH, DEFAULT_PORT, ITEMS_PATH, SIGN_DEVICE, SIGN_SIG, SIGN_TIME
 from magpiary.digest import story_due, weekly_due as digest_due
 from magpiary.embed import Warm
 from magpiary.setup import Setup
@@ -252,7 +253,7 @@ class Handler(BaseHTTPRequestHandler):
         elif parts.path == BOARDS_PATH:  # the phone, with its own key: the board list, nothing else
             from magpiary import boards
 
-            phone = self.server.store.phone_for_key(self._bearer())
+            phone = self._phone(f"GET {BOARDS_PATH}", None)
             if phone is None:
                 self.send_json(401, {"error": "unauthorized"})
                 return
@@ -271,6 +272,24 @@ class Handler(BaseHTTPRequestHandler):
             self.send_page(self.server.hub.not_found_page())
         else:
             self.send_json(404, {"error": "not found"})
+
+    def _phone(self, request: str, body: bytes | None):
+        """The phone behind a phone route: a signed request, or an older Shortcut's key as a Bearer, until that phone
+        first signs (then a key seen on the Wi-Fi earlier is useless). Refusals are logged with the reason."""
+        store, where = self.server.store, self.client_address[0]
+        if self.headers.get(SIGN_DEVICE):
+            phone, why = store.phone_for_signature(self.headers.get(SIGN_DEVICE, ""), self.headers.get(SIGN_TIME, ""),
+                                                   self.headers.get(SIGN_SIG, ""), request, body)
+            if phone is None:
+                log(f"{request} from {where} -> 401 ({why})")
+            return phone
+        phone = store.phone_for_key(self._bearer())
+        if phone is None:
+            log(f"{request} from {where} -> 401 (bad, missing or revoked key)")
+        elif store.phone_signs(phone.id):
+            log(f"{request} from {phone.name} at {where} -> 401 (this phone signs its sends now; its key alone is refused)")
+            return None
+        return phone
 
     def _ask_about_links(self, path: str) -> None:
         """The extension asks whether a link is saved (/v1/seen) or which board fits it (/v1/suggest). A paired key only."""
@@ -373,23 +392,23 @@ class Handler(BaseHTTPRequestHandler):
         if path != "/v1/items":
             self.send_json(404, {"error": "not found"})
             return
-        phone = self.server.store.phone_for_key(self._bearer())
-        if phone is None:
-            log(f"POST /v1/items from {self.client_address[0]} -> 401 (bad, missing or revoked key)")
-            self.send_json(401, {"error": "unauthorized"})
-            return
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             length = -1
         if length > MAX_BODY:
-            log(f"POST /v1/items from {phone.name} -> 413 (too large)")
+            log(f"POST /v1/items from {self.client_address[0]} -> 413 (too large)")
             self.send_json(413, {"error": "request too large"})
             return
+        raw = self.rfile.read(length) if length > 0 else b""  # read first: a signature covers these exact bytes
+        phone = self._phone(f"POST {ITEMS_PATH}", raw)
+        if phone is None:
+            self.send_json(401, {"error": "unauthorized"})
+            return
         try:
-            if length <= 0:
+            if not raw:
                 raise ValueError("empty")
-            items = json.loads(self.rfile.read(length))["items"]
+            items = json.loads(raw)["items"]
             if not isinstance(items, list):
                 raise ValueError("items")
         except Exception:

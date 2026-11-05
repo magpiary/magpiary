@@ -80,8 +80,12 @@ class Mac:
 
 
 class Phone:
-    def __init__(self, mac: Mac, key: str):
+    def __init__(self, mac: Mac, key: str = "", secret: str = ""):
+        """key: the phone's key (the Mac's test side has it); secret: what a real Shortcut holds, sha256(key)."""
+        import hashlib
+
         self.mac, self.key = mac, key
+        self.secret = secret or hashlib.sha256(key.encode()).hexdigest()
         self.outbox = ""
         self.boards_file = ""  # magpiary-boards.txt: the Mac's last list of active boards
         self.reachable = True  # False: the Mac is somewhere else; a request never gets an answer
@@ -121,6 +125,14 @@ class Phone:
         found = re.sub(r"(?s)^(?:.*\n)?" + chosen + r"\t([0-9a-f]{16}).*$", r"\1", lines)
         return re.sub(r"(?s)^(?![0-9a-f]{16}$).*$", "", found)
 
+    def signed(self, request: str, body: bytes | None = None) -> dict:
+        """The headers the Shortcut sends (0.1.5): who, when and the signature, never the key."""
+        from magpiary.protocol import SIGN_DEVICE, SIGN_SIG, SIGN_TIME, device_tag, signature
+
+        secret = self.secret
+        stamp = self.mac.clock.now().isoformat(timespec="seconds")
+        return {SIGN_DEVICE: device_tag(secret), SIGN_TIME: stamp, SIGN_SIG: signature(secret, request, stamp, body)}
+
     def item_line(self, shared: str, pick: str = "") -> str:
         now = self.mac.clock.now()
         item_id = f"{now:%Y%m%d%H%M%S}-{random.randint(100000, 999999)}"
@@ -131,7 +143,7 @@ class Phone:
     def post(self, body: str) -> dict:
         self.sent_bodies.append(body)
         req = urllib.request.Request(self.mac.url + "/v1/items", data=body.encode(), method="POST",
-                                     headers={"Authorization": f"Bearer {self.key}"})
+                                     headers=self.signed("POST /v1/items", body.encode()))
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
                 return json.loads(r.read())
@@ -175,7 +187,7 @@ class Phone:
             if at_home:  # the latest list first; a Mac that can't be reached stops the run, the post is queued
                 self.try_file = cur                                      # note the try before the first request
                 self.check_reachable()
-                req = urllib.request.Request(self.mac.url + "/v1/boards", headers={"Authorization": f"Bearer {self.key}"})
+                req = urllib.request.Request(self.mac.url + "/v1/boards", headers=self.signed("GET /v1/boards"))
                 try:
                     with urllib.request.urlopen(req, timeout=10) as r:
                         fresh = json.loads(r.read())
