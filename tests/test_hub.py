@@ -851,3 +851,13 @@ def test_uninstall_in_settings_follows_how_magpiary_was_installed(mac, monkeypat
     assert "magpiary://uninstall" not in request(mac, "GET", "/settings/storage")[2].decode()
     monkeypatch.setenv("MAGPIARY_PROGRAM", "/Applications/Magpiary.app/Contents/Resources/python/bin/magpiary")
     assert "magpiary://uninstall" in request(mac, "GET", "/settings/storage")[2].decode()
+
+
+def test_the_glass_button_rule_keeps_its_old_weight():
+    """The shared glass rule leaves the busy Nest out through :where(), which adds no weight. Written as
+    .nestbtn[data-mood="working"] it outweighed .btn.cta and turned the pink "Open the Nest" button dark (5 Nov 2026)."""
+    from pathlib import Path
+
+    css = (Path(__file__).parents[1] / "src/magpiary/static/indigo.css").read_text()
+    assert '.ubtn:not(.nestbtn:where([data-mood="working"], [data-mood="needs"]))' in css
+    assert '.ubtn:not(.nestbtn[data-mood' not in css
