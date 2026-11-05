@@ -439,15 +439,14 @@ html.lhslim #wallctl .views a { height: 40px; padding: 0 20px; }
 .cardm.pagemode .stage .pvbar { height: auto; min-height: 0; padding: 36px 16px 20px; }
 :root[data-theme] .pvbig svg { margin-left: -5px; }  /* a negative margin moves the box half as far */
 
-/* Featured: the extra tiles are there for small tiles; medium and large show seven, and the big one never fills half the row */
-.featgrid > .tile:nth-child(n+7):not(:has(.pastb)) { display: none; }
+/* Featured: the server sends exactly what fits (hub_wall.FEATURE_NEW); nothing here hides a tile, or that post would be
+   on no part of the wall. The big one never fills half the row */
 @media (min-width: 1101px) {
   html[data-size="s"] .featgrid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
   html[data-size="s"] .featgrid > .tile:first-child { grid-column: span 2; grid-row: span 2; }
   html[data-size="l"] .featgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   html[data-size="l"] .featgrid > .tile:first-child { grid-column: span 2; grid-row: span 1; aspect-ratio: auto; }
 }
-@media (min-width: 1101px) { html[data-size="s"] .featgrid > .tile:nth-child(n+7):not(:has(.pastb)) { display: flex; } }
 
 /* the + and the search icon: the same drawn icon, the same size, and Library/Archive/Trash's hover (the icon brightens) */
 :root[data-theme] .top .bar > .addp.btn { font-size: 0; color: var(--fg-3); transition: color .25s; }

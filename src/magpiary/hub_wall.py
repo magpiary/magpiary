@@ -36,7 +36,8 @@ MAGPIE = ('<svg class="emptyart" viewBox="0 0 120 90" aria-hidden="true"><path d
           '<circle cx="88" cy="20" r="3" fill="var(--t-design)"/></svg>')
 
 FEATURE_MIN = 12  # saves before the wall has a Featured area
-FEATURE_NEW = 10  # the most the Featured area can show (small tiles); medium and large hide the extra with CSS
+FEATURE_NEW = {"s": 10, "m": 6, "l": 6}  # newest saves in Featured, by tile size: exactly what fits in two rows. Never hidden
+# with CSS: a post Featured leaves out stays in its section below (CSS once hid 7-10 at medium and large, so they were nowhere)
 BIG_EVERY = 12  # one big tile (2x2) about every this many posts, in the sections below Featured
 BIG_MIN = 12  # a section needs this many posts before it gets one
 FEATURE_PAST_DAYS = 7  # how old "from your past" means
@@ -523,13 +524,14 @@ class WallPages:
         if len(items) < FEATURE_MIN:
             return [], None
         pics = [i for i in items if i["status"] == "archived" and self.thumb_url(i)]
-        newest = pics[:FEATURE_NEW]
+        count = FEATURE_NEW.get(ui.appearance(self.store)["size"], FEATURE_NEW["m"])
+        newest = pics[:count]
 
         def age(item: dict) -> int:
             when = ui.local(item.get("last_shared_at") or item.get("created_at"))
             return (today - when.date()).days if when else 0
 
-        older = [i for i in pics[FEATURE_NEW:] if age(i) >= FEATURE_PAST_DAYS]
+        older = [i for i in pics[count:] if age(i) >= FEATURE_PAST_DAYS]
         return newest, older[today.toordinal() % len(older)] if older else None
 
     # ---- piles on the wall --------------------------------------------------------------------

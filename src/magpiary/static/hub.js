@@ -644,6 +644,7 @@
   // ---- tile sizes and the theme -------------------------------------------------------------------------
   function setSize(size, form, data) {
     if (!size || root.dataset.size === size) return;
+    const regroup = $("#view .featgrid") && (root.dataset.size === "s") !== (size === "s");  // Featured holds 10 on small, 6 otherwise
     const Fl = F();
     const els = $$("#view .tile, #view .pile, #view .secblock > .sec");
     if (true) {  // instant: moving every tile is what made this button slow (owner, 1 Nov); both themes work this way
@@ -656,7 +657,19 @@
     form.dataset.cur = size;  // one icon that cycles: it shows the size now and asks for the next
     $$("button", form).forEach((x) => { x.value = after; x.title = `${names[size]} (click for ${names[after].toLowerCase()})`; x.setAttribute("aria-label", `Tile size: ${names[size]}`); });
     if (state) Fl.from(state, { targets: els, duration: .5, ease: "power3.inOut", absolute: false, scale: true, prune: true });
-    fetch("/hub/ui", { method: "POST", body: new URLSearchParams(data), headers: FORM });
+    fetch("/hub/ui", { method: "POST", body: new URLSearchParams(data), headers: FORM })
+      .then(() => { if (regroup) regroupWall(); });  // the size shows at once; Featured and the sections settle a moment later
+  }
+  // Featured holds a different number of saves on small tiles, so posts move between it and the sections: take the wall
+  // as drawn now (refresh's patchTiles only adds and removes, it never moves a tile from one section to another)
+  async function regroupWall() {
+    try {
+      const { doc } = await getDoc(location.href);
+      const fresh = doc.getElementById("wallbody"), mine = $("#view #wallbody");
+      if (!fresh || !mine || navigating) return;
+      anchored(() => { mine.innerHTML = fresh.innerHTML; });
+      initView(true);
+    } catch (e) { /* the next refresh draws it */ }
   }
   function setTheme(theme, btn, form, data) {
     const apply = () => {

@@ -861,3 +861,32 @@ def test_the_glass_button_rule_keeps_its_old_weight():
     css = (Path(__file__).parents[1] / "src/magpiary/static/indigo.css").read_text()
     assert '.ubtn:not(.nestbtn:where([data-mood="working"], [data-mood="needs"]))' in css
     assert '.ubtn:not(.nestbtn[data-mood' not in css
+
+
+@pytest.mark.parametrize("size,featured", [("s", 10), ("m", 6), ("l", 6)])
+def test_every_post_is_on_the_wall_once_at_every_tile_size(mac, tmp_path, size, featured):
+    """Featured takes what fits for the tile size; the rest stay in their sections. CSS used to hide Featured's
+    tiles 7-10 at medium and large, so those posts were on no part of the wall (owner, 5 Nov 2026)."""
+    import re
+
+    ids = [archive(mac, tmp_path, f"https://www.instagram.com/reel/F{n:03d}/", "instagram",
+                   {"text": f"Post {n}", "media": ["media-01.mp4"], "thumbnail": "thumbnail.jpg"},
+                   {"media-01.mp4": b"0" * 64, "thumbnail.jpg": b"\xff\xd8\xff" + b"0" * 20})[0] for n in range(16)]
+    mac.store.set_setting("ui_size", size)
+    from magpiary import ui
+    assert ui.appearance(mac.store)["size"] == size
+    body = page(mac)[2]
+    feat = body[body.index('class="grid featgrid"'):]
+    feat = feat[:feat.index("</section>")]
+    on_wall = re.findall(r'class="tile[^"]*"[^>]*data-id="(\d+)"', body)
+    assert sorted(map(int, on_wall)) == sorted(ids)                               # every post, once
+    assert len(re.findall(r'data-id="\d+"', feat)) == featured + ("pastb" in feat)
+
+
+def test_no_stylesheet_hides_a_featured_tile():
+    import re
+    from pathlib import Path
+
+    for name in ("hub.css", "indigo.css"):
+        css = (Path(__file__).parents[1] / "src/magpiary/static" / name).read_text()
+        assert not re.search(r"\.featgrid[^{]*\.tile[^{]*\{[^}]*display:\s*none", css), name
