@@ -139,9 +139,12 @@
    adds html.lhslim) neither it nor the top bar is sticky; the top bar simply scrolls away, and the pill alone sticks to the
    very top. No gap between the top bar and the tabs. ---- */
 @media (max-width: 760px) {
-  html:has(#wallctl) .top { position: static !important; transform: none !important; }
+  html:not(.lhslim):has(#wallctl) .top { position: static !important; transform: none !important; }
   html:has(.lhero) #wallctl { position: static !important; }
-  html.lhslim:has(.lhero) #wallctl { position: sticky !important; top: calc(env(safe-area-inset-top, 0px) + 10px) !important; }
+  /* with the pill showing, the top bar is sticky again: gone while you scroll down (html.navhid), back when you scroll up,
+     with the pill sliding down under it; with the bar gone the pill is at the very top */
+  html.lhslim:has(.lhero) #wallctl { position: sticky !important; top: calc(var(--top-h, 88px) + 8px) !important; }
+  html.lhslim.navhid:has(.lhero) #wallctl { top: calc(env(safe-area-inset-top, 0px) + 10px) !important; }
   .wrap:has(> #wallctl):has(> .lhero:not(.lhempty)) { padding-top: 0; }
   /* the pill is one row: three tabs and three icons, tighter, instead of wrapping into two rows */
   html.lhslim #wallctl .ctrl1 { flex-wrap: nowrap !important; height: 44px !important; border-radius: 999px !important; max-width: 100%; }

@@ -50,9 +50,10 @@ assert ".top .bar > .logo { font-size: 22px;" in css, "logo name must show on a 
 print("phone home top smoke: ok")
 
 # tabs and pill: nothing sticky until the pill shows; then the pill alone sticks, in one row; no gap under the top bar
-assert "html:has(#wallctl) .top { position: static !important;" in css, "top bar must not be sticky on the library"
+assert "html:not(.lhslim):has(#wallctl) .top { position: static !important;" in css, "top bar must not be sticky on the library"
 assert "html:has(.lhero) #wallctl { position: static !important; }" in css, "tabs must not be sticky before they become the pill"
-assert "html.lhslim:has(.lhero) #wallctl { position: sticky !important;" in css, "the pill must stick"
+assert "html.lhslim:has(.lhero) #wallctl { position: sticky !important;" in css and "html.lhslim.navhid:has(.lhero) #wallctl { top:" in css, "the pill must stick, under the top bar when it returns"
+assert 'gone && !was && box.offsetParent === null) root.classList.add("navhid")' in ijs, "top bar must start hidden when the pill appears"
 assert "html.lhslim #wallctl .ctrl1 { flex-wrap: nowrap !important;" in css, "the pill must be one row"
 assert ".wrap:has(> #wallctl):has(> .lhero:not(.lhempty)) { padding-top: 0; }" in css, "gap under the top bar must go"
 print("phone tabs and pill smoke: ok")

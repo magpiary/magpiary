@@ -188,6 +188,7 @@ void main(){vec2 u=gl_FragCoord.xy/r;float a=r.x/r.y;Q=vec2(u.x*a,u.y);gr=h(gl_F
       gone = natural < 10;  // = where the floating tabs stick, so they do not jump
     } else gone = box.getBoundingClientRect().bottom < 76;
     const was = root.classList.contains("lhslim");
+    if (gone && !was && box.offsetParent === null) root.classList.add("navhid");  // phone: the top bar is already off the screen; it returns when you scroll up
     root.classList.toggle("lhslim", gone); root.classList.toggle("lhtop", !gone);
     if (was !== gone) {  // the tabs change size between big and floating: the sliding highlight is measured again
       const views = $("#views"), on = $("a.on", views), line = $(".vline", views);
