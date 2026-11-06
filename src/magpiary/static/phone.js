@@ -193,13 +193,13 @@ document.addEventListener("click", (ev) => {
 }, true);
 window.addEventListener("pageshow", () => document.documentElement.classList.remove("pfade-out"));  // back button from the bfcache
 
-/* Swipe left/right on the library moves between Everything, Piles and Boards; the page follows your finger. */
+/* Swipe left/right on the library moves between Everything, Piles and Boards. The page does not move or rearrange: it fades out,
+   the view changes while it is hidden, and it fades in (owner, 6 Nov). */
 (() => {
   if (window.__phoneSwipe) return;
   window.__phoneSwipe = true;
-  const phone = window.matchMedia("(max-width: 760px)");
+  const root = document.documentElement, phone = window.matchMedia("(max-width: 760px)");
   const tabs = () => [...document.querySelectorAll("#wallctl #views a")];
-  const content = () => { const v = document.getElementById("view"); return v ? [...v.children].filter((e) => e.id !== "wallctl" && !e.classList.contains("lhero")) : []; };
   const blocked = (t) => {
     if (!(t instanceof Element)) return true;
     if (t.closest("input, textarea, select, video, .fmenu, .spanel, .sover, .modal, .nestsheet, .selbar, [contenteditable]")) return true;
@@ -210,8 +210,6 @@ window.addEventListener("pageshow", () => document.documentElement.classList.rem
     return document.body.classList.contains("lock") || document.body.classList.contains("askopen") || document.body.classList.contains("selecting");
   };
   let sx = 0, sy = 0, dx = 0, mode = "", busy = false, t0 = 0;
-  const move = (x, o) => content().forEach((e) => { e.style.transition = "none"; e.style.transform = x ? `translateX(${x}px)` : ""; e.style.opacity = o === undefined ? "" : String(o); });
-  const clear = () => content().forEach((e) => { e.style.transition = ""; e.style.transform = ""; e.style.opacity = ""; });
   document.addEventListener("touchstart", (ev) => {
     mode = ""; dx = 0;
     if (busy || !phone.matches || location.pathname !== "/" || ev.touches.length !== 1 || tabs().length < 2 || blocked(ev.target)) return;
@@ -223,40 +221,55 @@ window.addEventListener("pageshow", () => document.documentElement.classList.rem
     if (mode === "wait") {
       if (Math.abs(y) > 14 && Math.abs(y) > Math.abs(x)) { mode = ""; return; }   // it is a scroll
       if (Math.abs(x) < 12 || Math.abs(x) < Math.abs(y) * 1.4) return;
-      const i = tabs().findIndex((a) => a.classList.contains("on"));
-      const j = i + (x < 0 ? 1 : -1);
-      if (i < 0 || j < 0 || j >= tabs().length) { mode = ""; return; }            // nothing further in that direction
       mode = "drag";
     }
     dx = x;
-    move(dx * 0.9, 1 - Math.min(Math.abs(dx) / 420, 0.6));
   }, { passive: true });
   const end = () => {
     if (mode !== "drag") { mode = ""; return; }
     mode = "";
-    const i = tabs().findIndex((a) => a.classList.contains("on")), dir = dx < 0 ? 1 : -1, j = i + dir;
+    const i = tabs().findIndex((a) => a.classList.contains("on")), j = i + (dx < 0 ? 1 : -1);
     const fast = Math.abs(dx) / Math.max(performance.now() - t0, 1) > 0.5;
-    if (j < 0 || j >= tabs().length || (Math.abs(dx) < 70 && !fast)) {   // not far enough: spring back
-      content().forEach((e) => { e.style.transition = "transform .25s cubic-bezier(.2,.8,.2,1), opacity .25s"; e.style.transform = ""; e.style.opacity = ""; });
-      setTimeout(clear, 280); return;
-    }
+    if (i < 0 || j < 0 || j >= tabs().length || (Math.abs(dx) < 70 && !fast)) return;   // not far enough, or nothing further that way
     busy = true;
-    content().forEach((e) => { e.style.transition = "transform .18s ease-in, opacity .18s"; e.style.transform = `translateX(${dir * -110}%)`; e.style.opacity = "0"; });
+    window.__phoneHold = performance.now() + 3000;   // the top bar stays as it is while the view changes
+    root.classList.add("pswipe");                    // phone.css: the content fades out (and stays hidden)
     setTimeout(() => {
       const view = document.getElementById("view");
-      let done = false;
-      const arrive = () => {
-        if (done) return; done = true; mo.disconnect(); busy = false;
-        content().forEach((e) => e.animate([{ transform: `translateX(${dir * 45}%)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" }));
-        window.scrollTo(0, Math.min(scrollY, 0));
-      };
-      const mo = new MutationObserver(() => setTimeout(arrive, 30));
+      let quiet = null, finished = false;
+      const finish = () => { if (finished) return; finished = true; mo.disconnect(); clearTimeout(quiet); root.classList.remove("pswipe"); setTimeout(() => { busy = false; }, 260); };
+      const mo = new MutationObserver(() => { clearTimeout(quiet); quiet = setTimeout(finish, 320); });   // wait until the page has stopped changing
       if (view) mo.observe(view, { childList: true, subtree: true });
       tabs()[j].click();
-      clear();
-      setTimeout(arrive, 900);   // if nothing changed, never stay stuck
-    }, 190);
+      quiet = setTimeout(finish, 700);
+      setTimeout(finish, 1500);                      // never stay hidden
+    }, 170);
   };
   document.addEventListener("touchend", end, { passive: true });
-  document.addEventListener("touchcancel", () => { if (mode === "drag") { mode = ""; clear(); } else mode = ""; }, { passive: true });
+  document.addEventListener("touchcancel", () => { mode = ""; }, { passive: true });
+})();
+
+/* Changing the view from the pill must not bring the top bar back: scrolling jumps while the page changes are not "scroll up". */
+document.addEventListener("click", (ev) => {
+  if (ev.target instanceof Element && ev.target.closest("#wallctl #views a")) window.__phoneHold = performance.now() + 3000;
+}, true);
+
+/* The underline / oval under the tabs is measured again whenever the tabs change size or the active one changes, so it never
+   keeps the wrong width from the other state (top row vs floating pill). */
+(() => {
+  if (window.__phoneLine) return;
+  window.__phoneLine = true;
+  let timer = null;
+  const fix = () => {
+    const views = document.getElementById("views"), on = views && views.querySelector("a.on"), line = views && views.querySelector(".vline");
+    if (!on || !line || !window.gsap) return;
+    const r = on.getBoundingClientRect(), b = views.getBoundingClientRect();
+    if (!r.width) return;
+    window.gsap.set(line, { x: r.left - b.left + views.scrollLeft, width: r.width, opacity: 1 });
+  };
+  const later = () => { clearTimeout(timer); timer = setTimeout(fix, 520); };   // after hub.js has finished its own slide
+  new MutationObserver(later).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  document.addEventListener("click", (ev) => { if (ev.target instanceof Element && ev.target.closest("#views a")) later(); }, true);
+  window.addEventListener("resize", later);
+  window.addEventListener("scroll", later, { passive: true });
 })();

@@ -222,3 +222,19 @@
   #wallctl .ctrl1 > .tools:has(.pregroup) { margin-left: 6px !important; }  /* right next to the tabs, not at the far edge */
   html.lhslim #wallctl .views a { padding: 0 12px; }
 }
+
+/* ---- boards on a phone (owner, 6 Nov): the front flap was half the folder, too short for the sharing line, the count and the
+   name, so the name and its sticker were squashed to nothing. The flap grows to fit, name first. ---- */
+@media (max-width: 760px) {
+  .bpile .folder .flap { height: auto !important; min-height: 50%; padding: 12px 14px; justify-content: flex-end; gap: 4px; }
+  .bpile .folder .flap b { order: -1; display: flex; align-items: center; gap: 6px; min-height: 0; font-size: 17px; line-height: 1.15; overflow: visible; overflow-wrap: anywhere; }
+  .bpile .folder .flap b .stk { flex: none; font-size: 18px; }
+  .bpile .folder .flap > span:not(.stk) { order: 1; }
+}
+
+/* ---- swiping between views: only a fade (phone.js adds html.pswipe while the view changes underneath) ---- */
+@media (max-width: 760px) {
+  #view > :not(#wallctl):not(.lhero) { transition: opacity .22s ease; }
+  html.pswipe #view > :not(#wallctl):not(.lhero) { opacity: 0 !important; transition: opacity .15s ease-in; }
+  html.pswipe .ghosts { opacity: 0 !important; }   /* the pieces hub.js slides around while rearranging */
+}

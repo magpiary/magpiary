@@ -71,7 +71,15 @@ assert "details.fmenu > .pop.fpanel {" in css and "position: absolute; left: 0; 
 assert ".ubtn.dgbtn { border-radius: 999px 0 0 999px;" in css and ".ubtn.setbtn { border-radius: 0 999px 999px 0; }" in css, "top icons must be one pill"
 assert "pfade-out" in js and "@keyframes pfadein" in css, "cross-fade between pages missing"
 assert "__phoneSwipe" in js and "touchmove" in js.split("__phoneSwipe")[-1], "swipe between views missing"
+assert "translateX" not in js.split("Swipe left/right")[1].split("Changing the view")[0], "swipe must only fade, not slide"
 assert ".pilebar, .pagenote { display: none !important; }" in css, "Piles/Boards explanations must go"
 assert 'class="psr"' not in (src / "hub_wall.py").read_text() and 'ibtn pregroup' in (src / "hub_wall.py").read_text(), "Regroup icon button missing"
 assert "html.lhslim #wallctl .views a { padding: 0 12px; }" in css, "pill tab padding"
 print("phone filter/swipe/fade/top-icons smoke: ok")
+
+# swipe is a plain cross-fade; changing view does not bring the top bar back; the tab line is re-measured; board names show
+assert "html.pswipe #view > :not(#wallctl):not(.lhero) { opacity: 0 !important;" in css, "swipe fade rule missing"
+assert "window.__phoneHold = performance.now()" in js and "window.__phoneHold > performance.now()" in ijs, "view change must not bring the top bar back"
+assert "__phoneLine" in js, "tab underline must be re-measured"
+assert ".bpile .folder .flap { height: auto !important;" in css, "board name must show"
+print("phone swipe fade / nav hold / board names smoke: ok")

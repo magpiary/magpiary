@@ -242,6 +242,7 @@ void main(){vec2 u=gl_FragCoord.xy/r;float a=r.x/r.y;Q=vec2(u.x*a,u.y);gr=h(gl_F
   let lastY = scrollY;
   function navState() {
     const y = scrollY, slim = root.classList.contains("lhslim") || (!!$(".postpage") && y > 90);
+    if (window.__phoneHold > performance.now()) { lastY = y; return; }  // phone: the view is changing; that is not a scroll up (phone.js)
     if (!slim) root.classList.remove("navhid");
     else if (y > lastY + 4) root.classList.add("navhid");
     else if (y < lastY - 4) root.classList.remove("navhid");
