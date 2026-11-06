@@ -24,7 +24,7 @@ from magpiary.config import data_dir
 
 Run = Callable[[list[str], int], subprocess.CompletedProcess]
 
-VIDEO_FORMAT = "res:720,ext:mp4:m4a"  # up to 720p, mp4 where offered (owner's choice)
+VIDEO_FORMAT = "res:720,vcodec:h264,ext:mp4:m4a"  # up to 720p, then H.264 (iPhones cannot play VP9/AV1 in mp4; a preference, not a filter), mp4 where offered
 UPDATE_SETTING = "ytdlp_updated_on"
 
 
