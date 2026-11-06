@@ -122,7 +122,15 @@
    pinned just under the top bar so the keyboard has the rest of the screen ---- */
 @media (max-width: 760px) {
   .lhsearch { display: none !important; }
-  :root[data-theme] .sover { padding-top: 84px; padding-bottom: 8px; }  /* the top bar is about 75px tall */
+  :root[data-theme] .sover { padding-top: calc(env(safe-area-inset-top, 0px) + 10px); padding-bottom: 8px; }  /* over the top bar itself */
   .sover .sbox { display: flex; flex-direction: column; max-height: 100%; }
   .sover .spanel2 { flex: 1 1 auto; min-height: 0; max-height: none; }
+}
+
+/* ---- home page top (owner, 6 Nov): no heading block ("6 new today ... sort them into piles"); the tabs start right
+   under the top bar. An empty library keeps its greeting. The logo shows its name again. ---- */
+@media (max-width: 760px) {
+  .lhero:not(.lhempty) { display: none !important; }
+  .top .bar > .logo { font-size: 22px; gap: 7px; }
+  .top .bar > .logo .mark { width: 32px; height: 32px; }
 }

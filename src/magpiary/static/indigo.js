@@ -176,10 +176,17 @@ void main(){vec2 u=gl_FragCoord.xy/r;float a=r.x/r.y;Q=vec2(u.x*a,u.y);gr=h(gl_F
   function topState() {
     const box = $("#lhsearch");
     if (!box) { root.classList.remove("lhtop", "lhslim"); return; }
-    // on a phone the hero's search box is not shown (phone.css); then the floating tabs appear when the tabs' own row
-    // reaches the place the floating ones stick to, just under the top bar
-    const wc = $("#wallctl"), prev = wc && wc.previousElementSibling;
-    const gone = box.offsetParent === null && prev ? prev.getBoundingClientRect().bottom < 84 : box.getBoundingClientRect().bottom < 76;
+    // on a phone the hero (and its search box) is not shown (phone.css); then the floating tabs appear once the tabs' own row
+    // has gone up under the top bar. Where the row would sit is the bottom of the last visible thing before it, or the
+    // top of its container
+    const wc = $("#wallctl");
+    let gone;
+    if (box.offsetParent === null && wc) {
+      let prev = wc.previousElementSibling;
+      while (prev && prev.offsetParent === null) prev = prev.previousElementSibling;
+      const natural = prev ? prev.getBoundingClientRect().bottom : wc.parentElement.getBoundingClientRect().top + parseFloat(getComputedStyle(wc.parentElement).paddingTop || 0);
+      gone = natural < 20;
+    } else gone = box.getBoundingClientRect().bottom < 76;
     const was = root.classList.contains("lhslim");
     root.classList.toggle("lhslim", gone); root.classList.toggle("lhtop", !gone);
     if (was !== gone) {  // the tabs change size between big and floating: the sliding highlight is measured again

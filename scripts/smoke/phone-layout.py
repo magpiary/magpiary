@@ -39,7 +39,12 @@ print("phone nest switches smoke: ok")
 
 # search on a phone: no home search box, big search pinned under the top bar, tabs pill waits for the tabs row
 assert ".lhsearch { display: none !important; }" in css, "home search box must be hidden on a phone"
-assert ".sover { padding-top: 84px;" in css, "big search must sit under the top bar"
+assert "safe-area-inset-top, 0px) + 10px); padding-bottom: 8px" in css, "big search must sit over the top bar"
 ijs = (src / "static/indigo.js").read_text()
-assert "box.offsetParent === null && prev" in ijs, "pill must follow the tabs row when the hero search is hidden"
+assert "box.offsetParent === null && wc" in ijs and "natural < 20" in ijs, "pill must follow the tabs row when the hero search is hidden"
 print("phone search position smoke: ok")
+
+# home top: no heading block, tabs pulled up, logo shows its name
+assert ".lhero:not(.lhempty) { display: none !important; }" in css, "heading block must be hidden on a phone"
+assert ".top .bar > .logo { font-size: 22px;" in css, "logo name must show on a phone"
+print("phone home top smoke: ok")
