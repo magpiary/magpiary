@@ -1,0 +1,17 @@
+/* Phone layout (branch phone-library). Loaded last, so everything for small screens lives in this one file.
+   Rules here only apply on a phone-sized screen; the Mac layout is untouched. */
+
+@media (max-width: 760px) {
+  /* nothing may push the page sideways (the sticky bar's fade used to stick out 40px on each side) */
+  html, body { overflow-x: clip; }
+
+  /* iOS zooms the page when a text box is smaller than 16px; !important because older rules are very specific */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select, textarea { font-size: 16px !important; }
+
+  /* finger-sized targets (44px is what Apple asks for). Whole rules, with the theme prefix so they win. */
+  :root[data-theme] :is(.rb, .ishelf, .pgback, .pvb, .pvauto, .pvask, .pvaddbtn, .pvpile, .logo, .tabs a, .crumbbar .pacts > :is(a, button), .crumbbar .pacts > details > summary) {
+    min-width: 44px; min-height: 44px;
+  }
+  :root[data-theme] :is(.mi, .menu a, .menu button) { min-height: 44px; }
+}

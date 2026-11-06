@@ -20,7 +20,7 @@ from magpiary.web import Response, e
 STATIC = Path(__file__).with_name("static")
 STATIC_FILES = {"hub.css": "text/css; charset=utf-8", "hub.js": "text/javascript; charset=utf-8",
                 "fonts/bricolage-grotesque.woff2": "font/woff2", "fonts/dm-sans.woff2": "font/woff2",
-                "fonts/quicksand.woff2": "font/woff2", "indigo.css": "text/css; charset=utf-8",
+                "fonts/quicksand.woff2": "font/woff2", "indigo.css": "text/css; charset=utf-8", "phone.css": "text/css; charset=utf-8",
                 "indigo.js": "text/javascript; charset=utf-8", "digest.js": "text/javascript; charset=utf-8", "vendor/lenis.min.js": "text/javascript; charset=utf-8",
                 **{f"art/{n}.webp": "image/webp" for n in ("fly-a", "fly-b", "fly-c", "fly-d", "land-a", "land-b",
                                                            "land-c", "stack", "post", "digest-gift-1x", "digest-gift-2x")},
@@ -134,6 +134,7 @@ def document(title: str, body: str, look: dict, csrf: str, page: str, status: in
            f'<link rel="icon" type="image/svg+xml" href="/static/icon.svg?v={v}">'
            f'<link rel="stylesheet" href="/static/hub.css?v={v}">'
            f'<link rel="stylesheet" href="/static/indigo.css?v={v}"><link rel="stylesheet" href="/static/map.css?v={v}">'
+           f'<link rel="stylesheet" href="/static/phone.css?v={v}">'
            f'<link rel="preload" href="/static/fonts/quicksand.woff2" as="font" type="font/woff2" crossorigin>'
            f'<link rel="preload" href="/static/fonts/dm-sans.woff2" as="font" type="font/woff2" crossorigin>'
            f'<script defer src="/static/vendor/gsap.min.js?v={v}"></script>'
