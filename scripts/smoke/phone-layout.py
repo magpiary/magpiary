@@ -16,3 +16,9 @@ assert 'class="pbar"' in (src / "hub_wall.py").read_text(), "phone bar markup mi
 assert "phone.js" in ui.STATIC_FILES and (src / "static/phone.js").exists(), "phone.js missing"
 assert ".pbar { display: none; }" in css, "bar must be hidden on desktop"
 print("phone bar smoke: ok")
+
+# pull to refresh
+js = (src / "static/phone.js").read_text()
+assert "__phonePull" in js and "location.reload()" in js, "pull to refresh missing"
+assert ".ptr" in css, "pull indicator styles missing"
+print("pull to refresh smoke: ok")

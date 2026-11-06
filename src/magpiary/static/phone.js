@@ -112,3 +112,55 @@ document.addEventListener("click", (ev) => {
   ev.preventDefault(); ev.stopImmediatePropagation();
   if (location.pathname !== "/nest") location.assign("/nest");
 }, true);
+
+/* Pull to refresh on the library: at the top of the page, pull down and let go. Phone-sized screens only. */
+(() => {
+  if (window.__phonePull) return;
+  window.__phonePull = true;
+  const phone = window.matchMedia("(max-width: 760px)");
+  const THRESHOLD = 72, MAX = 120;
+  let el = null, startY = 0, startX = 0, pulling = false, pull = 0, busy = false;
+  const make = () => {
+    el = document.createElement("div");
+    el.className = "ptr"; el.setAttribute("aria-hidden", "true");
+    el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v12M6.5 11.5 12 17l5.5-5.5"/></svg>';
+    document.body.appendChild(el);
+    return el;
+  };
+  const show = (px) => {
+    const e = el || make();
+    e.style.setProperty("--pull", px + "px");
+    e.style.setProperty("--prog", Math.min(px / THRESHOLD, 1));
+    e.classList.toggle("ready", px >= THRESHOLD);
+  };
+  const reset = () => { if (!el) return; el.classList.remove("pulling", "ready"); el.style.setProperty("--pull", "0px"); el.style.setProperty("--prog", 0); };
+  const allowed = (t) => phone.matches && location.pathname === "/" && !busy && !document.body.classList.contains("lock")
+    && !document.body.classList.contains("askopen") && !(t instanceof Element && t.closest("input, textarea, select, [contenteditable], .spanel, .sover, .modal, .nestsheet, .pmore"))
+    && !document.querySelector("#sover:not([hidden])");
+  document.addEventListener("touchstart", (ev) => {
+    pulling = false; pull = 0;
+    if (ev.touches.length !== 1 || window.scrollY > 0 || !allowed(ev.target)) return;
+    startY = ev.touches[0].clientY; startX = ev.touches[0].clientX; pulling = true;
+  }, { passive: true });
+  document.addEventListener("touchmove", (ev) => {
+    if (!pulling) return;
+    const dy = ev.touches[0].clientY - startY, dx = ev.touches[0].clientX - startX;
+    if (dy <= 0 || Math.abs(dx) > dy || window.scrollY > 0) { if (pull) { pull = 0; reset(); } if (dy <= 0) pulling = false; return; }
+    pull = Math.min(MAX, dy * 0.5);  // it gets harder the further you pull
+    (el || make()).classList.add("pulling");
+    show(pull);
+  }, { passive: true });
+  const end = () => {
+    if (!pulling) return;
+    pulling = false;
+    if (pull >= THRESHOLD) {
+      busy = true;
+      el.classList.remove("pulling"); el.classList.add("loading");
+      el.style.setProperty("--pull", THRESHOLD * 0.8 + "px"); el.style.setProperty("--prog", 1);
+      setTimeout(() => location.reload(), 150);
+    } else reset();
+    pull = 0;
+  };
+  document.addEventListener("touchend", end, { passive: true });
+  document.addEventListener("touchcancel", () => { pulling = false; pull = 0; reset(); }, { passive: true });
+})();
