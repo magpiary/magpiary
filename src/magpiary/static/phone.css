@@ -79,12 +79,12 @@
   /* Library, Archive and Trash sit beside the logo, on the logo's row (owner, 6 Nov): the same pill, with equal-height
      parts and their pictures centred, so the icons no longer sit lower than the word Library */
   .top .bar { flex-wrap: nowrap; align-items: center; }
-  .top .bar > #shelfsw { order: 2; margin: 0 0 0 6px; flex: 0 0 auto; }
-  .top .bar > .right { order: 3; margin-left: auto; }
-  #shelfsw { align-items: center; }
-  #shelfsw > a { display: inline-flex; align-items: center; justify-content: center; height: 40px; min-height: 0; box-sizing: border-box; }
-  #shelfsw > a.ishelf { width: 40px; min-width: 40px; padding: 0; }
-  #shelfsw > a svg { display: block; flex: none; margin: 0; }
+  /* the Library / Archive / Trash pill is not shown on a phone (owner, 6 Nov): Archive and Trash are under More.
+     Only the logo on the left; Digest and Settings sit at the top right. */
+  .top .bar > #shelfsw { display: none !important; }
+  .top .bar > .logo { margin-right: auto; }  /* .right is display: contents, so push its buttons over with the logo's margin */
+  .top .bar > .sslot { display: none !important; }  /* the top search button some pages show: search lives in the bottom bar and on the home screen only */
+  .top .bar::after { display: none; }  /* a decorative 343px flex item that ate all the free space */
 
   /* the big headline and the magpie picture only greet an empty library; otherwise the posts start sooner */
   .lhero:not(.lhempty) > h1, .lhero:not(.lhempty) .lhbird { display: none; }
@@ -106,3 +106,4 @@
   @keyframes ptrspin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .ptr, .ptr svg { transition: none; } .ptr.loading svg { animation: none; } }
 }
+

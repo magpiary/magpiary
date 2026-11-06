@@ -27,3 +27,9 @@ print("pull to refresh smoke: ok")
 assert "getElementById(\"searchform\")" in js and "form.click()" in js, "bar Search must open the big search"
 assert "q.focus()" not in js.split("data-pbar-search")[1].split("data-pbar-more")[0], "bar Search must not focus the hidden box"
 print("phone search smoke: ok")
+
+# top bar: no shelf pill, no top search button, buttons pushed right, hub.css row break hidden
+for needle in ("#shelfsw { display: none !important; }", ".sslot { display: none !important; }", ".top .bar::after { display: none; }", ".logo { margin-right: auto; }"):
+    assert needle in css, "top bar rule missing: " + needle
+print("phone top bar smoke: ok")
+
