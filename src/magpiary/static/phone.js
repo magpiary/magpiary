@@ -22,3 +22,19 @@
   });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") close(); });
 })();
+
+/* The bar slides away while you scroll down and returns when you scroll up (or stop near the top). */
+(() => {
+  if (window.__phoneBarScroll) return;
+  window.__phoneBarScroll = true;
+  let last = window.scrollY, ticking = false;
+  const update = () => {
+    ticking = false;
+    const y = window.scrollY, delta = y - last;
+    if (Math.abs(delta) < 8) return;           // ignore jitter
+    const open = document.querySelector("[data-pbar-more][aria-expanded=true]");
+    document.body.classList.toggle("pbar-away", delta > 0 && y > 80 && !open);
+    last = y;
+  };
+  window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+})();

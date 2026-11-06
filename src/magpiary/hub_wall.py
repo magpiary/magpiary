@@ -300,7 +300,7 @@ class WallPages:
         today = sum(ui.section_of(i) == "Today" for i in items)
         # the big heading and search with the bird on it (owner, 1 Nov); the search opens the big search box and
         # the page's real one waits in the bar, which takes over once this has scrolled away
-        hero = (f'<div class="hero wallhero compact lhero" id="hero"><h1>{head_a} {head_b}</h1>'
+        hero = (f'<div class="hero wallhero compact lhero{"" if items else " lhempty"}" id="hero"><h1>{head_a} {head_b}</h1>'
                 f'<button type="button" class="lhsearch" id="lhsearch" aria-label="Search your saves"><span aria-hidden="true">⌕</span>'
                 f'<span class="lhph">Search what was said, shown or written</span><kbd>/</kbd>'
                 f'<img class="lhbird" src="{ui.art("land-c")}" alt=""></button><p class="meta1">'

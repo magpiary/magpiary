@@ -25,28 +25,49 @@
   /* Add and Nest move from the top bar to the bottom bar */
   .top .addp, .top .right .nestbtn { display: none !important; }
 
-  body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  body { padding-bottom: calc(76px + max(env(safe-area-inset-bottom, 0px) - 14px, 0px)); }
 
   .pbar {
-    display: flex; position: fixed; z-index: 60; top: auto; height: auto; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-    padding: 4px; border-radius: 26px; justify-content: space-between;
-    background: var(--navglass, rgba(24, 24, 28, .86)); box-shadow: var(--navring, 0 0 0 1px rgba(255, 255, 255, .12)), 0 14px 34px -12px rgba(0, 0, 0, .7);
+    display: flex; position: fixed; z-index: 60; top: auto; height: auto; left: 10px; right: 10px;
+    bottom: calc(max(env(safe-area-inset-bottom, 0px) - 14px, 0px) + 8px);  /* close to the edge; the home indicator keeps its own room */
+    padding: 4px; gap: 2px; border-radius: 999px; justify-content: space-between;
+    min-height: 0; border: 0; flex-wrap: nowrap;  /* a general nav rule gave it 68px of height and a line: that was the uneven padding */
+    background: rgb(14 14 17 / .97);  /* darker than the nav glass, same ring and edge light as the shelf pill */
+    box-shadow: var(--navring, inset 0 0 0 1px rgba(255, 255, 255, .08)), 0 12px 30px -12px rgba(0, 0, 0, .8);
+    transition: transform .28s cubic-bezier(.2, .8, .2, 1);
   }
+  /* slides away while you scroll down, comes back when you scroll up (phone.js sets the class) */
+  body.pbar-away .pbar:not(:focus-within) { transform: translateY(calc(100% + 24px)); }
+  @media (prefers-reduced-motion: reduce) { .pbar { transition: none; } }
   body.lock .pbar, body.askopen .pbar { display: none; }
   .pbar .pb {
-    flex: 1 1 0; min-width: 0; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    border: 0; border-radius: 22px; background: none; color: var(--fg-3, #9a9aa6); font: 600 11px/1 var(--sans, system-ui); text-decoration: none;
+    flex: 1 1 0; min-width: 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    border: 0; border-radius: 999px; background: none; color: var(--fg-3, #9a9aa6); font: 600 11px/1 var(--sans, system-ui); text-decoration: none;
     -webkit-tap-highlight-color: transparent; cursor: pointer;
   }
   .pbar .pb svg { width: 22px; height: 22px; }
-  .pbar .pb.on { color: var(--fg, #fff); background: var(--hov, rgba(255, 255, 255, .1)); }
+  .pbar .pb.on { color: var(--fg, #fff); background: rgba(247, 243, 232, .07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), inset 0 0 0 1px rgba(255, 255, 255, .07); }
   .pbar .pb:active { transform: scale(.96); }
   .pmore {
-    position: absolute; right: 4px; bottom: calc(100% + 10px); min-width: 190px; padding: 6px; border-radius: 20px;
-    background: var(--navglass, rgba(24, 24, 28, .96)); box-shadow: var(--navring, 0 0 0 1px rgba(255, 255, 255, .12)), 0 18px 40px -14px rgba(0, 0, 0, .8);
+    position: absolute; right: 0; bottom: calc(100% + 10px); min-width: 190px; padding: 6px; border-radius: 20px;
+    background: rgb(14 14 17 / .98); box-shadow: var(--navring, inset 0 0 0 1px rgba(255, 255, 255, .08)), 0 18px 40px -14px rgba(0, 0, 0, .8);
   }
   .pmore[hidden] { display: none; }
   .pmore a { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 14px; border-radius: 14px; color: var(--fg, #fff); text-decoration: none; font: 600 15px var(--sans, system-ui); }
   .pmore a:active { background: var(--hov, rgba(255, 255, 255, .1)); }
   .pmore svg { width: 20px; height: 20px; }
+
+  /* ---- the top of the phone screen ---- */
+  /* Library, Archive and Trash sit beside the logo, on the logo's row (owner, 6 Nov): the same pill, with equal-height
+     parts and their pictures centred, so the icons no longer sit lower than the word Library */
+  .top .bar { flex-wrap: nowrap; align-items: center; }
+  .top .bar > #shelfsw { order: 2; margin: 0 0 0 6px; flex: 0 0 auto; }
+  .top .bar > .right { order: 3; margin-left: auto; }
+  #shelfsw { align-items: center; }
+  #shelfsw > a { display: inline-flex; align-items: center; justify-content: center; height: 40px; min-height: 0; box-sizing: border-box; }
+  #shelfsw > a.ishelf { width: 40px; min-width: 40px; padding: 0; }
+  #shelfsw > a svg { display: block; flex: none; margin: 0; }
+
+  /* the big headline and the magpie picture only greet an empty library; otherwise the posts start sooner */
+  .lhero:not(.lhempty) > h1, .lhero:not(.lhempty) .lhbird { display: none; }
 }
