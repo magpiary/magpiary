@@ -38,3 +38,16 @@
   };
   window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
 })();
+
+/* The red dot on the Nest icon follows the Nest badge in the top bar (hub.js keeps that one up to date). */
+(() => {
+  if (window.__phoneBarDot) return;
+  window.__phoneBarDot = true;
+  const sync = () => {
+    const badge = document.getElementById("nbadge"), dot = document.querySelector("[data-pbar-dot]");
+    if (dot) dot.hidden = !badge || badge.hidden;
+  };
+  document.addEventListener("DOMContentLoaded", sync);
+  setInterval(sync, 2000);
+  sync();
+})();

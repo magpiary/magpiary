@@ -111,7 +111,7 @@ class WallPages:
                 + tab("/", "library", "Library", library)
                 + '<button type="button" class="pb" data-pbar-search aria-label="Search">' + ui.icon("search") + '<span>Search</span></button>'
                 + tab("/add", "plus", "Add", page == "add", ' id="pbar-add"')
-                + tab("/nest", "activity", "Nest", active == "nest")
+                + tab("/nest", "activity", "Nest", active == "nest").replace("</svg>", '</svg><i class="pdot" data-pbar-dot hidden></i>', 1)
                 + '<button type="button" class="pb" data-pbar-more aria-haspopup="true" aria-expanded="false">' + ui.icon("more") + '<span>More</span></button>'
                 + '<div class="pmore" id="pmore" role="menu" hidden>'
                 + f'<a role="menuitem" href="/?shelf=archive">{ui.icon("archive")}<span>Archive</span></a>'

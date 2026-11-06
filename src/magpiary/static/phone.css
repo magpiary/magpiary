@@ -32,8 +32,8 @@
     bottom: calc(max(env(safe-area-inset-bottom, 0px) - 14px, 0px) + 8px);  /* close to the edge; the home indicator keeps its own room */
     padding: 4px; gap: 2px; border-radius: 999px; justify-content: space-between;
     min-height: 0; border: 0; flex-wrap: nowrap;  /* a general nav rule gave it 68px of height and a line: that was the uneven padding */
-    background: rgb(14 14 17 / .97);  /* darker than the nav glass, same ring and edge light as the shelf pill */
-    box-shadow: var(--navring, inset 0 0 0 1px rgba(255, 255, 255, .08)), 0 12px 30px -12px rgba(0, 0, 0, .8);
+    background: linear-gradient(rgb(26 26 29 / .98), rgb(17 17 20 / .98));  /* dark, with a light rim along the top like a glass edge */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 0 0 1px rgba(255, 255, 255, .07), 0 12px 30px -12px rgba(0, 0, 0, .85);
     transition: transform .28s cubic-bezier(.2, .8, .2, 1);
   }
   /* shrinks while you scroll down, grows back when you scroll up (phone.js sets the class) */
@@ -43,13 +43,19 @@
   body.lock .pbar, body.askopen .pbar { display: none; }
   .pbar .pb {
     flex: 1 1 0; min-width: 0; height: 56px; display: flex; align-items: center; justify-content: center;
-    border: 0; border-radius: 999px; background: none; color: var(--fg-3, #9a9aa6); font: 600 11px/1 var(--sans, system-ui); text-decoration: none;
+    border: 0; border-radius: 999px; background: none; color: rgba(255, 255, 255, .92); font: 600 11px/1 var(--sans, system-ui); text-decoration: none;
     -webkit-tap-highlight-color: transparent; cursor: pointer;
   }
-  .pbar .pb svg { width: 26px; height: 26px; }
+  .pbar .pb svg { width: 26px; height: 26px; stroke-width: 2.4; position: relative; }  /* bolder strokes, like Instagram's */
   /* icons only, like Instagram; the words stay for screen readers */
   .pbar .pb > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .pbar .pb.on { color: var(--fg, #fff); background: rgba(247, 243, 232, .07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), inset 0 0 0 1px rgba(255, 255, 255, .07); }
+  /* the place you are: a clearly lighter oval, and its icon filled in */
+  .pbar .pb.on { color: #fff; background: rgba(255, 255, 255, .17); }
+  .pbar .pb.on svg { fill: currentColor; }
+  /* a red dot when the Nest has something that needs you (phone.js copies it from the Nest badge) */
+  .pbar .pb .pdot { position: absolute; top: 12px; left: calc(50% + 7px); width: 11px; height: 11px; border-radius: 50%; background: #ff3b47; box-shadow: 0 0 0 2px rgb(18 18 21); }
+  .pbar .pb { position: relative; }
+  .pbar .pb .pdot[hidden] { display: none; }
   .pbar .pb:active { transform: scale(.96); }
   .pmore {
     position: absolute; right: 0; bottom: calc(100% + 10px); min-width: 190px; padding: 6px; border-radius: 20px;
