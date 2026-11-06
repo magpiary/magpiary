@@ -185,7 +185,7 @@ void main(){vec2 u=gl_FragCoord.xy/r;float a=r.x/r.y;Q=vec2(u.x*a,u.y);gr=h(gl_F
       let prev = wc.previousElementSibling;
       while (prev && prev.offsetParent === null) prev = prev.previousElementSibling;
       const natural = prev ? prev.getBoundingClientRect().bottom : wc.parentElement.getBoundingClientRect().top + parseFloat(getComputedStyle(wc.parentElement).paddingTop || 0);
-      gone = natural < 20;
+      gone = natural < 10;  // = where the floating tabs stick, so they do not jump
     } else gone = box.getBoundingClientRect().bottom < 76;
     const was = root.classList.contains("lhslim");
     root.classList.toggle("lhslim", gone); root.classList.toggle("lhtop", !gone);

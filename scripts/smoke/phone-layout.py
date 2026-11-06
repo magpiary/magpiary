@@ -41,10 +41,18 @@ print("phone nest switches smoke: ok")
 assert ".lhsearch { display: none !important; }" in css, "home search box must be hidden on a phone"
 assert "safe-area-inset-top, 0px) + 10px); padding-bottom: 8px" in css, "big search must sit over the top bar"
 ijs = (src / "static/indigo.js").read_text()
-assert "box.offsetParent === null && wc" in ijs and "natural < 20" in ijs, "pill must follow the tabs row when the hero search is hidden"
+assert "box.offsetParent === null && wc" in ijs and "natural < 10" in ijs, "pill must follow the tabs row when the hero search is hidden"
 print("phone search position smoke: ok")
 
 # home top: no heading block, tabs pulled up, logo shows its name
 assert ".lhero:not(.lhempty) { display: none !important; }" in css, "heading block must be hidden on a phone"
 assert ".top .bar > .logo { font-size: 22px;" in css, "logo name must show on a phone"
 print("phone home top smoke: ok")
+
+# tabs and pill: nothing sticky until the pill shows; then the pill alone sticks, in one row; no gap under the top bar
+assert "html:has(#wallctl) .top { position: static !important;" in css, "top bar must not be sticky on the library"
+assert "html:has(.lhero) #wallctl { position: static !important; }" in css, "tabs must not be sticky before they become the pill"
+assert "html.lhslim:has(.lhero) #wallctl { position: sticky !important;" in css, "the pill must stick"
+assert "html.lhslim #wallctl .ctrl1 { flex-wrap: nowrap !important;" in css, "the pill must be one row"
+assert ".wrap:has(> #wallctl):has(> .lhero:not(.lhempty)) { padding-top: 0; }" in css, "gap under the top bar must go"
+print("phone tabs and pill smoke: ok")

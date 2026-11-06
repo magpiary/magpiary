@@ -134,3 +134,22 @@
   .top .bar > .logo { font-size: 22px; gap: 7px; }
   .top .bar > .logo .mark { width: 32px; height: 32px; }
 }
+
+/* ---- the library's tabs and the pill (owner, 6 Nov): until the tabs row has gone up and turned into the pill (indigo.js
+   adds html.lhslim) neither it nor the top bar is sticky; the top bar simply scrolls away, and the pill alone sticks to the
+   very top. No gap between the top bar and the tabs. ---- */
+@media (max-width: 760px) {
+  html:has(#wallctl) .top { position: static !important; transform: none !important; }
+  html:has(.lhero) #wallctl { position: static !important; }
+  html.lhslim:has(.lhero) #wallctl { position: sticky !important; top: calc(env(safe-area-inset-top, 0px) + 10px) !important; }
+  .wrap:has(> #wallctl):has(> .lhero:not(.lhempty)) { padding-top: 0; }
+  /* the pill is one row: three tabs and three icons, tighter, instead of wrapping into two rows */
+  html.lhslim #wallctl .ctrl1 { flex-wrap: nowrap !important; height: 44px !important; border-radius: 999px !important; max-width: 100%; }
+  html.lhslim #wallctl .views a { padding: 0 8px; font-size: 13.5px; }
+  html.lhslim #wallctl .vgrp, html.lhslim #wallctl .views { flex: 0 0 auto; gap: 0 !important; }
+  html.lhslim #wallctl .views a { margin: 0 !important; }
+  html.lhslim #wallctl .ctrl1 { background: rgb(20 20 24 / .97) !important; }  /* posts must not show through the pill */
+  html.lhslim #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button) { width: 34px; height: 34px; min-width: 34px; }
+  html.lhslim #wallctl .ctrl1 .tools { flex-wrap: nowrap; }  /* the third icon used to drop to a second line */
+  html.lhslim #wallctl .ctrl1 .tools .sizes { margin: 0; }
+}
