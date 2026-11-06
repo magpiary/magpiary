@@ -20,7 +20,7 @@ from magpiary.web import Response, e
 STATIC = Path(__file__).with_name("static")
 STATIC_FILES = {"hub.css": "text/css; charset=utf-8", "hub.js": "text/javascript; charset=utf-8",
                 "fonts/bricolage-grotesque.woff2": "font/woff2", "fonts/dm-sans.woff2": "font/woff2",
-                "fonts/quicksand.woff2": "font/woff2", "indigo.css": "text/css; charset=utf-8", "phone.css": "text/css; charset=utf-8",
+                "fonts/quicksand.woff2": "font/woff2", "indigo.css": "text/css; charset=utf-8", "phone.css": "text/css; charset=utf-8", "phone.js": "text/javascript; charset=utf-8",
                 "indigo.js": "text/javascript; charset=utf-8", "digest.js": "text/javascript; charset=utf-8", "vendor/lenis.min.js": "text/javascript; charset=utf-8",
                 **{f"art/{n}.webp": "image/webp" for n in ("fly-a", "fly-b", "fly-c", "fly-d", "land-a", "land-b",
                                                            "land-c", "stack", "post", "digest-gift-1x", "digest-gift-2x")},
@@ -140,7 +140,7 @@ def document(title: str, body: str, look: dict, csrf: str, page: str, status: in
            f'<script defer src="/static/vendor/gsap.min.js?v={v}"></script>'
            f'<script defer src="/static/vendor/Flip.min.js?v={v}"></script>'
            f'<script defer src="/static/vendor/lenis.min.js?v={v}"></script>'
-           f'<script defer src="/static/digest.js?v={v}"></script><script defer src="/static/map.js?v={v}"></script>'
+           f'<script defer src="/static/phone.js?v={v}"></script><script defer src="/static/digest.js?v={v}"></script><script defer src="/static/map.js?v={v}"></script>'
            f'<script defer src="/static/hub.js?v={v}"></script>'
            f'<script defer src="/static/indigo.js?v={v}"></script>'
            f'<script defer src="/static/lock.js?v={v}"></script><script defer src="/static/settings.js?v={v}"></script></head>'

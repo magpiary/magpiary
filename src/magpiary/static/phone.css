@@ -15,3 +15,38 @@
   }
   :root[data-theme] :is(.mi, .menu a, .menu button) { min-height: 44px; }
 }
+
+/* ---- the bottom bar (owner, 6 Nov 2026): Library, Search, Add, Nest, More ---- */
+.pbar { display: none; }
+
+@media (max-width: 760px) {
+  /* the floating Ask and Help pills go: Ask is off on the phone for now, Help lives under More */
+  .askdockwrap { display: none !important; }
+  /* Add and Nest move from the top bar to the bottom bar */
+  .top .addp, .top .right .nestbtn { display: none !important; }
+
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+  .pbar {
+    display: flex; position: fixed; z-index: 60; top: auto; height: auto; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding: 4px; border-radius: 26px; justify-content: space-between;
+    background: var(--navglass, rgba(24, 24, 28, .86)); box-shadow: var(--navring, 0 0 0 1px rgba(255, 255, 255, .12)), 0 14px 34px -12px rgba(0, 0, 0, .7);
+  }
+  body.lock .pbar, body.askopen .pbar { display: none; }
+  .pbar .pb {
+    flex: 1 1 0; min-width: 0; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    border: 0; border-radius: 22px; background: none; color: var(--fg-3, #9a9aa6); font: 600 11px/1 var(--sans, system-ui); text-decoration: none;
+    -webkit-tap-highlight-color: transparent; cursor: pointer;
+  }
+  .pbar .pb svg { width: 22px; height: 22px; }
+  .pbar .pb.on { color: var(--fg, #fff); background: var(--hov, rgba(255, 255, 255, .1)); }
+  .pbar .pb:active { transform: scale(.96); }
+  .pmore {
+    position: absolute; right: 4px; bottom: calc(100% + 10px); min-width: 190px; padding: 6px; border-radius: 20px;
+    background: var(--navglass, rgba(24, 24, 28, .96)); box-shadow: var(--navring, 0 0 0 1px rgba(255, 255, 255, .12)), 0 18px 40px -14px rgba(0, 0, 0, .8);
+  }
+  .pmore[hidden] { display: none; }
+  .pmore a { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 14px; border-radius: 14px; color: var(--fg, #fff); text-decoration: none; font: 600 15px var(--sans, system-ui); }
+  .pmore a:active { background: var(--hov, rgba(255, 255, 255, .1)); }
+  .pmore svg { width: 20px; height: 20px; }
+}

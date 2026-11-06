@@ -100,6 +100,27 @@ class WallPages:
                 f'aria-label="Open the Nest"><span class="tkin"><b><i></i><span id="tk-h">{head}</span></b>'
                 f'<span class="tks" id="tks">{"".join(chips)}</span><span class="more" id="tk-more">{more}</span></span></a>')
 
+    def phone_bar(self, page: str, shelf: str = "", active: str = "") -> str:
+        """The bar at the bottom of a phone screen: Library, Search, Add, Nest and More (owner, 6 Nov 2026). CSS shows it
+        only on a phone-sized screen; it replaces the floating Ask and Help pills there (Ask is off on the phone for now)."""
+        def tab(href: str, icon: str, label: str, on: bool = False, extra: str = "") -> str:
+            return (f'<a class="pb{" on" if on else ""}" href="{href}"{" aria-current=page" if on else ""}{extra}>'
+                    f'{ui.icon(icon)}<span>{label}</span></a>')
+        library = page == "wall" and shelf in ("", "inbox")
+        return ('<nav class="pbar" id="pbar" aria-label="Main">'
+                + tab("/", "library", "Library", library)
+                + '<button type="button" class="pb" data-pbar-search aria-label="Search">' + ui.icon("search") + '<span>Search</span></button>'
+                + tab("/add", "plus", "Add", page == "add", ' id="pbar-add"')
+                + tab("/nest", "activity", "Nest", active == "nest")
+                + '<button type="button" class="pb" data-pbar-more aria-haspopup="true" aria-expanded="false">' + ui.icon("more") + '<span>More</span></button>'
+                + '<div class="pmore" id="pmore" role="menu" hidden>'
+                + f'<a role="menuitem" href="/?shelf=archive">{ui.icon("archive")}<span>Archive</span></a>'
+                + f'<a role="menuitem" href="/?shelf=trash">{ui.icon("trash")}<span>Trash</span></a>'
+                + f'<a role="menuitem" href="/digest">{ui.icon("digest")}<span>Digest</span></a>'
+                + f'<a role="menuitem" href="/map">{ui.icon("grid3")}<span>Map</span></a>'
+                + f'<a role="menuitem" href="/help">{ui.icon("book")}<span>Help</span></a>'
+                + '</div></nav>')
+
     def search_overlay(self) -> str:
         """The big search used when Appearance → Search is Spotlight (hub.js opens it from the bar's search)."""
         return ('<div class="sover" id="sover" hidden><div class="sbox" role="dialog" aria-modal="true" aria-label="Search">'
