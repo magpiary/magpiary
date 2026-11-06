@@ -309,7 +309,10 @@ class WallPages:
                 + '<span>Sort them into piles, or see everything by when you saved it.</span></p></div>')
         if view == "piles":
             body = self._piles_view(ctx)
-            tabs = self._views("piles", f'<div class="tools">{self.size_control()}</div>')
+            # a phone gets Regroup as an icon beside the tabs (phone.css hides this on the Mac and hides the paragraph + button below on a phone)
+            pregroup = ui.button_form(self.csrf, "/hub/piles/regroup", {"next": "/?view=piles"}, ui.icon("refresh"), "ibtn pregroup",
+                                      "Group all your saves again? Your renames, moves, removals and deletions stay.", title="Regroup everything")
+            tabs = self._views("piles", f'<div class="tools">{self.size_control()}{pregroup}</div>')
         elif view == "boards":
             body, tabs = self.boards_view(q), self._views("boards", f'<div class="tools">{self.size_control()}</div>')
         else:

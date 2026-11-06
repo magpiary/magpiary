@@ -51,7 +51,7 @@ print("phone home top smoke: ok")
 
 # tabs and pill: nothing sticky until the pill shows; then the pill alone sticks, in one row; no gap under the top bar
 assert "html:not(.lhslim):has(#wallctl) .top { position: static !important;" in css, "top bar must not be sticky on the library"
-assert "html:has(.lhero) #wallctl { position: static !important; }" in css, "tabs must not be sticky before they become the pill"
+assert "html:has(.lhero) #wallctl { position: relative !important; top: auto !important; }" in css, "tabs must not be sticky before they become the pill"
 assert "html.lhslim:has(.lhero) #wallctl { position: sticky !important;" in css and "html.lhslim.navhid:has(.lhero) #wallctl { top:" in css, "the pill must stick, under the top bar when it returns"
 assert 'gone && !was && box.offsetParent === null) root.classList.add("navhid")' in ijs, "top bar must start hidden when the pill appears"
 assert "html.lhslim #wallctl .ctrl1 { flex-wrap: nowrap !important;" in css, "the pill must be one row"
@@ -65,3 +65,13 @@ assert "html.lhslim #wallctl .views a { font-size: 12px; }" in css, "pill labels
 assert 'root.dataset.size = "m"' in js, "phone must keep Medium tiles"
 assert ".pile .lt { display: contents; }" in css and ".piles { grid-template-columns: repeat(2, minmax(0, 1fr));" in css, "piles: name line then labels"
 print("phone filter/size/pill/piles smoke: ok")
+
+# filter panel stays on screen, Digest+Settings are one dark pill, pages cross-fade, swipe between the three views, no explanations
+assert "details.fmenu > .pop.fpanel {" in css and "position: absolute; left: 0; right: 0; width: auto;" in css, "filter panel must fit the screen"
+assert ".ubtn.dgbtn { border-radius: 999px 0 0 999px;" in css and ".ubtn.setbtn { border-radius: 0 999px 999px 0; }" in css, "top icons must be one pill"
+assert "pfade-out" in js and "@keyframes pfadein" in css, "cross-fade between pages missing"
+assert "__phoneSwipe" in js and "touchmove" in js.split("__phoneSwipe")[-1], "swipe between views missing"
+assert ".pilebar, .pagenote { display: none !important; }" in css, "Piles/Boards explanations must go"
+assert 'class="psr"' not in (src / "hub_wall.py").read_text() and 'ibtn pregroup' in (src / "hub_wall.py").read_text(), "Regroup icon button missing"
+assert "html.lhslim #wallctl .views a { padding: 0 12px; }" in css, "pill tab padding"
+print("phone filter/swipe/fade/top-icons smoke: ok")

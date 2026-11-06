@@ -176,3 +176,87 @@ document.addEventListener("click", (ev) => {
   new MutationObserver(fix).observe(root, { attributes: true, attributeFilter: ["data-size"] });
   phone.addEventListener?.("change", fix);
 })();
+
+/* Soft cross-fade between the pages the bottom bar leads to (owner, 6 Nov): the old page fades out, the new one fades in
+   (phone.css does the fading in on every load). Library from another page, Nest, and the pages under More. */
+document.addEventListener("click", (ev) => {
+  if (!window.matchMedia("(max-width: 760px)").matches || ev.defaultPrevented || ev.button || ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
+  const a = ev.target instanceof Element ? ev.target.closest('#pbar a[data-pb="nest"], #pbar a[data-pb="library"], #pmore a') : null;
+  if (!a) return;
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin || url.pathname + url.search === location.pathname + location.search) return;
+  if (a.matches('[data-pb="library"]') && location.pathname === "/") return;  // inside the library the page's own switching handles it
+  ev.preventDefault(); ev.stopImmediatePropagation();
+  const root = document.documentElement;
+  root.classList.add("pfade-out");
+  setTimeout(() => location.assign(url.href), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 170);
+}, true);
+window.addEventListener("pageshow", () => document.documentElement.classList.remove("pfade-out"));  // back button from the bfcache
+
+/* Swipe left/right on the library moves between Everything, Piles and Boards; the page follows your finger. */
+(() => {
+  if (window.__phoneSwipe) return;
+  window.__phoneSwipe = true;
+  const phone = window.matchMedia("(max-width: 760px)");
+  const tabs = () => [...document.querySelectorAll("#wallctl #views a")];
+  const content = () => { const v = document.getElementById("view"); return v ? [...v.children].filter((e) => e.id !== "wallctl" && !e.classList.contains("lhero")) : []; };
+  const blocked = (t) => {
+    if (!(t instanceof Element)) return true;
+    if (t.closest("input, textarea, select, video, .fmenu, .spanel, .sover, .modal, .nestsheet, .selbar, [contenteditable]")) return true;
+    for (let el = t; el && el !== document.body; el = el.parentElement) {   // something that scrolls sideways keeps its swipe
+      const o = getComputedStyle(el).overflowX;
+      if ((o === "auto" || o === "scroll") && el.scrollWidth > el.clientWidth + 2) return true;
+    }
+    return document.body.classList.contains("lock") || document.body.classList.contains("askopen") || document.body.classList.contains("selecting");
+  };
+  let sx = 0, sy = 0, dx = 0, mode = "", busy = false, t0 = 0;
+  const move = (x, o) => content().forEach((e) => { e.style.transition = "none"; e.style.transform = x ? `translateX(${x}px)` : ""; e.style.opacity = o === undefined ? "" : String(o); });
+  const clear = () => content().forEach((e) => { e.style.transition = ""; e.style.transform = ""; e.style.opacity = ""; });
+  document.addEventListener("touchstart", (ev) => {
+    mode = ""; dx = 0;
+    if (busy || !phone.matches || location.pathname !== "/" || ev.touches.length !== 1 || tabs().length < 2 || blocked(ev.target)) return;
+    sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; t0 = performance.now(); mode = "wait";
+  }, { passive: true });
+  document.addEventListener("touchmove", (ev) => {
+    if (!mode) return;
+    const x = ev.touches[0].clientX - sx, y = ev.touches[0].clientY - sy;
+    if (mode === "wait") {
+      if (Math.abs(y) > 14 && Math.abs(y) > Math.abs(x)) { mode = ""; return; }   // it is a scroll
+      if (Math.abs(x) < 12 || Math.abs(x) < Math.abs(y) * 1.4) return;
+      const i = tabs().findIndex((a) => a.classList.contains("on"));
+      const j = i + (x < 0 ? 1 : -1);
+      if (i < 0 || j < 0 || j >= tabs().length) { mode = ""; return; }            // nothing further in that direction
+      mode = "drag";
+    }
+    dx = x;
+    move(dx * 0.9, 1 - Math.min(Math.abs(dx) / 420, 0.6));
+  }, { passive: true });
+  const end = () => {
+    if (mode !== "drag") { mode = ""; return; }
+    mode = "";
+    const i = tabs().findIndex((a) => a.classList.contains("on")), dir = dx < 0 ? 1 : -1, j = i + dir;
+    const fast = Math.abs(dx) / Math.max(performance.now() - t0, 1) > 0.5;
+    if (j < 0 || j >= tabs().length || (Math.abs(dx) < 70 && !fast)) {   // not far enough: spring back
+      content().forEach((e) => { e.style.transition = "transform .25s cubic-bezier(.2,.8,.2,1), opacity .25s"; e.style.transform = ""; e.style.opacity = ""; });
+      setTimeout(clear, 280); return;
+    }
+    busy = true;
+    content().forEach((e) => { e.style.transition = "transform .18s ease-in, opacity .18s"; e.style.transform = `translateX(${dir * -110}%)`; e.style.opacity = "0"; });
+    setTimeout(() => {
+      const view = document.getElementById("view");
+      let done = false;
+      const arrive = () => {
+        if (done) return; done = true; mo.disconnect(); busy = false;
+        content().forEach((e) => e.animate([{ transform: `translateX(${dir * 45}%)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" }));
+        window.scrollTo(0, Math.min(scrollY, 0));
+      };
+      const mo = new MutationObserver(() => setTimeout(arrive, 30));
+      if (view) mo.observe(view, { childList: true, subtree: true });
+      tabs()[j].click();
+      clear();
+      setTimeout(arrive, 900);   // if nothing changed, never stay stuck
+    }, 190);
+  };
+  document.addEventListener("touchend", end, { passive: true });
+  document.addEventListener("touchcancel", () => { if (mode === "drag") { mode = ""; clear(); } else mode = ""; }, { passive: true });
+})();

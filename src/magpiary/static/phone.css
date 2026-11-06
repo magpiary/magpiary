@@ -140,7 +140,7 @@
    very top. No gap between the top bar and the tabs. ---- */
 @media (max-width: 760px) {
   html:not(.lhslim):has(#wallctl) .top { position: static !important; transform: none !important; }
-  html:has(.lhero) #wallctl { position: static !important; }
+  html:has(.lhero) #wallctl { position: relative !important; top: auto !important; }  /* relative (not static) so the filter panel can hang from it */
   /* with the pill showing, the top bar is sticky again: gone while you scroll down (html.navhid), back when you scroll up,
      with the pill sliding down under it; with the bar gone the pill is at the very top */
   html.lhslim:has(.lhero) #wallctl { position: sticky !important; top: calc(var(--top-h, 88px) + 8px) !important; }
@@ -176,4 +176,49 @@
   :root[data-theme] .pile .newb { order: 2; }
   :root[data-theme] .pile .lc { order: 3; }
   :root[data-theme] .pile .sub { white-space: normal; height: auto; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+}
+
+/* ---- the filter panel (owner, 6 Nov): it hung from the filter icon and ran off the left edge; on a phone it hangs from the
+   whole tabs row instead, as wide as the screen minus 16px each side, and scrolls if it is tall ---- */
+@media (max-width: 760px) {
+  #wallctl .ctrl1, #wallctl .tools, #wallctl details.fmenu { position: static !important; }
+  :root[data-theme] #wallctl details.fmenu > .pop.fpanel {
+    position: absolute; left: 0; right: 0; width: auto; top: calc(100% + 8px); max-height: calc(100vh - 330px); overflow-y: auto; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ---- Digest and Settings at the top (owner, 6 Nov): one dark pill with the bottom bar's glass edge, the two icons as its halves ---- */
+@media (max-width: 760px) {
+  :root[data-theme] .top .bar .ubtn:is(.dgbtn, .setbtn) {
+    width: 50px; min-width: 50px; height: 48px; min-height: 48px; padding: 0; justify-content: center; color: rgba(255, 255, 255, .92);
+    background: linear-gradient(rgb(26 26 29 / .98), rgb(17 17 20 / .98)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 0 0 1px rgba(255, 255, 255, .07), 0 12px 30px -12px rgba(0, 0, 0, .85) !important;
+  }
+  :root[data-theme] .top .bar .ubtn.dgbtn { border-radius: 999px 0 0 999px; margin-right: -6px; }  /* touches the next one: the bar's gap is 6px */
+  :root[data-theme] .top .bar .ubtn.setbtn { border-radius: 0 999px 999px 0; }
+  :root[data-theme] .top .bar .ubtn.dgbtn:only-of-type, :root[data-theme] .top .bar .ubtn:is(.dgbtn, .setbtn) .ico { width: 22px; height: 22px; stroke-width: 2.1; }
+}
+
+/* ---- cross-fade between pages (owner, 6 Nov): every page fades in as it loads; phone.js fades the old one out first when a
+   bottom-bar link is tapped. The bar itself stays put. ---- */
+@media (max-width: 760px) {
+  @keyframes pfadein { from { opacity: 0; } }
+  body > :not(.pbar):not(script):not(style) { animation: pfadein .28s ease-out backwards; }
+  html.pfade-out body > :not(.pbar):not(#pmore):not(script):not(style) { opacity: 0; transition: opacity .16s ease-in; }
+  @media (prefers-reduced-motion: reduce) { body > :not(.pbar) { animation: none; } html.pfade-out body > :not(.pbar) { transition: none; } }
+}
+
+/* ---- Piles and Boards (owner, 6 Nov): no explanation paragraphs; Regroup is an icon beside the tabs; the three tab labels get
+   more room on the sides (not the filter and select icons) ---- */
+#wallctl .tools > form:has(> .pregroup) { display: none; }  /* the Mac keeps its own button under the tabs */
+@media (max-width: 760px) {
+  .pilebar, .pagenote { display: none !important; }
+  #wallctl .tools > form:has(> .pregroup) { display: block; }
+  :root[data-theme] #wallctl .pregroup { width: 40px; height: 40px; min-width: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: none; box-shadow: none; border: 0; }
+  #wallctl .pregroup .ico { width: 19px; height: 19px; }
+  #wallctl .ctrl1:has(.pregroup) { justify-content: flex-start !important; }
+  #wallctl .ctrl1:has(.pregroup) > .vgrp { flex: 0 0 auto; }
+  #wallctl .ctrl1 > .tools:has(.pregroup) { margin-left: 6px !important; }  /* right next to the tabs, not at the far edge */
+  html.lhslim #wallctl .views a { padding: 0 12px; }
 }
