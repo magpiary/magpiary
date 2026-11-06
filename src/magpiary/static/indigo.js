@@ -176,7 +176,10 @@ void main(){vec2 u=gl_FragCoord.xy/r;float a=r.x/r.y;Q=vec2(u.x*a,u.y);gr=h(gl_F
   function topState() {
     const box = $("#lhsearch");
     if (!box) { root.classList.remove("lhtop", "lhslim"); return; }
-    const gone = box.getBoundingClientRect().bottom < 76;
+    // on a phone the hero's search box is not shown (phone.css); then the floating tabs appear when the tabs' own row
+    // reaches the place the floating ones stick to, just under the top bar
+    const wc = $("#wallctl"), prev = wc && wc.previousElementSibling;
+    const gone = box.offsetParent === null && prev ? prev.getBoundingClientRect().bottom < 84 : box.getBoundingClientRect().bottom < 76;
     const was = root.classList.contains("lhslim");
     root.classList.toggle("lhslim", gone); root.classList.toggle("lhtop", !gone);
     if (was !== gone) {  // the tabs change size between big and floating: the sliding highlight is measured again

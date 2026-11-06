@@ -36,3 +36,10 @@ print("phone top bar smoke: ok")
 # Nest switches: one row each on a phone
 assert ".nestpage .tgrow { grid-template-columns: minmax(0, 1fr); }" in css, "Nest switches must be one column"
 print("phone nest switches smoke: ok")
+
+# search on a phone: no home search box, big search pinned under the top bar, tabs pill waits for the tabs row
+assert ".lhsearch { display: none !important; }" in css, "home search box must be hidden on a phone"
+assert ".sover { padding-top: 84px;" in css, "big search must sit under the top bar"
+ijs = (src / "static/indigo.js").read_text()
+assert "box.offsetParent === null && prev" in ijs, "pill must follow the tabs row when the hero search is hidden"
+print("phone search position smoke: ok")

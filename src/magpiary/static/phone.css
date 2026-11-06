@@ -117,3 +117,12 @@
   :root[data-theme] .nestpage .tgl .tgt b { font-size: 15px; }
   :root[data-theme] .nestpage .tgl .tgt small { font-size: 12.5px; margin-top: 3px; }
 }
+
+/* ---- search on a phone (owner, 6 Nov): the home page has no search box; the bottom bar's icon opens the big search,
+   pinned just under the top bar so the keyboard has the rest of the screen ---- */
+@media (max-width: 760px) {
+  .lhsearch { display: none !important; }
+  :root[data-theme] .sover { padding-top: 84px; padding-bottom: 8px; }  /* the top bar is about 75px tall */
+  .sover .sbox { display: flex; flex-direction: column; max-height: 100%; }
+  .sover .spanel2 { flex: 1 1 auto; min-height: 0; max-height: none; }
+}
