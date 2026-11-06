@@ -164,3 +164,15 @@ document.addEventListener("click", (ev) => {
   document.addEventListener("touchend", end, { passive: true });
   document.addEventListener("touchcancel", () => { pulling = false; pull = 0; reset(); }, { passive: true });
 })();
+
+/* Tiles are always Medium on a phone (owner, 6 Nov): the size button is gone, and a size saved on the Mac does not apply here.
+   The page swaps its own attributes when it changes view, so the size is put back whenever it changes. */
+(() => {
+  if (window.__phoneSize) return;
+  window.__phoneSize = true;
+  const root = document.documentElement, phone = window.matchMedia("(max-width: 760px)");
+  const fix = () => { if (phone.matches && root.dataset.size !== "m") root.dataset.size = "m"; };
+  fix();
+  new MutationObserver(fix).observe(root, { attributes: true, attributeFilter: ["data-size"] });
+  phone.addEventListener?.("change", fix);
+})();

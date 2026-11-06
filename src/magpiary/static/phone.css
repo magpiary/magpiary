@@ -156,3 +156,24 @@
   html.lhslim #wallctl .ctrl1 .tools { flex-wrap: nowrap; }  /* the third icon used to drop to a second line */
   html.lhslim #wallctl .ctrl1 .tools .sizes { margin: 0; }
 }
+
+/* ---- filter / select / tile size (owner, 6 Nov): flat plain icons at the top of the page; no tile-size button on a phone
+   (phone.js keeps the size at Medium); the floating pill's labels are 12px ---- */
+@media (max-width: 760px) {
+  html:not(.lhslim) #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button) { background: none !important; box-shadow: none !important; border: 0 !important; }
+  #wallctl .sizes { display: none !important; }
+  html.lhslim #wallctl .views a { font-size: 12px; }
+}
+
+/* ---- piles on a phone (owner, 6 Nov): Medium tiles, two to a row; the pile's name gets a whole line (two if needed) and
+   the "5 new" and "7 saves" labels drop to the next line instead of squeezing it ---- */
+@media (max-width: 760px) {
+  .piles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 12px; }
+  :root[data-theme] .pile .lab { flex-wrap: wrap; justify-content: flex-start; gap: 6px 8px; padding-top: 10px; }
+  :root[data-theme] .pile .lt { display: contents; }
+  :root[data-theme] .pile .lt::before { order: 0; margin-top: 5px; align-self: flex-start; }
+  :root[data-theme] .pile .lab b { order: 1; flex: 1 1 calc(100% - 22px); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 17px; }
+  :root[data-theme] .pile .newb { order: 2; }
+  :root[data-theme] .pile .lc { order: 3; }
+  :root[data-theme] .pile .sub { white-space: normal; height: auto; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+}

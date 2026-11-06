@@ -57,3 +57,11 @@ assert 'gone && !was && box.offsetParent === null) root.classList.add("navhid")'
 assert "html.lhslim #wallctl .ctrl1 { flex-wrap: nowrap !important;" in css, "the pill must be one row"
 assert ".wrap:has(> #wallctl):has(> .lhero:not(.lhempty)) { padding-top: 0; }" in css, "gap under the top bar must go"
 print("phone tabs and pill smoke: ok")
+
+# filter/select flat at the top, no tile-size button, Medium always, pill labels 12px, pile names get a whole line
+assert "html:not(.lhslim) #wallctl .ctrl1 :is(.ibtn, .tbtn, summary, .tools button) { background: none !important;" in css, "flat icons"
+assert "#wallctl .sizes { display: none !important; }" in css, "tile size button must be hidden"
+assert "html.lhslim #wallctl .views a { font-size: 12px; }" in css, "pill labels 12px"
+assert 'root.dataset.size = "m"' in js, "phone must keep Medium tiles"
+assert ".pile .lt { display: contents; }" in css and ".piles { grid-template-columns: repeat(2, minmax(0, 1fr));" in css, "piles: name line then labels"
+print("phone filter/size/pill/piles smoke: ok")
