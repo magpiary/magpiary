@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from urllib.parse import quote
 
-from magpiary import thumbs
+from magpiary import phone_video, thumbs
 from magpiary.store import Store
 from magpiary.web import Response
 
@@ -35,7 +35,7 @@ class MediaPages:
     library: Path | None
 
     def _media(
-        self, item_id: int, name: str, range_header: str, width: str = ""
+        self, item_id: int, name: str, range_header: str, width: str = "", user_agent: str = ""
     ) -> Response:
         item = self.store.item_by_id(item_id)
         if (
@@ -53,6 +53,11 @@ class MediaPages:
             or not path.is_file()
         ):
             return Response(404, b"not found", "text/plain")
+        if phone_video.is_iphone(user_agent) and re.fullmatch(r"media-\d{2,3}\.mp4", name):
+            state = phone_video.ensure(path)
+            if state == "converting":
+                return Response(503, b"Getting this video ready for your iPhone. Try again in a minute.", "text/plain",
+                                headers={"Retry-After": "20"})
         if (
             width.isdigit()
             and not range_header

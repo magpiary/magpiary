@@ -153,7 +153,7 @@ class Hub(
 
     # ---- routing ------------------------------------------------------------------------
 
-    def get(self, path: str, query: dict, client_ip: str, host: str, range_header: str = "") -> Response:
+    def get(self, path: str, query: dict, client_ip: str, host: str, range_header: str = "", user_agent: str = "") -> Response:
         refused = local_only(client_ip, host)
         if refused:
             return refused
@@ -260,7 +260,7 @@ class Hub(
         if m := re.fullmatch(r"/pile/(\d+)", path):
             return self.pile_page(int(m.group(1)))
         if m := re.fullmatch(r"/media/(\d+)/([^/]+)", path):
-            return self._media(int(m.group(1)), m.group(2), range_header, q.get("w", ""))
+            return self._media(int(m.group(1)), m.group(2), range_header, q.get("w", ""), user_agent)
         return self.shell("Not found", '<p class="empty">Nothing here. <a class="link" href="/">Back to the library</a></p>',
                           "missing", 404)
 

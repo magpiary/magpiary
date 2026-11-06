@@ -264,7 +264,8 @@ class Handler(BaseHTTPRequestHandler):
                                  "wifi": self.server.store.wifi_mode_of(phone.id)})
         elif parts.path in HUB_PAGES or parts.path.startswith(HUB_PREFIXES):
             self.send_page(self.server.hub.get(parts.path, parse_qs(parts.query), self.client_address[0],
-                                               self.headers.get("Host", ""), self.headers.get("Range", "")))
+                                               self.headers.get("Host", ""), self.headers.get("Range", ""),
+                                               self.headers.get("User-Agent", "")))
         elif setup and (parts.path == "/install" or parts.path.startswith(("/install/", "/s/"))):
             self.send_page(setup.get(parts.path, parse_qs(parts.query), self.client_address[0],
                                      self.headers.get("Host", "")))
