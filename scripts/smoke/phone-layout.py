@@ -33,3 +33,6 @@ for needle in ("#shelfsw { display: none !important; }", ".sslot { display: none
     assert needle in css, "top bar rule missing: " + needle
 print("phone top bar smoke: ok")
 
+# Nest switches: one row each on a phone
+assert ".nestpage .tgrow { grid-template-columns: minmax(0, 1fr); }" in css, "Nest switches must be one column"
+print("phone nest switches smoke: ok")

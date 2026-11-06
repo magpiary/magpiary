@@ -107,3 +107,13 @@
   @media (prefers-reduced-motion: reduce) { .ptr, .ptr svg { transition: none; } .ptr.loading svg { animation: none; } }
 }
 
+/* ---- Nest page, Switches (owner, 6 Nov): four columns do not fit 390px, so each switch is one full-width row:
+   the name and its state on the left, the toggle on the right ---- */
+@media (max-width: 760px) {
+  :root[data-theme] .nestpage .tgrow { grid-template-columns: minmax(0, 1fr); }
+  :root[data-theme] .nestpage .tgrow > form { border-right: 0 !important; }
+  :root[data-theme] .nestpage .tgrow .tgl { padding: 12px 4px 12px 0 !important; min-height: 56px; }
+  :root[data-theme] .nestpage .tgl .tgt b, :root[data-theme] .nestpage .tgl .tgt small { white-space: normal; }
+  :root[data-theme] .nestpage .tgl .tgt b { font-size: 15px; }
+  :root[data-theme] .nestpage .tgl .tgt small { font-size: 12.5px; margin-top: 3px; }
+}
