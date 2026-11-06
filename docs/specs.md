@@ -1361,6 +1361,43 @@ is the default when both are), then paid keys. Free-tier keys are last.
 **Deeper dive button.** In its own tab, and in the post's More actions (⋯) menu. "Suggested" is shown as coloured text,
 not a pill.
 
+## Phone access to the library on the local network (owner decisions, 6 Nov 2026; not built)
+
+Today the hub refuses every request that is not from the Mac itself (`local_only` in `web.py`, 403 "This Mac only"). This
+adds an opt-in way to open the library from a phone on the same network. Nothing below is built yet.
+
+**Access**
+- Off by default. A manual toggle in Settings > Advanced; it stays on until switched off.
+- Each phone pairs once: the Mac shows a QR code (and the name `magpiary.local`); the phone keeps a key until revoked.
+- Settings lists paired phones (name, last seen) with Revoke.
+- If the hub lock PIN is on, a paired phone still asks for the PIN, under the same rules as the Mac (idle time, Mac sleep).
+- Works on any network the Mac is on (no Home-only check). The warning text explains the risk.
+
+**Encryption: HTTPS only, no plain HTTP**
+- Magpiary makes its own certificate authority; the key never leaves the Mac, is readable only by the owner, and the
+  certificate is name-constrained to `.local`. It signs a server certificate (renewed yearly, under 398 days for iOS).
+- The pairing screen walks the iPhone through the one-time install (Settings > General > VPN & Device Management, then
+  About > Certificate Trust Settings) and shows a fingerprint to compare. No tap-through fallback.
+- Revoke shows how to remove the certificate from the phone.
+- iPhone Safari first; Android later.
+- Needs: `magpiary.local` announced over Bonjour (small dependency) and a port in the URL (for example 8766).
+
+**What the phone can do**
+- Everything except Settings, AI keys and the lock.
+- **Ask Magpiary is off on the phone for now**; search stays. Revisit once phone use is known.
+- Other AI actions (re-run summary, Deeper dive, Digest) work behind a confirm tap. Open point: owner may prefer these
+  off as well until Ask returns.
+
+**Mac side**
+- Subtle phone icon with a green glowing dot in the nav bar while access is on.
+- Menu bar icon, and a notification on each new connection.
+- Access log in Settings: paired phones, last seen, refused attempts.
+
+**Phone experience**
+- Installable web app (Add to Home Screen): icon, full-screen.
+- **Build order:** mobile layout first, tested on the Mac at phone size (about 375 px); pairing, HTTPS and the toggle second.
+  Read `workbench/notes/codex-review-lessons.md` before touching the hub server, keys, files or UI built from a prototype.
+
 ## Work kept outside this repository
 
 These are decided and tracked in the private workspace, not here, because they hold real library content or business plans:
