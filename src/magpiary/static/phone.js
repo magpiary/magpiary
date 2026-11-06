@@ -123,7 +123,7 @@ document.addEventListener("click", (ev) => {
   const make = () => {
     el = document.createElement("div");
     el.className = "ptr"; el.setAttribute("aria-hidden", "true");
-    el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v12M6.5 11.5 12 17l5.5-5.5"/></svg>';
+    el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4.2h-4.2"/></svg>';
     document.body.appendChild(el);
     return el;
   };
