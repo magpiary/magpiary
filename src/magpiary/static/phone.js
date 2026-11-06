@@ -1,4 +1,4 @@
-/* Phone bar: Search focuses the search box, More opens a small menu. Event delegation, so it survives page changes. */
+/* Phone bar: Search opens the big search, More opens a small menu. Event delegation, so it survives page changes. */
 (() => {
   if (window.__phoneBar) return;  // the page can load this file again when it swaps pages
   window.__phoneBar = true;
@@ -10,9 +10,9 @@
     if (!(t instanceof Element)) return;
     if (t.closest("[data-pbar-search]")) {
       close();
-      const q = document.getElementById("q");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      if (q) setTimeout(() => q.focus(), 120);
+      // the bar's own search box is hidden on a phone, so open the big full-screen search, on any page
+      const form = document.getElementById("searchform");
+      if (form) form.click(); else location.assign("/");
     } else if (t.closest("[data-pbar-more]")) {
       const m = more(); if (!m) return;
       m.hidden = !m.hidden;

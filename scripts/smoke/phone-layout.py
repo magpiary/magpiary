@@ -22,3 +22,8 @@ js = (src / "static/phone.js").read_text()
 assert "__phonePull" in js and "location.reload()" in js, "pull to refresh missing"
 assert ".ptr" in css, "pull indicator styles missing"
 print("pull to refresh smoke: ok")
+
+# search: the bar's Search opens the big search on any page (the top box is hidden on a phone)
+assert "getElementById(\"searchform\")" in js and "form.click()" in js, "bar Search must open the big search"
+assert "q.focus()" not in js.split("data-pbar-search")[1].split("data-pbar-more")[0], "bar Search must not focus the hidden box"
+print("phone search smoke: ok")
