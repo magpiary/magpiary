@@ -51,3 +51,64 @@
   setInterval(sync, 2000);
   sync();
 })();
+
+/* Which place is lit, and the oval that slides to it. The page swaps its content without reloading, so the bar,
+   which lives outside the content, has to follow the address by itself. */
+(() => {
+  if (window.__phoneBarActive) return;
+  window.__phoneBarActive = true;
+  const which = () => {
+    const open = (id) => { const e = document.getElementById(id); return !!e && !e.hidden && (id !== "nestsheet" || e.classList.contains("open")); };
+    if (open("nestsheet")) return "nest";           // the Nest and Add open over the page, so the address does not change
+    if (open("addm")) return "add";
+    if (document.body.classList.contains("helpopen")) return "more";
+    const p = location.pathname, q = new URLSearchParams(location.search);
+    if (p === "/") {
+      if (q.get("q")) return "search";
+      const shelf = q.get("shelf");
+      return shelf === "archive" || shelf === "trash" ? "more" : "library";
+    }
+    if (p === "/nest" || p === "/queue") return "nest";
+    if (p === "/add") return "add";
+    if (p === "/digest" || p.startsWith("/digest/") || p === "/map" || p === "/help") return "more";
+    return "";
+  };
+  const apply = () => {
+    const bar = document.getElementById("pbar"), slider = document.getElementById("pslider");
+    if (!bar || !slider) return;
+    const now = which();
+    let target = null;
+    bar.querySelectorAll(".pb").forEach((b) => {
+      const on = b.dataset.pb === now;
+      b.classList.toggle("on", on);
+      if (on) { b.setAttribute("aria-current", "page"); target = b; } else b.removeAttribute("aria-current");
+    });
+    if (target && target.offsetWidth) {
+      if (!slider.classList.contains("show")) {   // first time on this page: start in place, do not slide in from the left
+        slider.style.transition = "none";
+        requestAnimationFrame(() => requestAnimationFrame(() => { slider.style.transition = ""; }));
+      }
+      slider.style.setProperty("--px", target.offsetLeft + "px");
+      slider.style.setProperty("--pw", target.offsetWidth + "px");
+      slider.classList.add("show");
+    } else slider.classList.remove("show");
+  };
+  for (const m of ["pushState", "replaceState"]) {
+    const orig = history[m];
+    history[m] = function () { const r = orig.apply(this, arguments); setTimeout(apply, 0); return r; };
+  }
+  window.addEventListener("popstate", () => setTimeout(apply, 0));
+  window.addEventListener("resize", apply);
+  document.addEventListener("click", () => setTimeout(apply, 60));
+  document.addEventListener("DOMContentLoaded", apply);
+  setInterval(apply, 1500);  // catches any page change that did not go through the history calls
+  apply();
+})();
+
+/* On a phone the Nest opens as its own page: the drop-down sheet hangs from a top-bar button that is not shown here. */
+document.addEventListener("click", (ev) => {
+  const a = ev.target instanceof Element ? ev.target.closest('#pbar a[data-pb="nest"]') : null;
+  if (!a || ev.metaKey || ev.ctrlKey) return;
+  ev.preventDefault(); ev.stopImmediatePropagation();
+  if (location.pathname !== "/nest") location.assign("/nest");
+}, true);

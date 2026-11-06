@@ -108,11 +108,12 @@ class WallPages:
                     f'{ui.icon(icon)}<span>{label}</span></a>')
         library = page == "wall" and shelf in ("", "inbox")
         return ('<nav class="pbar" id="pbar" aria-label="Main">'
-                + tab("/", "library", "Library", library)
-                + '<button type="button" class="pb" data-pbar-search aria-label="Search">' + ui.icon("search") + '<span>Search</span></button>'
-                + tab("/add", "plus", "Add", page == "add", ' id="pbar-add"')
-                + tab("/nest", "activity", "Nest", active == "nest").replace("</svg>", '</svg><i class="pdot" data-pbar-dot hidden></i>', 1)
-                + '<button type="button" class="pb" data-pbar-more aria-haspopup="true" aria-expanded="false">' + ui.icon("more") + '<span>More</span></button>'
+                + '<i class="pslider" id="pslider" aria-hidden="true"></i>'
+                + tab("/", "library", "Library", library, ' data-pb="library"')
+                + '<button type="button" class="pb" data-pbar-search data-pb="search" aria-label="Search">' + ui.icon("search") + '<span>Search</span></button>'
+                + tab("/add", "plus", "Add", page == "add", ' id="pbar-add" data-pb="add"')
+                + tab("/nest", "activity", "Nest", active == "nest", ' data-pb="nest"').replace("</svg>", '</svg><i class="pdot" data-pbar-dot hidden></i>', 1)
+                + '<button type="button" class="pb" data-pbar-more data-pb="more" aria-haspopup="true" aria-expanded="false">' + ui.icon("more") + '<span>More</span></button>'
                 + '<div class="pmore" id="pmore" role="menu" hidden>'
                 + f'<a role="menuitem" href="/?shelf=archive">{ui.icon("archive")}<span>Archive</span></a>'
                 + f'<a role="menuitem" href="/?shelf=trash">{ui.icon("trash")}<span>Trash</span></a>'

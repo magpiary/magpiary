@@ -50,8 +50,17 @@
   /* icons only, like Instagram; the words stay for screen readers */
   .pbar .pb > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   /* the place you are: a clearly lighter oval, and its icon filled in */
-  .pbar .pb.on { color: #fff; background: rgba(255, 255, 255, .17); }
-  .pbar .pb.on svg { fill: currentColor; }
+  .pbar .pb.on { color: #fff; }
+  .pbar .pslider {
+    position: absolute; top: 4px; left: 0; height: 56px; width: 0; border-radius: 999px; background: rgba(255, 255, 255, .17);
+    transform: translateX(var(--px, 0)); width: var(--pw, 0); opacity: 0; pointer-events: none;
+    transition: transform .34s cubic-bezier(.3, 1.2, .5, 1), width .34s cubic-bezier(.3, 1.2, .5, 1), opacity .2s;
+  }
+  .pbar .pslider.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .pbar .pslider { transition: none; } }
+  /* the Library grid: thinner lines so the four tiles keep their gaps; filled when it is the place you are */
+  .pbar .pb[data-pb="library"] svg { stroke-width: 1.8; }
+  .pbar .pb[data-pb="library"].on svg { fill: currentColor; stroke-width: 1; }
   /* a red dot when the Nest has something that needs you (phone.js copies it from the Nest badge) */
   .pbar .pb .pdot { position: absolute; top: 12px; left: calc(50% + 7px); width: 11px; height: 11px; border-radius: 50%; background: #ff3b47; box-shadow: 0 0 0 2px rgb(18 18 21); }
   .pbar .pb { position: relative; }
