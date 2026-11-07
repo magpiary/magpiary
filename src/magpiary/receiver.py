@@ -38,7 +38,7 @@ from magpiary.shortcut import sign
 from magpiary.system import current_wifi_name, local_name
 from magpiary.web import Response, local_only
 from magpiary.store import TRASH_DAYS, ItemResult, Store
-from magpiary import update
+from magpiary import phone_video, update
 from magpiary.tools import update_ytdlp
 from magpiary.worker import brain_due, deep_due, fetch_due, jitter_pause, links_due, process_due, related_due, screen_due, icons_due
 
@@ -736,6 +736,7 @@ def serve(store: Store, host: str, port: int) -> None:
                   wifi_suggestion=current_wifi_name)
     server = make_server(store, host, port, setup)
     server.library = server.hub.library = data_dir() / "library"
+    phone_video._clean_in_background(server.library)  # leftovers of a conversion cut short by the last stop
     server.hub.keep_awake = setup.keep_awake
     server.hub.lock.watch()  # sleep and the screen lock lock the hub even when no tab is open
     server.hub.meaning = Warm()  # search by meaning; loaded on the first search, let go when idle

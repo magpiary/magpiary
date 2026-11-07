@@ -218,3 +218,52 @@ def test_backoff_stops_growing_at_an_hour(monkeypatch):
     assert not phone_video._may_retry(path, (1, 1))
     monkeypatch.setattr(phone_video, "_now", lambda: 3601.0)
     assert phone_video._may_retry(path, (1, 1))
+
+
+def test_clean_stale_temporaries_removes_only_exact_leftovers(tmp_path):
+    lib = tmp_path / "library"
+    stale = []
+    for n in ("a", "b", "c"):
+        d = lib / n
+        d.mkdir(parents=True)
+        (d / "media-01.mp4").write_bytes(b"original")
+        t = d / ".media-01.h264.tmp.mp4"
+        t.write_bytes(b"x")
+        stale.append(t)
+    keep_names = ["media-01.mp4", ".media-01.mp4", ".media-01.h264.tmp.mp4.keep", ".notes.h264.tmp.mp4", ".media-.h264.tmp.mp4"]
+    keep = lib / "a"
+    for name in keep_names:
+        (keep / name).write_bytes(b"k")
+    deep = lib / "a" / "nested"
+    deep.mkdir()
+    (deep / ".media-01.h264.tmp.mp4").write_bytes(b"deep")
+    (lib / ".media-02.h264.tmp.mp4").write_bytes(b"at library level")
+    target = tmp_path / "precious.bin"
+    target.write_bytes(b"precious")
+    (lib / "b" / ".media-09.h264.tmp.mp4").symlink_to(target)
+
+    assert phone_video.clean_stale_temporaries(lib) == 3
+    assert not any(t.exists() for t in stale)
+    for name in keep_names:
+        assert (keep / name).exists(), name
+    assert (lib / "b" / "media-01.mp4").read_bytes() == b"original"
+    assert (deep / ".media-01.h264.tmp.mp4").exists()
+    assert (lib / ".media-02.h264.tmp.mp4").exists()
+    assert (lib / "b" / ".media-09.h264.tmp.mp4").is_symlink() and target.read_bytes() == b"precious"
+
+
+def test_clean_stale_temporaries_missing_folder(tmp_path):
+    assert phone_video.clean_stale_temporaries(tmp_path / "nope") == 0
+
+
+def test_clean_in_background_runs(tmp_path):
+    d = tmp_path / "item"
+    d.mkdir()
+    t = d / ".media-03.h264.tmp.mp4"
+    t.write_bytes(b"x")
+    phone_video._clean_in_background(tmp_path)
+    for _ in range(100):
+        if not t.exists():
+            break
+        time.sleep(0.05)
+    assert not t.exists()

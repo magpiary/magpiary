@@ -160,6 +160,45 @@ def _convert(path: Path, before: dict) -> bool:
         tmp.unlink(missing_ok=True)
 
 
+_STALE = re.compile(r"\.media-\d+\.h264\.tmp\.mp4")
+
+
+def clean_stale_temporaries(library: Path) -> int:
+    """Remove temporary conversion files left by a hub that was stopped mid-conversion; returns how many.
+
+    Only files named exactly `.media-<digits>.h264.tmp.mp4`, directly inside an item folder (library/<item>/), real files
+    only (symlinks are never followed or removed). Run once at start-up, when no conversion can be running."""
+    removed = 0
+    try:
+        folders = [d for d in os.scandir(library) if d.is_dir(follow_symlinks=False)]
+    except OSError:
+        return 0
+    for folder in folders:
+        try:
+            entries = list(os.scandir(folder.path))
+        except OSError:
+            continue
+        for entry in entries:
+            try:
+                if _STALE.fullmatch(entry.name) and entry.is_file(follow_symlinks=False):
+                    os.unlink(entry.path)
+                    removed += 1
+            except OSError:
+                continue
+    return removed
+
+
+def _clean_in_background(library: Path) -> None:
+    def run() -> None:
+        try:
+            n = clean_stale_temporaries(library)
+            if n:
+                log.info("phone video: removed %d leftover temporary file(s)", n)
+        except Exception:  # never let clean-up trouble reach start-up
+            log.warning("phone video: clean-up of leftovers failed", exc_info=True)
+    threading.Thread(target=run, name="phone-video-cleanup", daemon=True).start()
+
+
 def _process(path: Path) -> str:
     """Look at the file as it is now (not as it was when queued) and convert it if needed. 'ready' or 'failed'."""
     before = probe(path)
