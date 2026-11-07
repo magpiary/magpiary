@@ -2,6 +2,9 @@
 /* Phone layout (branch phone-library). Loaded last, so everything for small screens lives in this one file.
    Rules here only apply on a phone-sized screen; the Mac layout is untouched. */
 
+/* previous/next edge buttons exist only for the phone layout; the phone rules below show them */
+.cardm.pagemode .stage .pedge { display: none; }
+
 @media (max-width: 760px) {
   /* nothing may push the page sideways (the sticky bar's fade used to stick out 40px on each side) */
   html, body { overflow-x: clip; }

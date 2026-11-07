@@ -185,3 +185,10 @@ assert "line-clamp: 2" in css and "Settings: explanations are clamped" in js, "s
 print("phone settings column/menu/clamp smoke: ok")
 assert "#keys .addrow, #keys .dots, #keys .draghandle, #keysdanger, #addkey-adv, #search, #instagram, #home, #chrome, #downloads, #library" in css, "Mac-only settings hidden on the phone"
 print("phone settings Mac-only smoke: ok")
+
+# previous/next edge buttons: hidden by a rule outside any media query, shown by the phone rule, not created on a wide window
+_head = css.split("@media", 1)[0]
+assert ".cardm.pagemode .stage .pedge { display: none; }" in _head, "pedge must be hidden outside the phone media query"
+assert "display: grid; place-items: center; color: #fff" in css.split(".pedge.pl")[0], "phone rule must show pedge"
+assert 'matchMedia("(max-width: 760px)")' in js.split("function edges()")[1].split("function sideways")[0], "phone.js must not create pedge on a wide window"
+print("phone pedge smoke: ok")

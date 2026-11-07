@@ -307,6 +307,7 @@ document.addEventListener("click", (ev) => {
   function edges() {
     const stage = document.querySelector(".cardm.pagemode .stage");
     if (!stage || stage.querySelector(".pedge")) return;
+    if (!matchMedia("(max-width: 760px)").matches) return; // phone width only (same breakpoint as phone.css)
     [["Previous post", "pl", "M15 5l-7 7 7 7"], ["Next post", "pr", "M9 5l7 7-7 7"]].forEach(function (s) {
       if (!link(s[0])) return;
       const b = document.createElement("button");
@@ -343,6 +344,7 @@ document.addEventListener("click", (ev) => {
     if (a) a.click();
   }, { passive: true });
   new MutationObserver(function () { clearTimeout(edges.t); edges.t = setTimeout(edges, 80); }).observe(document.documentElement, { childList: true, subtree: true });
+  addEventListener("resize", function () { clearTimeout(edges.t); edges.t = setTimeout(edges, 120); });
   edges();
 })();
 
