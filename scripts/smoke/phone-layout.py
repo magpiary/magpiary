@@ -111,3 +111,6 @@ assert 'const KEY = "mag-backing"' in js and "location.replace(n.href)" in js, "
 print("phone post back smoke: ok")
 assert "top: calc(env(safe-area-inset-top, 0px) + 6px) !important; padding-top: 6px;" in css and ".ptabsbg.show { display: block; }" in css and "ptabsbg" in js, "stuck post tabs: higher, full-width background only while stuck"
 print("phone post tabs sticky smoke: ok")
+assert ".pscroll > [data-pane] { min-height: calc(100svh - 300px); }" in css and "top: -500px" in css, "short tabs keep room; background reaches over the top"
+assert "function pin(wasStuck)" in js, "switching tabs while stuck must keep the bar pinned"
+print("phone post tab switch smoke: ok")

@@ -380,7 +380,7 @@ document.addEventListener("click", (ev) => {
     if (!bg) { bg = document.createElement("div"); bg.className = "ptabsbg"; bg.setAttribute("aria-hidden", "true"); document.body.appendChild(bg); }
     const r = nav.getBoundingClientRect(), stick = parseFloat(getComputedStyle(nav).top) || 0;
     const stuck = r.top <= stick + 0.5 && r.bottom > 0 && window.scrollY > 0;
-    bg.style.height = Math.max(0, r.bottom) + "px";
+    bg.style.height = Math.max(0, r.bottom) + 500 + "px";  // 500px above the screen too: the page rubber-banding must not uncover anything
     bg.classList.toggle("show", stuck);
   }
   const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
@@ -389,4 +389,29 @@ document.addEventListener("click", (ev) => {
   addEventListener("pageshow", queue);
   new MutationObserver(queue).observe(document.documentElement, { childList: true, subtree: true });
   update();
+})();
+
+/* Post tabs: switching tab while the bar is stuck keeps the bar exactly where it is and shows the top of the new tab (the pages
+   would otherwise keep the old scroll spot: past the end of a short tab, or in the middle of a long one). When the bar is still in
+   its place in the page nothing is moved. */
+(function () {
+  "use strict";
+  const docTop = (el) => { let y = 0; for (; el; el = el.offsetParent) y += el.offsetTop; return y; };  // layout position, ignores transforms
+  function pin(wasStuck) {
+    const nav = document.querySelector(".cardm.pagemode .tabs.pvtabs");
+    const pane = nav && nav.parentElement.querySelector("[data-pane]:not([hidden])");
+    if (!wasStuck || !pane) return;
+    const stick = parseFloat(getComputedStyle(nav).top) || 0;
+    const mb = parseFloat(getComputedStyle(nav).marginBottom) || 0;
+    const naturalTop = docTop(pane) - mb - nav.offsetHeight;
+    window.scrollTo({ top: Math.max(0, naturalTop - stick), behavior: "instant" });
+  }
+  document.addEventListener("click", function (ev) {
+    const a = ev.target instanceof Element ? ev.target.closest(".cardm.pagemode .tabs.pvtabs a[data-tab]") : null;
+    if (!a || innerWidth > 760 || a.classList.contains("off")) return;
+    const nav = a.closest(".tabs"), r = nav.getBoundingClientRect(), stick = parseFloat(getComputedStyle(nav).top) || 0;
+    const wasStuck = r.top <= stick + 1 && window.scrollY > 0;
+    setTimeout(() => pin(wasStuck), 0);   // after the page has shown the new tab
+    setTimeout(() => pin(wasStuck), 160);  // and again once its fade-in and any content settling are done
+  }, true);
 })();

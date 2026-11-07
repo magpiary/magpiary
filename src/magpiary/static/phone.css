@@ -303,6 +303,11 @@
   :root[data-theme] .cardm.pagemode .tabs.pvtabs { top: calc(env(safe-area-inset-top, 0px) + 6px) !important; padding-top: 6px; z-index: 14; }
   /* the bar's background is a separate full-width layer (phone.js sizes it) that exists only while the tabs are stuck: it runs off
      the left, right and top edges in the dark colour at the top of the page, with a hard edge under the tabs */
-  .ptabsbg { display: none; position: fixed; left: 0; right: 0; top: 0; height: 0; z-index: 13; pointer-events: none; background: var(--fade-0, #101015); }
+  .ptabsbg { display: none; position: fixed; left: 0; right: 0; top: -500px; height: 0; z-index: 13; pointer-events: none; background: var(--fade-0, #101015); }
   .ptabsbg.show { display: block; }
+}
+
+/* a tab with little in it still leaves enough page below the bar to scroll to its top with the bar pinned (blank space under it) */
+@media (max-width: 760px) {
+  .cardm.pagemode .pscroll > [data-pane] { min-height: calc(100svh - 300px); }
 }
