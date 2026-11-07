@@ -296,3 +296,9 @@
   .tabs.pvtabs { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
   .tabs.pvtabs::-webkit-scrollbar { display: none; }
 }
+
+/* ---- post tab strip, stuck (owner, 7 Nov): no logo bar above it any more, so it sticks near the very top (just under the status bar),
+   and it has a solid page-coloured background so the text scrolling under it does not show through ---- */
+@media (max-width: 760px) {
+  :root[data-theme] .cardm.pagemode .tabs.pvtabs { top: calc(env(safe-area-inset-top, 0px) + 6px) !important; background: rgb(var(--c-page)) !important; padding-top: 6px; z-index: 14; }
+}

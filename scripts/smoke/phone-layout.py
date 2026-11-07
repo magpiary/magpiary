@@ -109,3 +109,5 @@ assert r'/^\/item\/\d+/.test(location.pathname)' in js, "pull to refresh on a po
 print("phone post view round 2 smoke: ok")
 assert 'const KEY = "mag-backing"' in js and "location.replace(n.href)" in js, "Back must leave the post in one tap"
 print("phone post back smoke: ok")
+assert "top: calc(env(safe-area-inset-top, 0px) + 6px) !important; background: rgb(var(--c-page)) !important;" in css, "stuck post tabs: higher, with a background"
+print("phone post tabs sticky smoke: ok")
