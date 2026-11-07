@@ -587,3 +587,10 @@ def test_phone_still_cannot_touch_keys_the_lock_pairing_or_files(door):
     for path in ("/hub/keys/add", "/hub/keys/remove", "/hub/lock/on", "/hub/lock/off", "/hub/phones/add", "/hub/phones/remove",
                  "/hub/backup", "/hub/restore", "/hub/boards/b2", "/hub/login/disconnect", "/hub/reveal"):
         assert door.request("POST", path, {"csrf": csrf})[0] == 403, path
+
+
+def test_certificate_guide_lets_the_phone_say_the_install_is_done(door):
+    mac_post(door, "/hub/access/pair")
+    token = door.primary.hub._pairing[0]
+    page = door.primary.hub.access_guide(f"/phone-access/{token}", "192.168.1.20").body.decode()
+    assert 'id="inst"' in page and "I've installed it" in page and "mark(3)" in page

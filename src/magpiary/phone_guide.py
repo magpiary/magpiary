@@ -74,7 +74,9 @@ def certificate_guide(token: str, https_port: int, fingerprint_on_mac: bool = Tr
 <p>Open the <b>Settings</b> app.</p>
 <div class="more"><p>Tap <b>Profile Downloaded</b> at the top. Tap <b>Install</b> (top right), enter your passcode, then tap
 <b>Install</b> and <b>Install</b> again, then <b>Done</b>.</p>
-<p>No <b>Profile Downloaded</b> at the top? Go to <b>General → VPN &amp; Device Management</b> and tap <b>{e(CA_NAME)}</b>.</p></div></li>
+<p>No <b>Profile Downloaded</b> at the top? Go to <b>General → VPN &amp; Device Management</b> and tap <b>{e(CA_NAME)}</b>.</p>
+<button class="btn2" id="inst" type="button">I've installed it</button>
+<p class="fine" style="margin-top:8px">This page can't see inside Settings, so tell it when you're done.</p></div></li>
 <li class="next" data-s="3"><h3>Trust it</h3>
 <p>One more switch in Settings.</p>
 <div class="more"><p>Go to <b>General → About → Certificate Trust Settings</b>. Under <b>Enable full trust for root certificates</b>,
@@ -94,6 +96,7 @@ var steps=document.querySelectorAll("#stp>li"),live=document.getElementById("liv
 go=document.getElementById("go"),hint=document.getElementById("hint"),trusted=false,tapped=false,started=Date.now();
 function mark(n){{steps.forEach(function(li,i){{li.className=i+1<n?"done":i+1===n?"now":"next"}})}}
 document.getElementById("dl").addEventListener("click",function(){{tapped=true;if(!trusted)mark(2)}});
+document.getElementById("inst").addEventListener("click",function(){{if(!trusted)mark(3)}});
 function ok(){{trusted=true;mark(4);go.removeAttribute("aria-disabled");live.className="live ok";
 t.textContent="Your phone trusts this Mac. Tap Continue."}}
 function probe(){{if(trusted)return;var i=new Image();i.onload=ok;
