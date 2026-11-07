@@ -273,3 +273,23 @@ document.addEventListener("click", (ev) => {
   window.addEventListener("resize", later);
   window.addEventListener("scroll", later, { passive: true });
 })();
+
+/* Post view tab strip: mark which side still has more tabs, so the CSS can fade that edge. */
+(function () {
+  "use strict";
+  function mark(nav) {
+    const max = nav.scrollWidth - nav.clientWidth;
+    nav.classList.toggle("pmoreR", max > 4 && nav.scrollLeft < max - 4);
+    nav.classList.toggle("pmoreL", max > 4 && nav.scrollLeft > 4);
+  }
+  function scan() {
+    document.querySelectorAll(".tabs.pvtabs").forEach(function (nav) {
+      if (!nav.__pmore) { nav.__pmore = true; nav.addEventListener("scroll", function () { mark(nav); }, { passive: true }); }
+      mark(nav);
+    });
+  }
+  addEventListener("resize", scan);
+  addEventListener("load", scan);
+  new MutationObserver(function () { clearTimeout(scan.t); scan.t = setTimeout(scan, 120); }).observe(document.documentElement, { childList: true, subtree: true });
+  scan();
+})();

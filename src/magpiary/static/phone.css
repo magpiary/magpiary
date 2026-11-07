@@ -238,3 +238,18 @@
   html.pswipe #view > :not(#wallctl):not(.lhero) { opacity: 0 !important; transition: opacity .15s ease-in; }
   html.pswipe .ghosts { opacity: 0 !important; }   /* the pieces hub.js slides around while rearranging */
 }
+
+/* ---- post view on a phone (owner picked it 7 Nov): the toolbar was two rows (back button, then the arrows) floating over the
+   caption; the video filled the screen; Ask is off on the phone; the tab strip ran off the edge without a hint ---- */
+@media (max-width: 760px) {
+  .crumbbar { flex-wrap: nowrap !important; padding: 4px 0 !important; }
+  .crumbbar .pacts { flex: 0 1 auto; min-width: 0; margin-left: auto !important; }
+  .pvask, .pvactions:has(> .pvask:only-child) { display: none !important; }
+  /* the video is capped to 62% of the screen height (black bars at the sides), so the page below and the player controls stay visible */
+  .cardm.pagemode .stage { max-height: min(62svh, 520px) !important; background: #000; }
+  .cardm.pagemode .stage video { object-fit: contain; }
+  /* the tab strip fades at the edge that still has more tabs (phone.js toggles the classes) */
+  .tabs.pvtabs.pmoreR { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+  .tabs.pvtabs.pmoreL { -webkit-mask-image: linear-gradient(270deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(270deg, #000 calc(100% - 36px), transparent); }
+  .tabs.pvtabs.pmoreL.pmoreR { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+}
