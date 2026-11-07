@@ -506,3 +506,13 @@ document.addEventListener("click", function (ev) {
   const input = k.parentElement.querySelector("input");
   (input || document).dispatchEvent(new KeyboardEvent("keydown", opts));
 });
+
+// Settings (i) tips: a tap opens the tip card, a tap anywhere else closes it (iOS does not focus these on tap)
+(function () {
+  if (!window.matchMedia || !matchMedia("(max-width: 760px)").matches) return;
+  document.addEventListener("click", function (ev) {
+    var hit = ev.target.closest && ev.target.closest(".setpane .info");
+    document.querySelectorAll(".setpane .info.open").forEach(function (n) { if (n !== hit) n.classList.remove("open"); });
+    if (hit) { hit.classList.toggle("open"); ev.preventDefault(); }
+  }, true);
+})();

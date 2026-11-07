@@ -1,3 +1,4 @@
+.setback, .setsupport { display: none; }
 /* Phone layout (branch phone-library). Loaded last, so everything for small screens lives in this one file.
    Rules here only apply on a phone-sized screen; the Mac layout is untouched. */
 
@@ -490,12 +491,52 @@
 /* ---- Settings (owner asked for the sweep, 7 Nov): the section strip scrolls sideways with a fade on the side that has more (it ended at the
    screen edge with a half tab and no hint); the Privacy / hub lock entry under it looks like a row of its own, not a lost tab ---- */
 @media (max-width: 760px) {
-  .setnav { overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
-  .setnav::-webkit-scrollbar { display: none; }
-  .setnav > a { scroll-snap-align: start; }
-  .setnav.pmoreR { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
-  .setnav.pmoreL { -webkit-mask-image: linear-gradient(270deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(270deg, #000 calc(100% - 36px), transparent); }
-  .setnav.pmoreL.pmoreR { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
-  .setside > .setpriv { border: 1px solid var(--line, rgb(255 255 255 / .12)); border-radius: 12px; padding: 0 14px; margin-top: 10px; min-height: 44px; align-items: center; }
-  .setside > .setpriv small, .setside > .setpriv span:last-child { font-size: 12px; }
+  /* Settings in two layers: /settings is the list of sections, each section opens on its own with a Back link */
+  .setlayout.setroot .setpane, .setlayout:not(.setroot) .setside, .setlayout .sethelp { display: none; }
+  .setlayout { display: block; }
+  .setnav { display: block; margin: 0; padding: 0; overflow: visible; }
+  .setnavh, .setnavh:first-child { display: block !important; margin: 22px 4px 8px; font-size: 12px; }
+  .setside > .setnav > .setnavh:first-child { margin-top: 4px; }
+  .setcard, .setpriv { display: grid !important; grid-template-columns: 30px minmax(0, 1fr) 14px; grid-template-rows: auto auto; column-gap: 14px; row-gap: 1px; align-items: center;
+    min-height: 56px; padding: 8px 14px !important; margin: 0 0 8px !important; border-radius: 14px; border: 1px solid var(--line, rgb(255 255 255 / .12)); background: var(--chip, rgb(255 255 255 / .05)); }
+  .setcard .seticon, .setpriv .seticon { grid-row: span 2; width: 30px; height: 30px; }
+  .setcard > b, .setpriv b { grid-column: 2; font-size: 16px; align-self: end; }
+  .setcard .setstat, .setpriv small { display: block !important; grid-column: 2; font-size: 12px; align-self: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .setpriv > span:not(.seticon) { grid-column: 2; grid-row: span 2; display: grid; justify-items: start; align-content: center; text-align: left; }
+  .setcard::after, .setpriv::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 8px; height: 8px; border-top: 2px solid var(--fg-3, #888); border-right: 2px solid var(--fg-3, #888); transform: rotate(45deg); justify-self: end; margin-right: 2px; }
+  .setcard.on, .setpriv.on { background: var(--chip, rgb(255 255 255 / .05)); box-shadow: none; }
+  .setsupport { display: block; text-align: center; margin: 18px 0 6px; padding: 12px; font-size: 14px; color: var(--fg-2); }
+  .setback { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -6px 0 8px -8px; padding: 0 12px 0 8px; font-weight: 600; font-size: 16px; color: var(--accent, var(--fg)); }
+  .setback::before { content: ""; width: 9px; height: 9px; border-left: 2.5px solid currentColor; border-bottom: 2.5px solid currentColor; transform: rotate(45deg); margin-right: 4px; }
+}
+
+@media (max-width: 760px) {
+  /* Settings sections: finger-sized controls, nothing under 12px */
+  .setpane .btn.sm { min-height: 40px; padding-inline: 16px; }
+  .setpane summary { min-height: 40px !important; display: inline-flex !important; align-items: center; }
+  .setpane .sw { position: relative; }
+  .setpane .sw::after { content: ""; position: absolute; inset: -8px -6px; }
+  .setpane .draghandle { min-width: 36px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .setpane .dots, .setpane .pastebtn { min-width: 40px; min-height: 40px; }
+  .setpane input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), .setpane select { min-height: 44px; }
+  .setpane :is(.g2chip, .advpill, .advpill.sm, .deeppick > span) { font-size: 12px !important; }
+  .setpane .link { display: inline-block; padding-block: 10px; margin-block: -10px; }
+  .sethead .sethelpbtn { min-height: 40px; }
+  .setpane .tchip button { width: 36px; height: 36px; margin-block: -6px; }
+  .setpane .pedbtn { position: relative; } .setpane .pedbtn::after { content: ""; position: absolute; inset: -6px; }
+  .setpane :is(.pkicker, .pno, .pkicker span) { font-size: 12px !important; }
+  /* a row that is only a switch: the switch sits at the right of the title, not on a line of its own */
+  .setpane .srow:has(> .src > form > .sw:only-of-type):not(:has(> .src .btn, > .src select, > .src input:not([type="hidden"]))) { grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 12px; }
+  .setpane .srow:has(> .src > form > .sw:only-of-type):not(:has(> .slead)):not(:has(> .src .btn, > .src select, > .src input:not([type="hidden"]))) { grid-template-columns: minmax(0, 1fr) auto; }
+  .setpane .srow:has(> .src > form > .sw:only-of-type):not(:has(> .src .btn, > .src select, > .src input:not([type="hidden"]))) > .src { grid-column: -2; grid-row: 1; align-self: center; margin: 0; padding: 0; }
+  .setpane form.picks { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px; }
+  .setpane form.picks > .pick { width: auto; }
+  .setpane .glassticks button { min-height: 40px; min-width: 44px; }
+  .setpane input[type="range"] { min-height: 40px; }
+  /* the little (i) tips open as a card above the bottom bar instead of a hover bubble that runs off the screen */
+  .setpane .info .ttip { position: fixed; left: 16px; right: 16px; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); top: auto; transform: none; width: auto; max-width: none; padding: 12px 14px; font-size: 14px; line-height: 1.4; z-index: 60; }
+  .setpane .info.open .ttip { opacity: 1; }
+  .setpane .info { position: relative; cursor: pointer; } .setpane .info::after { content: ""; position: absolute; inset: -10px; }
+  .setpane .segbar > button, .setpane .seg-b, .setpane .askseg button { min-height: 40px; }
+  .setpane .seg-b small { font-size: 12px !important; }
 }

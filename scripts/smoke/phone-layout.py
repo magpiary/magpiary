@@ -156,5 +156,16 @@ assert ".wrap > .sec > form:not(.sizes) { order: 3;" in css and ".sq .quote smal
 print("phone search results smoke: ok")
 assert '.sover .sbig kbd::after { content: "Close";' in css and '".sover .sbig kbd"' in js, "big search Close button"
 print("phone big search close smoke: ok")
-assert ".setnav.pmoreR {" in css and '".tabs.pvtabs, .setnav"' in js, "Settings tab strip fade hint"
+assert ".setnav.pmoreR {" not in css, "Settings strip replaced by the two-layer list"
 print("phone settings strip smoke: ok")
+
+# Settings in two layers on the phone: the list of sections, each section on its own with a Back link; Privacy is a normal row
+hs = (ROOT / "src/magpiary/hub_settings.py").read_text() if "ROOT" in globals() else open("src/magpiary/hub_settings.py").read()
+assert 'setlayout{" setroot" if root else ""}' in hs and 'class="setback" href="/settings"' in hs and 'setsech">Security' in hs, "settings two layers markup"
+assert ".setlayout.setroot .setpane, .setlayout:not(.setroot) .setside" in css, "settings list/section switch"
+assert ".setcard::after, .setpriv::after" in css and ".setpane .info .ttip { position: fixed;" in css, "settings rows chevron + tip card"
+assert ".setback, .setsupport { display: none; }" in css.split("@media")[0], "phone-only settings bits hidden on the Mac"
+print("phone settings two-layer smoke: ok")
+assert '".setpane .info.open"' in js and ".setpane .info.open .ttip { opacity: 1; }" in css, "settings tip opens on tap"
+assert ".setpane form.picks { grid-template-columns: repeat(2" in css and ".setpane .srow:has(> .src > form > .sw:only-of-type)" in css, "settings pickers 2 columns, lone switch at the row's right"
+print("phone settings sections smoke: ok")

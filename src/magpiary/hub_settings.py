@@ -233,6 +233,7 @@ class SettingsPages:
         if section and section not in PAGES:
             return self.shell("Not found", '<p class="empty">No such settings page. <a class="link" href="/settings">'
                               'Settings</a></p>', "missing", 404)
+        root = not section  # /settings itself: on a phone this is the list of sections, not one of them
         section = section or next((k for k, (_, bad) in self._nav_status().items() if bad), "ai")
         saved = SAVED.get(q.get("saved", ""), "") or q.get("note", "")[:200]
         error = q.get("error", "")[:200]
@@ -242,8 +243,9 @@ class SettingsPages:
                 "storage": self._storage_section, "boards": self._boards_section, "appearance": self._look_section,
                 "privacy": self._privacy_section}[section](q)
         icon, colour = SECTION_ICONS[section]
-        page = (f'<div class="setlayout"><aside class="setside"><h1>Settings</h1>{self._search_box()}{self._nav(section)}</aside>'
-                f'<section class="setpane" id="setpane"><div class="sethead" style="--c:{colour}"><span class="seticon">'
+        page = (f'<div class="setlayout{" setroot" if root else ""}"><aside class="setside"><h1>Settings</h1>{self._search_box()}{self._nav(section)}'
+                f'<a class="setsupport" href="{SUPPORT_URL}" target="_blank" rel="noopener">Support Magpiary ↗</a></aside>'
+                f'<section class="setpane" id="setpane"><a class="setback" href="/settings">Settings</a><div class="sethead" style="--c:{colour}"><span class="seticon">'
                 f'{ui.icon(icon)}</span><div><h2>{PAGES[section]}</h2><p>{e(SECTION_BLURBS[section])}</p></div>'
                 f'<button type="button" class="btn sm sethelpbtn" id="sethelpbtn" aria-controls="sethelp">?<span>Help</span></button></div>'
                 f'{flash}<div class="setboxes">{body}</div></section>'
@@ -363,7 +365,7 @@ class SettingsPages:
 
         return ('<nav class="setnav" aria-label="Settings sections">' + "".join(
             f'<p class="setnavh">{e(head)}</p>' + "".join(card(k) for k in keys) for head, keys in NAV_GROUPS) + "</nav>"
-            f'<a class="setpriv{" on" if current == "privacy" else ""}" href="/settings/privacy"'
+            f'<p class="setnavh setsech">Security</p><a class="setpriv{" on" if current == "privacy" else ""}" href="/settings/privacy"'
             f'{" aria-current=page" if current == "privacy" else ""}><span class="seticon" style="--c:#5b5b66">{ui.icon("lock")}</span><span><b>Privacy</b>'
             f'<small>{e(self.lock_nav_status() or "Hub lock off")}</small></span></a>')
 
