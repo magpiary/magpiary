@@ -411,3 +411,21 @@
 @media (max-width: 760px) {
   .cardm.pagemode .stage .pvautozone .pvauto, .cardm.pagemode .stage .pvautozone .pvauto:is(:hover, :active, :focus, :focus-visible) { background: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent; outline: none; }
 }
+
+/* ---- post page audit (owner, 7 Nov): labels sit in the middle of their pills. The pile pill and similar chips were 44px boxes with the
+   text pinned to the top (display: block + min-height); the little x on a chip sits on the text's middle line ---- */
+@media (max-width: 760px) {
+  :root[data-theme] .postpage :is(.pvpile, .pvaddbtn) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; line-height: 1.2; }
+  .postpage .pvpile { justify-content: flex-start; }
+  .postpage .fchip { align-items: center; }
+  .postpage .fchip :is(a, form, button) { display: inline-flex; align-items: center; line-height: 1; }
+}
+
+/* post page: small links and icons get a finger-sized area to hit without moving anything (padding out, the same margin back in) */
+@media (max-width: 760px) {
+  .postpage :is(.capt, .copyb, .qs, .qs a, a.qs, .rf, a.link, button.link, a[target="_blank"]:not(.pvprimary):not(.rb)) { padding-block: 10px; margin-block: -10px; padding-inline: 6px; margin-inline: -6px; }
+  .postpage .rf { min-width: 44px; min-height: 44px; margin-block: -8px; display: inline-grid; place-items: center; }
+  .postpage .fchip :is(a, button) { padding-inline: 10px; margin-inline: -4px; }
+  .postpage .frow > small { font-size: 12px; }          /* "Length" and its kind were 11px */
+  .postpage .bd { font-size: 12px; }                    /* "No link found yet" was 10.5px */
+}

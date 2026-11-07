@@ -136,3 +136,7 @@ assert ".cardm.pagemode .stage .pvautozone { left: 62px; }" in css and "padding-
 print("phone post buttons round 10 smoke: ok")
 assert ".cardm.pagemode .stage .pvautozone { left: 66px;" in css and "background: rgb(250 250 252 / .74)" not in css and "left: calc(-1 * max(var(--pad, 16px), 24px)) !important;" in css, "equal 12px gaps; right pill stays dark"
 print("phone post buttons round 11 smoke: ok")
+assert ":root[data-theme] .postpage :is(.pvpile, .pvaddbtn) { display: inline-flex; align-items: center;" in css, "pile pill label centred"
+print("phone post audit smoke: ok")
+assert ".postpage .frow > small { font-size: 12px; }" in css and "padding-block: 10px; margin-block: -10px;" in css, "post page: bigger hit areas, no text under 12px in labels"
+print("phone post hit areas smoke: ok")
