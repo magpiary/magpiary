@@ -146,7 +146,7 @@ assert ".cardm.pagemode .pscroll > [data-pane] { padding-bottom: 170px; }" in cs
 print("phone post sticky container smoke: ok")
 assert 'nav.classList.add("pfix")' in js and ".tabs.pvtabs.pfix { position: fixed !important;" in css, "tab strip is pinned with position fixed (immune to iOS rubber-banding)"
 print("phone post pinned tabs smoke: ok")
-assert "html:has(.postpage)::before { content: \"\"; position: fixed; left: 0; right: 0; top: -500px;" in css, "solid cap behind the status bar on post pages"
+assert "html::before { content: \"\"; position: fixed; left: 0; right: 0; top: -500px;" in css, "solid cap behind the status bar on every page"
 print("phone post status-bar cap smoke: ok")
 assert ".label .m .kind, .mx .kind, .bcard .kind { font-size: 12px; }" in css and ".avatar.mini > span { font-size: 10.5px; }" in css, "small text on the home screen"
 print("phone home small text smoke: ok")
@@ -156,3 +156,5 @@ assert ".wrap > .sec > form:not(.sizes) { order: 3;" in css and ".sq .quote smal
 print("phone search results smoke: ok")
 assert '.sover .sbig kbd::after { content: "Close";' in css and '".sover .sbig kbd"' in js, "big search Close button"
 print("phone big search close smoke: ok")
+assert ".setnav.pmoreR {" in css and '".tabs.pvtabs, .setnav"' in js, "Settings tab strip fade hint"
+print("phone settings strip smoke: ok")

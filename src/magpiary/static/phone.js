@@ -274,7 +274,7 @@ document.addEventListener("click", (ev) => {
   window.addEventListener("scroll", later, { passive: true });
 })();
 
-/* Post view tab strip: mark which side still has more tabs, so the CSS can fade that edge. */
+/* Post view and Settings tab strips: mark which side still has more tabs, so the CSS can fade that edge. */
 (function () {
   "use strict";
   function mark(nav) {
@@ -283,7 +283,7 @@ document.addEventListener("click", (ev) => {
     nav.classList.toggle("pmoreL", max > 4 && nav.scrollLeft > 4);
   }
   function scan() {
-    document.querySelectorAll(".tabs.pvtabs").forEach(function (nav) {
+    document.querySelectorAll(".tabs.pvtabs, .setnav").forEach(function (nav) {
       if (!nav.__pmore) { nav.__pmore = true; nav.addEventListener("scroll", function () { mark(nav); }, { passive: true }); }
       mark(nav);
     });

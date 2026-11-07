@@ -444,7 +444,7 @@
 /* the strip behind the status bar: content that scrolls up under it used to fade (iOS blurs it). A solid cap in the page's top colour now
    sits there, so the media is cut off cleanly. It reaches 500px above the layout viewport, which is where the status bar is on iOS. */
 @media (max-width: 760px) {
-  html:has(.postpage)::before { content: ""; position: fixed; left: 0; right: 0; top: -500px; height: 500px; background: var(--fade-0, #101015); z-index: 12; pointer-events: none; }
+  html::before { content: ""; position: fixed; left: 0; right: 0; top: -500px; height: 500px; background: var(--fade-0, #101015); z-index: 12; pointer-events: none; }
   .ptabsbg { display: none !important; }
 }
 
@@ -485,4 +485,17 @@
 @media (max-width: 760px) {
   .sover .sbig kbd { font-size: 0; line-height: 0; padding: 0 12px; height: 32px; display: inline-flex; align-items: center; border-radius: 999px; cursor: pointer; }
   .sover .sbig kbd::after { content: "Close"; font: 600 12px var(--sans, system-ui); letter-spacing: 0; text-transform: none; color: var(--fg-2, #ccc); }
+}
+
+/* ---- Settings (owner asked for the sweep, 7 Nov): the section strip scrolls sideways with a fade on the side that has more (it ended at the
+   screen edge with a half tab and no hint); the Privacy / hub lock entry under it looks like a row of its own, not a lost tab ---- */
+@media (max-width: 760px) {
+  .setnav { overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .setnav::-webkit-scrollbar { display: none; }
+  .setnav > a { scroll-snap-align: start; }
+  .setnav.pmoreR { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+  .setnav.pmoreL { -webkit-mask-image: linear-gradient(270deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(270deg, #000 calc(100% - 36px), transparent); }
+  .setnav.pmoreL.pmoreR { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+  .setside > .setpriv { border: 1px solid var(--line, rgb(255 255 255 / .12)); border-radius: 12px; padding: 0 14px; margin-top: 10px; min-height: 44px; align-items: center; }
+  .setside > .setpriv small, .setside > .setpriv span:last-child { font-size: 12px; }
 }
