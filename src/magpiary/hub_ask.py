@@ -227,7 +227,7 @@ class AskPages:
                 + ('<button type="button" class="askdock" data-askdock aria-label="Open Ask Magpiary" title="Ask Magpiary">'
                    '<span class="askmark" aria-hidden="true">✦</span><span class="askdocklab">Ask Magpiary</span><small class="askdockstate" data-askdockstate></small>'
                    f'{ui.icon("chevup")}</button>' if ask else "")
-                + ('<a class="askdock askoff" href="/settings/ask#onoff" title="Ask Magpiary is off: see why and turn it on">'
+                + ('<a class="askdock askoff" href="/settings/ai#onoff" title="Ask Magpiary is off: see why and turn it on">'
                    '<span class="askmark" aria-hidden="true">✦</span><span class="askdocklab">Ask Magpiary</span>'
                    '<small class="askdockstate">Off</small></a>' if off else "") + '</div></div>')
 

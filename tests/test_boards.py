@@ -203,14 +203,14 @@ def test_settings_lists_boards_with_their_sync_and_a_sync_now(mac, monkeypatch, 
     relays = Relays()
     mac.server.hub.relay_connect = relays.connect
     mac.server.hub.sync_boards = mac.server.hub._sync_here  # no board lane in the test service: sync right here
-    body = page(mac, "/settings/boards")[2]
+    body = page(mac, "/settings/profile")[2]
     assert "Sync now" not in body and "No boards yet" in body  # no boards yet: only the empty note
     board_id = make(mac.store, "Recipes")
-    body = page(mac, "/settings/boards")[2]
+    body = page(mac, "/settings/profile")[2]
     assert "Your boards" in body and "Recipes" in body and "Not synced yet" in body and "1 member" in body
-    status, headers, _ = post(mac, "/hub/boards/sync", next="/settings/boards")
+    status, headers, _ = post(mac, "/hub/boards/sync", next="/settings/profile")
     assert "Syncing%20your%20boards%20now" in headers["Location"]
-    assert re.search(r"Synced [^<]+ through Nostr relays", page(mac, "/settings/boards")[2])
+    assert re.search(r"Synced [^<]+ through Nostr relays", page(mac, "/settings/profile")[2])
     assert relays.events[boardsync.RELAYS[0]]  # published
     assert mac.store.board(board_id)["synced_at"]
 

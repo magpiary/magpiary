@@ -5,7 +5,7 @@ from magpiary import askconfig, ui
 from magpiary import keys as keyring
 from magpiary.web import e
 
-BACK = "/settings/ask"
+BACK = "/settings/ai"
 KEY_WARN = {"free": "A free key can run out quickly: every question counts against its daily limit.",
             "paid": "Billed per use by the provider; a question costs a little more than a summary."}
 
@@ -27,7 +27,7 @@ class AskSettings:
         return (f'<form method="post" action="/hub/askset"{confirm}>{ui.hidden(self.csrf, next=BACK, **fields)}'
                 f'<button type="submit" class="{cls}">{e(label)}</button></form>')
 
-    def _ask_section(self, q: dict) -> str:
+    def _ask_section(self, q: dict, nested: bool = False) -> str:
         from magpiary.hub_settings import _adv, _group, _row
 
         from magpiary import engines
@@ -45,7 +45,8 @@ class AskSettings:
                                more=why), gid="onoff", cls="feat")]
         if not on:
             return "".join(out)
-        out += [self._ask_engines(), self._ask_answers(), _adv(self._ask_model() + self._ask_usage(), "Model and effort, tokens and a limit")]
+        extra = self._ask_model() + self._ask_usage()
+        out += [self._ask_engines(), self._ask_answers(), extra if nested else _adv(extra, "Model and effort, tokens and a limit")]
         return "".join(out)
 
     def _engine_switch(self, on: bool, label: str, fields_on: dict, fields_off: dict, confirm: str = "", back: str = BACK) -> str:
@@ -101,7 +102,7 @@ class AskSettings:
             asked = f"{qs} question" + ("" if qs == 1 else "s") if used else ""
             usage += f'<div class="actl-use"><span>{name}</span><b>{askconfig.compact(total) if used else "—"}</b><small>{asked}</small></div>'
         return (f'<div class="actl"><h4>Who answers</h4>{who}{model}<div class="actl-row"><span class="actl-name">Allow web search</span>{web}</div>'
-                f'<h4>Tokens used</h4><div class="actl-uses">{usage}</div><a class="actl-all" href="/settings/ask">All Ask settings →</a></div>')
+                f'<h4>Tokens used</h4><div class="actl-uses">{usage}</div><a class="actl-all" href="/settings/ai#ask">All Ask settings →</a></div>')
 
     def _ask_engines(self) -> str:
         from magpiary import ask_codex, ask_setup

@@ -545,8 +545,8 @@ def test_pair_and_home_screen_pages_are_phone_sized(door):
 
 # ---- Settings on the phone: the owner's list (7 Nov): look, switch, small choices; never keys, lock, pairing, files ----
 
-@pytest.mark.parametrize("path", ["/settings", "/settings/profile", "/settings/phones", "/settings/ai", "/settings/ask", "/settings/agents",
-                                  "/settings/boards", "/settings/appearance", "/settings/storage", "/settings/privacy", "/doctor"])
+@pytest.mark.parametrize("path", ["/settings", "/settings/profile", "/settings/phones", "/settings/ai",
+                                  "/settings/appearance", "/settings/storage", "/settings/privacy", "/doctor"])
 def test_phone_can_open_the_settings_pages(door, path):
     door.pair()
     assert door.request("GET", path)[0] == 200, path

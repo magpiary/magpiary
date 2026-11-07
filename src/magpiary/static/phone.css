@@ -576,6 +576,14 @@
   .setpane details.adv { background: none !important; box-shadow: none !important; border: 0 !important; border-top: 1px solid var(--line, rgb(255 255 255 / .1)) !important; border-radius: 0 !important; }
   .setpane details.adv > summary { padding-inline: 0 !important; }
   .setpane details.adv > summary .advpill { display: none; }
+  /* Advanced and the Ask / AI agents folds: one full-width flat row, chevron at the right edge, body on the same left edge as the rows (8 Nov 2026) */
+  .setpane details.adv { margin: 0 !important; width: 100% !important; box-sizing: border-box; }
+  .setpane details.adv > summary { display: flex !important; align-items: center; width: 100% !important; box-sizing: border-box; padding: 14px 0 !important; gap: 12px; }
+  .setpane details.adv > summary .advtx { flex: 1 1 auto; min-width: 0; }
+  .setpane details.adv > summary .advc, .setpane details.adv > summary .advdot { margin-left: auto !important; flex: none; }
+  .setpane details.adv > summary .advdot + .advc { margin-left: 0 !important; }
+  .setpane details.adv > .advbody { width: 100% !important; box-sizing: border-box; padding: 6px 0 16px !important; }
+  .setpane details.adv .advbody > .sgroup:first-child { margin-top: 0; }
   .setpane .srow.keyrow > .src { flex-basis: calc(100% - 84px); margin-left: 84px; }
   .setpane .srow > .src:has(> form > .sw:only-of-type):not(:has(.btn, select, input:not([type="hidden"]))) { flex: none; margin: 0; align-self: center; }
   .setpane .srow .src :is(select, input:not([type="checkbox"], [type="radio"], [type="hidden"]), .deeppick) { max-width: 100%; }

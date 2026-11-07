@@ -108,7 +108,7 @@ def test_invite_shows_the_boards_code_on_the_board_page(mac):
     assert code in page(mac, f"/board/{board_id}?invite=1")[2]  # pressing Invite again: the same code
     post(mac, "/hub/boards/new-code", board=board_id, next=f"/board/{board_id}")
     assert code not in page(mac, f"/board/{board_id}?invite=1")[2]
-    settings = page(mac, "/settings/boards")[2]
+    settings = page(mac, "/settings/profile")[2]
     assert "Your boards" in settings and 'action="/hub/boards/join"' not in settings and "?invite=1" not in settings
 
 
@@ -131,13 +131,13 @@ def test_where_new_boards_sync_is_one_setting_and_needs_a_bucket(mac, monkeypatc
     setup_hub(mac)
     body = page(mac, "/?view=boards&make=new")[2]
     assert 'name="via"' not in body and "Sharing syncs through free public Nostr relays" in body
-    post(mac, "/hub/boards/via", via="bucket", next="/settings/boards")
+    post(mac, "/hub/boards/via", via="bucket", next="/settings/profile")
     assert mac.store.get_setting("board_via") == "bucket"
     _, headers, _ = post(mac, "/hub/boards/new", name="Still relays", next="/?view=boards")
     assert mac.store.board(headers["Location"].rsplit("/", 1)[1].split("?")[0])["via"] == "nostr"  # no bucket connected
     monkeypatch.setattr(boardsync, "load_bucket", lambda: {"provider": "b2", "bucket": "x"})
     assert "Sharing syncs through your own storage bucket" in page(mac, "/?view=boards&make=new")[2]
-    assert 'value="bucket" class="on"' in page(mac, "/settings/boards")[2]
+    assert 'value="bucket" class="on"' in page(mac, "/settings/profile")[2]
 
 
 def test_a_post_shared_to_a_board_shows_at_once_while_it_is_read(mac, lib):
@@ -371,7 +371,7 @@ def test_your_profile_is_resent_to_your_boards_only_when_it_changed(mac):
     def sent() -> int:
         return sum(1 for ev in mac.store.board_events(board_id) if ev["member"] == me and ev["type"] == "profile")
     assert boards.republish_profile(mac.store) == 0 and sent() == 1  # nothing changed since the board was made
-    post(mac, "/hub/profile/about", about="Collector of small shops", next="/settings/boards")
+    post(mac, "/hub/profile/about", about="Collector of small shops", next="/settings/profile")
     assert sent() == 2 and mac.store.board_events(board_id)[-1]["body"]["about"] == "Collector of small shops"
     assert boards.republish_profile(mac.store) == 0 and sent() == 2
 

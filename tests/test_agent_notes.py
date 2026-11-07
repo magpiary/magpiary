@@ -177,7 +177,7 @@ def test_the_key_has_no_controls_on_the_page(hub, capsys):
     from test_hub import page
 
     run(capsys, hub, "add", YT)                                                      # the key now exists
-    body = page(hub, "/settings/agents")[2].split('id="sethelp"')[0]
+    body = page(hub, "/settings/ai")[2].split('id="agents"')[1].split('id="pause"')[0]  # the AI agents fold
     for gone in ("Their key", "Cut off", "Make a new key", "No key yet", "/hub/agents/newkey", "/hub/agents/cutoff"):
         assert gone not in body, gone
 
@@ -187,7 +187,7 @@ def test_help_has_an_ai_agents_topic_and_settings_lists_the_page(hub):
 
     body = page(hub, "/help")[2]
     assert "AI agents" in body and "magpiary help agents" in body and "Turn AI agents on or off" in body and "Connect Claude Code or Codex" in body
-    assert 'href="/settings/agents"' in page(hub, "/settings/ai")[2]
+    assert 'href="/settings/ai"' in page(hub, "/settings/ai")[2]
 
 
 def test_the_owner_sees_the_agent_note_apart_from_their_own_and_can_remove_it(hub, capsys):

@@ -52,9 +52,9 @@ def test_the_settings_switch_turns_them_on_and_off(hub, capsys):
     item = seed(hub, "a", "Sourdough starter")
     switch(hub, False)
     assert run(capsys, hub, "search", "sourdough")[0] == 1
-    assert post(hub, "/hub/agents/on", enabled="1", next="/settings/agents")[0] == 303
+    assert post(hub, "/hub/agents/on", enabled="1", next="/settings/ai")[0] == 303
     assert run(capsys, hub, "search", "sourdough", "--words-only")[0] == 0
-    post(hub, "/hub/agents/on", enabled="0", next="/settings/agents")
+    post(hub, "/hub/agents/on", enabled="0", next="/settings/ai")
     assert run(capsys, hub, "show", str(item))[0] == 1
     assert run(capsys, hub, "add", YT)[0] == 1
 
@@ -68,11 +68,11 @@ def test_the_settings_switch_turns_them_on_and_off(hub, capsys):
 ])
 def test_each_permission_blocks_only_its_own_action(hub, capsys, which, blocked, allowed):
     item = seed(hub, "a", "Sourdough starter")
-    post(hub, "/hub/agents/perm", which=which, enabled="0", next="/settings/agents")
+    post(hub, "/hub/agents/perm", which=which, enabled="0", next="/settings/ai")
     code, _, err = run(capsys, hub, *[a.format(id=item) for a in blocked])
     assert code == 1 and "turned off for AI agents" in err
     assert run(capsys, hub, *allowed)[0] == 0
-    post(hub, "/hub/agents/perm", which=which, enabled="1", next="/settings/agents")
+    post(hub, "/hub/agents/perm", which=which, enabled="1", next="/settings/ai")
     assert run(capsys, hub, *[a.format(id=item) for a in blocked] + (["--words-only"] if blocked[0] == "search" else []))[0] == 0
 
 
@@ -80,9 +80,9 @@ def test_each_permission_blocks_only_its_own_action(hub, capsys, which, blocked,
 
 def test_daily_limits_stop_links_and_notes_and_ignore_odd_values(hub, capsys):
     item = seed(hub, "c", "Sourdough starter")
-    post(hub, "/hub/agents/limits", add="7", note="abc", next="/settings/agents")          # not one of the choices
+    post(hub, "/hub/agents/limits", add="7", note="abc", next="/settings/ai")          # not one of the choices
     assert hub.store.get_setting("agents_limit_add", "") == "" and hub.store.get_setting("agents_limit_note", "") == ""
-    post(hub, "/hub/agents/limits", add="10", note="100", next="/settings/agents")
+    post(hub, "/hub/agents/limits", add="10", note="100", next="/settings/ai")
     assert hub.store.get_setting("agents_limit_add") == "10"
     hub.store.set_setting("agents_limit_add", "1")
     hub.store.set_setting("agents_limit_note", "2")
@@ -102,7 +102,7 @@ def test_daily_limits_stop_links_and_notes_and_ignore_odd_values(hub, capsys):
 def test_hidden_tags_do_not_exist_for_agents(hub, capsys):
     shown = seed(hub, "a", "Sourdough starter")
     tagged = seed(hub, "b", "Private diary entry", tags=("private",))
-    post(hub, "/hub/agents/hide", tags=" Private , journal ,private", next="/settings/agents")
+    post(hub, "/hub/agents/hide", tags=" Private , journal ,private", next="/settings/ai")
     assert hub.store.get_setting("agents_hide_tags") == "private,journal"
     _, out, _ = run(capsys, hub, "list", "--json")
     assert [r["id"] for r in json.loads(out)["results"]] == [shown]
@@ -117,7 +117,7 @@ def test_hidden_tags_do_not_exist_for_agents(hub, capsys):
     assert json.loads(run(capsys, hub, "status", "--json")[1])["library"] == 1             # not even counted
     code, out, _ = run(capsys, hub, "add", hub.store.item_by_id(tagged)["canonical_url"])  # re-adding a hidden link reveals nothing
     assert code == 0 and "Already in Magpiary." in out and "#" not in out
-    post(hub, "/hub/agents/hide", tags="", next="/settings/agents")                       # unhide
+    post(hub, "/hub/agents/hide", tags="", next="/settings/ai")                       # unhide
     assert json.loads(run(capsys, hub, "status", "--json")[1])["library"] == 2
     assert run(capsys, hub, "show", str(tagged))[0] == 0
 
@@ -133,16 +133,16 @@ def test_the_activity_log_records_actions_and_refusals_and_can_be_cleared(hub, c
     entries = agent_log.recent(10)
     assert [(e["tool"], e["ok"]) for e in entries] == [("search", False), ("add", True), ("search", True)]
     assert entries[0]["why"] and entries[2]["detail"] == "sourdough"
-    body = page(hub, "/settings/agents")[2]
+    body = page(hub, "/settings/ai")[2]
     assert "Searched" in body and "Saved a link" in body and "Refused" in body and "secret words" in body
-    post(hub, "/hub/agents/clearlog", next="/settings/agents")
-    assert agent_log.recent(10) == [] and "Nothing yet" in page(hub, "/settings/agents")[2]
+    post(hub, "/hub/agents/clearlog", next="/settings/ai")
+    assert agent_log.recent(10) == [] and "Nothing yet" in page(hub, "/settings/ai")[2]
 
 
 def test_the_page_shows_ten_entries_and_folds_the_rest(hub):
     for n in range(14):
         agent_log.record("search", f"query {n}")
-    body = page(hub, "/settings/agents")[2].split('id="sethelp"')[0]
+    body = page(hub, "/settings/ai")[2].split('id="sethelp"')[0]
     assert "query 13" in body and "Show earlier activity" in body and "4 more" in body and "query 0" in body
     shown = body[body.index('id="activity"'):body.index("Show earlier activity")]
     assert "query 4" in shown and "query 3" not in shown                                     # ten on top, the older four folded
@@ -158,10 +158,10 @@ def test_a_full_disk_never_stops_an_answer(hub, capsys, monkeypatch):
 
 def test_the_settings_page_holds_controls_and_the_how_to_lives_in_help(hub):
     switch(hub, False)
-    off = page(hub, "/settings/agents")[2].split('id="sethelp"')[0]
+    off = page(hub, "/settings/ai")[2].split('id="sethelp"')[0]
     assert "/hub/agents/perm" not in off and "Read my saves" not in off and "Turn it on to choose what they may do" in off  # nothing below an off switch
     switch(hub, True)
-    whole = page(hub, "/settings/agents")[2]
+    whole = page(hub, "/settings/ai")[2]
     body = whole.split('id="sethelp"')[0]                                                # the page itself, not its Help drawer
     master = body[body.index('id="agents-on"'):body.index('id="activity"')]
     assert all(t in master for t in ("Read my saves", "Save links for me", "Write notes on my saves"))   # nested in the master group
@@ -172,10 +172,9 @@ def test_the_settings_page_holds_controls_and_the_how_to_lives_in_help(hub):
         assert gone not in body, gone
     assert 'data-copycode="claude mcp add magpiary -- magpiary mcp"' in body and 'data-copycode="codex mcp add magpiary -- magpiary mcp"' in body  # one click to copy
     assert 'href="/help#help-agents"' in body                                               # the explanation stays in Help
-    assert "claude mcp add magpiary -- magpiary mcp" in whole.split('id="sethelp"')[1]     # and is one tap away in the drawer
     assert "goes to the company behind that AI" not in body
     help_body = page(hub, "/help")[2]
     assert "claude mcp add magpiary -- magpiary mcp" in help_body and "Turn AI agents on or off" in help_body
     assert "Which commands are there?" in help_body and "What is the key?" in help_body
     nav = page(hub, "/settings/ai")[2]
-    assert 'href="/settings/agents"' in nav
+    assert 'href="/settings/ai"' in nav

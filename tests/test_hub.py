@@ -479,7 +479,7 @@ def test_settings_sections_and_the_health_check(mac):
         assert status == 200 and text in body, path
     body = page(mac, "/settings/profile")[2]  # Your profile is a section of its own, first in the list, not part of Shared boards
     assert body.index('href="/settings/profile"') < body.index('href="/settings/phones"') < body.index('href="/settings/ai"') and "How friends see you" in body
-    assert "How friends see you" not in page(mac, "/settings/boards")[2] and "Where boards sync" in page(mac, "/settings/boards")[2]
+    assert "Where boards sync" in page(mac, "/settings/profile")[2]  # Shared boards sits on the profile page since 8 Nov
     assert "Your identity" in body and "Set up your profile" in body  # the profile's own help
     assert page(mac, "/settings/nope")[0] == 404
     assert "Health" in page(mac, "/doctor")[2]
@@ -551,7 +551,7 @@ def test_help_page_lists_every_chapter_once_and_every_jump_lands(mac):
     jumps = re.findall(r'href="#(help-[^"]+)"', body)
     assert len(jumps) > len(helptext.TOPICS) and all(ids[j] == 1 for j in jumps)
     assert "What&#x27;s new" in body or "What's new" in body
-    assert "Ask Magpiary" in page(mac, "/settings/ask")[2] and "Turn Ask on" in page(mac, "/settings/ask")[2]
+    assert "Ask Magpiary" in page(mac, "/settings/ai")[2] and "Use Ask Magpiary" in page(mac, "/settings/ai")[2]
     assert 'href="/help#help-nest"' in page(mac, "/help?frag=1&ctx=nest")[2]  # All help opens at the same chapter
 
 

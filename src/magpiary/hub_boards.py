@@ -117,7 +117,7 @@ class BoardPages:
                     f'<div class="mkideas" aria-label="Ideas">{ideas}</div>'
                     '<button class="btn dark">Make the board</button></form>'
                     f'<p class="bpriv">{ui.icon("lock")}<span>Private: it stays on this Mac until you share it from the '
-                    'board\'s page. Sharing syncs through ' + via + ' · <a href="/settings/boards#sync">change</a></span></p>')
+                    'board\'s page. Sharing syncs through ' + via + ' · <a href="/settings/profile#sync">change</a></span></p>')
         join_form = (f'<form method="post" action="/hub/boards/join" class="bmake">{ui.hidden(self.csrf, next=back)}'
                      '<label class="mklab" for="mkcode">Invite code</label>'
                      '<input id="mkcode" name="code" class="mono bbig bcodein" placeholder="MAG-XXXX-XXXX-XXXX" aria-label="Invite code" '

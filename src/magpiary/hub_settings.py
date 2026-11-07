@@ -11,7 +11,7 @@ import subprocess
 import time
 from datetime import date, datetime
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from magpiary import boardsync, identity
 from magpiary import keys as keyring
@@ -25,24 +25,16 @@ from magpiary.web import Response, e
 
 # The addresses "phones" and "storage" stay as they were, so old links keep working; only the names changed (1 Nov 2026).
 BACKUP_SETTING = "last_backup_at"
-SECTIONS = {"profile": "Your profile", "phones": "Phone", "ai": "AI & login", "ask": "Ask Magpiary", "agents": "AI agents",
-            "boards": "Shared boards", "appearance": "Appearance", "storage": "Library & this Mac"}
-NAV_GROUPS = (("You", ("profile",)), ("Using Magpiary", ("phones", "ai", "ask", "agents", "boards")), ("This hub", ("appearance", "storage")))
+SECTIONS = {"profile": "Profile & boards", "phones": "Phone", "ai": "AI & login", "appearance": "Appearance", "storage": "Library & this Mac"}
+NAV_GROUPS = (("You", ("profile",)), ("Using Magpiary", ("phones", "ai")), ("This hub", ("appearance", "storage")))
+# Six pages since 8 Nov 2026 (owner): Ask Magpiary and AI agents are folds on AI & login, Shared boards sits on Profile & boards.
+# The old addresses redirect, keeping the query and the #anchor, so every old link and form return still lands.
+MOVED = {"ask": "ai", "agents": "ai", "boards": "profile"}
 PAGES = {**SECTIONS, "privacy": "Privacy"}  # Privacy sits apart, under the list
-SECTION_ICONS = {"profile": ("people", "var(--t-place)"), "ai": ("sparkle", "var(--t-design)"), "ask": ("comment", "var(--t-design)"), "agents": ("terminal", "var(--t-tool)"), "phones": ("phone", "var(--t-howto)"),
-                 "storage": ("library", "var(--t-discussion)"), "boards": ("folder", "var(--t-news_opinion)"), "appearance": ("palette", "var(--t-tool)"),
-                 "privacy": ("lock", "#3d3d3d")}
+SECTION_ICONS = {"profile": ("people", "var(--t-place)"), "ai": ("sparkle", "var(--t-design)"), "phones": ("phone", "var(--t-place)"),
+                 "storage": ("library", "var(--t-discussion)"), "appearance": ("palette", "var(--t-tool)"), "privacy": ("lock", "#3d3d3d")}
 SUPPORT_URL = "https://www.buymeacoffee.com/magpiary"  # opens in the browser on click; nothing is sent from the app
 
-SECTION_BLURBS = {"profile": "What friends see on a board, and what your AI knows about your goals.",
-                  "phones": "Send posts from your iPhone to this Mac, and open your library on it.",
-                  "ai": "Your AI keys, Smart or Private summaries, the digest, Deeper dive, finding links, and the optional Instagram login.",
-                  "ask": "Turn Ask on or off, choose who answers and how much it says.",
-                  "agents": "Let an AI such as Claude Code or Codex search your saves, save links and leave notes, from Terminal.",
-                  "boards": "Your boards, where they sync, and invites.",
-                  "appearance": "Theme, tile size, tile labels, glass, interface size and page width.",
-                  "storage": "Your folders, backups and the Trash, saving from Chrome, and keeping this Mac ready.",
-                  "privacy": "The hub lock, what leaves this Mac, where your data lives, and how to delete it."}
 SAVED = {"key": "Key checked and saved.", "login": "Instagram connected.", "model": "Model changed.",
          "mode": "Saved. New summaries follow this mode.", "budget": "Saved.", "look": "Saved.", "phone": "Phone removed.",
          "awake": "Saved.", "limit": "Search limit saved.", "longvideo": "Saved.", "allowed": "Allowed. The Digest, Ask and Deeper dive now use it.", "stopped": "Stopped. Magpiary no longer uses it.", "deep": "Deeper dive engine saved.", "keys": "Keys removed.", "profile": "Profile saved.",
@@ -89,19 +81,19 @@ SEARCH_INDEX = [
     ("Web search key", "tavily brave search links finding directories wikidata limit", "ai", "search"),
     ("Pause summaries", "pause stop limit transcribing nest budget", "ai", "pause"),
     ("Remove all keys", "delete keys", "ai", "advanced"),
-    ("Turn Ask Magpiary on or off", "ask chat question assistant switch hide", "ask", "onoff"),
-    ("Who answers Ask", "claude code codex chatgpt gemini key engine", "ask", "engine"),
-    ("Answer depth and web search", "short deep web", "ask", "answers"),
-    ("Ask model and effort", "haiku sonnet opus effort", "ask", "model"),
-    ("Ask tokens and limit", "token usage spend limit warning", "ask", "usage"),
-    ("Let AI agents use Magpiary", "cli terminal command line claude code codex agent mcp switch on off enable disable", "agents", "switch"),
-    ("What AI agents may do", "agent permission read save links notes", "agents", "switch"),
-    ("Connect an AI agent", "copy command claude code codex mcp", "agents", "connect"),
-    ("What AI agents did", "agent activity log recent clear", "agents", "activity"),
-    ("Hide saves from AI agents", "agent private hide tag", "agents", "hide"),
-    ("Daily limits for AI agents", "agent limit links notes per day", "agents", "limit-add"),
-    ("Your boards", "shared boards invite friends", "boards", "boards"),
-    ("Where boards sync", "relays nostr bucket b2 backblaze r2 s3", "boards", "sync"),
+    ("Turn Ask Magpiary on or off", "ask chat question assistant switch hide", "ai", "onoff"),
+    ("Who answers Ask", "claude code codex chatgpt gemini key engine", "ai", "engine"),
+    ("Answer depth and web search", "short deep web", "ai", "answers"),
+    ("Ask model and effort", "haiku sonnet opus effort", "ai", "model"),
+    ("Ask tokens and limit", "token usage spend limit warning", "ai", "usage"),
+    ("Let AI agents use Magpiary", "cli terminal command line claude code codex agent mcp switch on off enable disable", "ai", "switch"),
+    ("What AI agents may do", "agent permission read save links notes", "ai", "switch"),
+    ("Connect an AI agent", "copy command claude code codex mcp", "ai", "connect"),
+    ("What AI agents did", "agent activity log recent clear", "ai", "activity"),
+    ("Hide saves from AI agents", "agent private hide tag", "ai", "hide"),
+    ("Daily limits for AI agents", "agent limit links notes per day", "ai", "limit-add"),
+    ("Your boards", "shared boards invite friends", "profile", "boards"),
+    ("Where boards sync", "relays nostr bucket b2 backblaze r2 s3", "profile", "sync"),
     ("Theme", "light dark colour mode", "appearance", "theme"),
     ("Tile size", "grid small large wall", "appearance", "tiles"),
     ("Tile labels", "overlay coloured text", "appearance", "labels"),
@@ -155,11 +147,16 @@ def _info(text: str) -> str:
 
 
 def _more(body: str, label: str = "More about this") -> str:
-    """A longer extra, folded until asked for."""
+    """A longer extra, folded until asked for. The plain "More about this" explanations are gone (8 Nov 2026, one line per row):
+    only an extra with its own label, which carries steps or a command, is kept."""
+    if label == "More about this":
+        return ""
     return f'<details class="xmore"><summary>{ui.icon("info")}<span>{e(label)}</span></summary><div class="xmorebody">{body}</div></details>'
 
 
 def _lock(key: str) -> str:
+    """The per-group privacy note is gone (8 Nov 2026): the Privacy page says what leaves this Mac, once."""
+    return ""
     return f'<div class="plock"><p>{e(LOCKS[key])}</p></div>'
 
 
@@ -195,13 +192,13 @@ def _status(text: str, tone: str = "ok") -> str:
     return f'<p class="sstat {tone}"><i></i>{text}</p>'
 
 
-def _adv(body: str, hint: str = "", *, attention: bool = False, gid: str = "advanced", label: str = "Advanced settings") -> str:
+def _adv(body: str, hint: str = "", *, attention: bool = False, gid: str = "advanced", label: str = "Advanced settings", pill: str = "Advanced") -> str:
     """The folded block that ends a page. It remembers if it was opened and opens itself when a link points inside
     it (lock.js-style script lives in settings.js: data-adv)."""
     return (f'<details class="adv" id="{gid}" data-adv><summary><span class="advic">{ui.icon("sliders")}</span>'
             f'<span class="advtx"><span class="advt">{e(label)}</span>' + (f'<span class="advh">{e(hint)}</span>' if hint else "") + "</span>"
             + ('<span class="advdot" title="Something here needs a look"></span>' if attention else "")
-            + f'<span class="advpill">Advanced</span><span class="advc">{ui.icon("chev")}</span></summary><div class="advbody">{body}</div></details>')
+            + (f'<span class="advpill">{e(pill)}</span>' if pill else "") + f'<span class="advc">{ui.icon("chev")}</span></summary><div class="advbody">{body}</div></details>')
 
 
 def _paste(target: str) -> str:
@@ -231,6 +228,9 @@ class SettingsPages:
     def settings_page(self, section: str, q: dict) -> Response:
         if section == "links":  # that page's settings moved: the search key and the Instagram login to AI & login
             return Response(303, b"", headers={"Location": "/settings/ai#search"})
+        if section in MOVED:
+            where = "/settings/" + MOVED[section] + ("?" + urlencode({k: v for k, v in q.items() if isinstance(v, str)}) if q else "")
+            return Response(303, b"", headers={"Location": where})
         if section and section not in PAGES:
             return self.shell("Not found", '<p class="empty">No such settings page. <a class="link" href="/settings">'
                               'Settings</a></p>', "missing", 404)
@@ -240,14 +240,14 @@ class SettingsPages:
         error = q.get("error", "")[:200]
         flash = ((f'<div class="flash">{e(saved)}</div>' if saved else "")
                  + (f'<div class="flash err">{e(error)}</div>' if error else ""))
-        body = {"profile": self._profile_section, "ai": self._ai_section, "ask": self._ask_section, "agents": self._agents_section, "phones": self._phones_section,
-                "storage": self._storage_section, "boards": self._boards_section, "appearance": self._look_section,
+        body = {"profile": self._profile_section, "ai": self._ai_section, "phones": self._phones_section,
+                "storage": self._storage_section, "appearance": self._look_section,
                 "privacy": self._privacy_section}[section](q)
         icon, colour = SECTION_ICONS[section]
         page = (f'<div class="setlayout{" setroot" if root else ""}"><aside class="setside"><h1>Settings</h1>{self._search_box()}{self._nav(section)}'
                 f'<a class="setsupport" href="{SUPPORT_URL}" target="_blank" rel="noopener">Support Magpiary ↗</a></aside>'
                 f'<section class="setpane" id="setpane"><a class="setback" href="/settings">Settings</a><div class="sethead" style="--c:{colour}"><span class="seticon">'
-                f'{ui.icon(icon)}</span><div><h2>{PAGES[section]}</h2><p>{e(SECTION_BLURBS[section])}</p></div>'
+                f'{ui.icon(icon)}</span><div><h2>{PAGES[section]}</h2></div>'
                 f'<button type="button" class="btn sm sethelpbtn" id="sethelpbtn" aria-controls="sethelp">?<span>Help</span></button></div>'
                 f'{flash}<div class="setboxes">{body}</div></section>'
                 f'<aside class="sethelp" id="sethelp" aria-label="Help">'
@@ -263,10 +263,10 @@ class SettingsPages:
             return "Off", "ok"
         return "On", "ok"
 
-    def _agents_section(self, q: dict) -> str:
+    def _agents_section(self, q: dict, nested: bool = False) -> str:
         from magpiary import agent_log, agent_policy as ap
 
-        store, back = self.store, "/settings/agents"
+        store, back = self.store, "/settings/ai"
         on = ap.enabled(store)
 
         def switch(action: str, is_on: bool, fields: dict, label: str, confirm: str = "") -> str:
@@ -327,7 +327,7 @@ class SettingsPages:
         limits = _group("Daily limits", limit_row("add", "Links a day", "The most links an AI can save in a day.")
                         + limit_row("note", "Notes a day", "The most notes an AI can write in a day."), gid="limits",
                         desc="So a runaway agent cannot flood your library.")
-        return master + activity + _adv(hide + limits, "Hide saves, daily limits")
+        return master + activity + (hide + limits if nested else _adv(hide + limits, "Hide saves, daily limits"))
 
     def _search_box(self) -> str:
         data = e(json.dumps([[t, k, p, a] for t, k, p, a in SEARCH_INDEX]))
@@ -342,11 +342,9 @@ class SettingsPages:
         ai = ("Private · no AI" if mode == "private" else f"Smart · {working.name}" if working else "Smart · no key yet")
         phones = [p for p in self.store.list_phones() if not p["revoked_at"] and p.get("kind") not in ("browser", "agent")]
         counts = self.store.hub_counts()["shelves"]
-        boards_n = len(self.store.boards())
         status = {"profile": (identity.profile(self.store)["name"] or "No name yet", False),
                   "phones": (f'{len(phones)} phone{"" if len(phones) == 1 else "s"} paired' if phones else "No phone yet", not phones),
-                  "ai": (ai, mode == "smart" and not working), "ask": self.ask_status(), "agents": (self._agent_state()[0], False),
-                  "boards": (f'{boards_n} board{"" if boards_n == 1 else "s"}', False),
+                  "ai": (ai, mode == "smart" and not working),
                   "appearance": (ui.THEMES[ui.appearance(self.store)["theme"]], False),
                   "storage": (f'{sum(counts.values())} saves', False)}
         return {k: status[k] for k in SECTIONS}
@@ -376,6 +374,8 @@ class SettingsPages:
         """AI keys first, then Summaries: the Smart or Private switch, and the Digest, Ask and Deeper dive that need Smart."""
         return "".join([self._keys_group(q), self._summaries_group(), self._digest_group(q), self._deep_group(),
                         self._finding_group(), self._instagram_group(),
+                        _adv(self._ask_section(q, nested=True), "Who answers, how deep, the web", gid="ask", label="Ask Magpiary", pill=""),
+                        _adv(self._agents_section(q, nested=True), "Let Claude Code or Codex use your saves", gid="agents", label="AI agents", pill=""),
                         _adv(_group("Pause summaries", _row("Pause or limit them", "The switches for summaries and transcribing are in the Nest, where you can see the work.",
                                                             '<a class="btn sm" href="/nest">Open the Nest</a>', lead=ui.icon("clock")), gid="pause")
                              + self._keys_danger(), "Pausing summaries, removing keys")])
@@ -409,7 +409,7 @@ class SettingsPages:
         ask_on = askconfig.enabled(self.store)
         rows += _row("Ask Magpiary", "Ask questions about your saves and get answers with the posts they came from.",
                      f'<span class="modectl">{_stat("On" if ask_on else "Off", "ok" if ask_on else "")}'
-                     f'<a class="btn sm" href="/settings/ask">Open</a></span>', lead=ui.icon("book"), sid="summaries-ask")
+                     f'<a class="btn sm" href="/settings/ai#ask">Open</a></span>', lead=ui.icon("book"), sid="summaries-ask")
         return _group("Summaries", rows, gid="mode",
                       more=_more("<p>In both modes the transcript and the frames are made on this Mac, and the video itself "
                                  "is never sent anywhere. You can switch any time; posts already read stay as they are.</p>"
@@ -504,7 +504,7 @@ class SettingsPages:
             control = (self._switch("/hub/engine/allow", on, {"kind": kind, "enabled": "0", "next": "/settings/ai#keys"},
                                     {"kind": kind, "enabled": "1", "next": "/settings/ai#keys"}, f"Allow {eng.SHORT[kind]}",
                                     confirm="" if on else confirm)
-                       if on or here else '<a class="btn sm" href="/settings/ask#engine">Set it up</a>')
+                       if on or here else '<a class="btn sm" href="/settings/ai#engine">Set it up</a>')
             rows[kind] = _row(eng.LOCAL[kind], desc, control, lead=_handle(eng.SHORT[kind], on and here) + logo, sid=f"local-{kind}",
                               cls="keyrow" + ("" if on and here else " offrow"))
         return rows
@@ -790,7 +790,7 @@ class SettingsPages:
                       desc=(f"Share a post to Magpiary on your iPhone and it arrives here. Last delivery {e(ui.day(last))}." if last
                             else "Share a post to Magpiary on your iPhone and it arrives here."),
                       more=_more('<p>Each phone has its own key and sends on any Wi-Fi your Mac is on. '
-                                 '<a class="link" href="/welcome/phone">Open the setup guide</a> for the Shortcut, step by step.</p>')),
+                                 '<a class="link" href="/welcome/phone">Open the setup guide</a> for the Shortcut, step by step.</p>', "Setup guide")),
                self.access_group(q),
                qr]
         return "".join(out)
@@ -1078,6 +1078,12 @@ class SettingsPages:
         self.sync_boards()
 
     def _profile_section(self, q: dict) -> str:
+        """Your face, links, goals and topics, then your boards; one Advanced block holds the identity key and board sync."""
+        main, identity_group = self._profile_part(q)
+        boards, sync, broken = self._boards_part(q)
+        return main + boards + _adv(identity_group + sync, "Your key, relays and your own storage bucket", attention=broken)
+
+    def _profile_part(self, q: dict) -> tuple[str, str]:
         """The owner's own profile, as friends see it, edited right in it: click the face for photo and colour, click the
         name or the about line to change them (each with its own Save). Links and topics are below."""
         me = identity.profile(self.store)
@@ -1157,34 +1163,32 @@ class SettingsPages:
                 + goals
                 + _group("Topics", f'<div class="srow pfull">{topics}</div>', gid="topics",
                          desc="From your biggest piles; take off any you don't want to show, or add your own.")
-                + _adv(_group("Your identity", _row(
+                , _group("Your identity", _row(
                     "Your key", "Made on this Mac. It signs everything you add to a board, so nobody can act as you. It never leaves this Mac.",
                     f'<button type="button" class="btn sm" data-copy="{e(identity.public_key())}">{ui.icon("copy")}Copy ID</button>'
                     + self._finder("identity", "/settings/profile"), lead=ui.icon("lock"),
                     info=f"Stored at {identity._key_path()} with owner-only access. It is a Nostr-compatible key; your short ID is its first "
-                         "characters, so friends can tell two people with the same name apart."), gid="identity"),
-                       "Your key and where it lives"))
+                         "characters, so friends can tell two people with the same name apart."), gid="identity"))
 
-    def _boards_section(self, q: dict) -> str:
+    def _boards_part(self, q: dict) -> tuple[str, str, bool]:
         from magpiary.hub_boards import new_board_via
 
         mine = boardsync.load_bucket()
         found = self.store.boards()
         broken = [b for b in found if b["sync_error"]]
         if broken:
-            line = _status(f'{len(broken)} board{"" if len(broken) == 1 else "s"} couldn\'t sync. Open Advanced to check the relays or your bucket.', "bad")
+            line = _status(f'{len(broken)} board{"" if len(broken) == 1 else "s"} couldn\'t sync. Open Advanced settings to check the relays or your bucket.', "bad")
         elif mine and new_board_via(self.store) == "bucket":
             line = _status("New boards sync through your own bucket.", "ok")
         else:
             line = _status("Boards sync through free public relays. Nothing to set up.", "ok")
         top = self._boards_group(q) or _group("Your boards", _row("No boards yet", "Make or join one under Library → Boards.", cls="emptyrow"), gid="boards")
-        return top.replace('</header>', '</header>' + line, 1) + _adv(
-            self._sync_group(), "Relays and your own storage bucket", attention=bool(broken))
+        return top.replace('</header>', '</header>' + line, 1), self._sync_group(), bool(broken)
 
     def _boards_group(self, q: dict) -> str:
         from magpiary import boards
 
-        back, me = "/settings/boards", identity.public_key()
+        back, me = "/settings/profile", identity.public_key()
         rows = ""
         found = self.store.boards()
         for b in found:
@@ -1205,7 +1209,7 @@ class SettingsPages:
                       action=ui.button_form(self.csrf, "/hub/boards/sync", {"next": back}, ui.icon("refresh") + "Sync now", "btn sm"))
 
     def _sync_group(self) -> str:
-        back = "/settings/boards"
+        back = "/settings/profile"
         relays = ", ".join(boardsync._host(r) for r in boardsync.RELAYS)
         nostr = _row("Nostr relays", f"The default: free public relays ({e(relays)}). Nothing to sign up for.",
                      self._form("/hub/boards/check-relays", {"next": back}, "Check relays", "btn sm"),
@@ -1615,24 +1619,24 @@ class SettingsPages:
                 error = boardsync.connect_b2(*pair, self.sync_call) if pair else "No saved Backblaze key was found."
                 if not error and path.endswith("env"):
                     boardsync.forget_b2_env()  # now kept in storage.json; one copy of a secret is enough
-            return Response(303, b"", headers={"Location": "/settings/boards" + ("?error=" + quote(error) if error else "?saved=bucket") + "#sync"})
+            return Response(303, b"", headers={"Location": "/settings/profile" + ("?error=" + quote(error) if error else "?saved=bucket") + "#sync"})
         if path == "/hub/boards/sync" and self.store.board(form.get("board", "")):
             return self._sync_one_board(form["board"])
         if path == "/hub/boards/sync":
             self.sync_boards()
-            return Response(303, b"", headers={"Location": "/settings/boards?note=" + quote("Syncing your boards now.") + "#boards"})
+            return Response(303, b"", headers={"Location": "/settings/profile?note=" + quote("Syncing your boards now.") + "#boards"})
         if path == "/hub/boards/via":
             self.store.set_setting("board_via", "bucket" if form.get("via") == "bucket" else "nostr")
-            return Response(303, b"", headers={"Location": "/settings/boards?saved=via#sync"})
+            return Response(303, b"", headers={"Location": "/settings/profile?saved=via#sync"})
         if path == "/hub/boards/remove-bucket":
             boardsync.remove_bucket(self.sync_call)
-            return Response(303, b"", headers={"Location": "/settings/boards?saved=nobucket#sync"})
+            return Response(303, b"", headers={"Location": "/settings/profile?saved=nobucket#sync"})
         if path in ("/hub/boards/check-bucket", "/hub/boards/check-relays"):
             conn = boardsync.Nostr(connect=self.relay_connect) if path.endswith("relays") else boardsync.bucket_connector(call=self.sync_call)
             status = conn.check() if conn else boardsync.Status(False, "No bucket is connected.")
             detail = status.detail + ("" if all(ok for _, ok, _ in status.parts) else
                                       " (" + "; ".join(f"{n}: {d}" for n, ok, d in status.parts if not ok) + ")")
-            return Response(303, b"", headers={"Location": "/settings/boards?" + ("note=" if status.ok else "error=")
+            return Response(303, b"", headers={"Location": "/settings/profile?" + ("note=" if status.ok else "error=")
                                                 + quote(detail[:200]) + "#sync"})
         if path in ("/hub/profile", "/hub/profile/about", "/hub/profile/links", "/hub/profile/topic"):
             if path == "/hub/profile":

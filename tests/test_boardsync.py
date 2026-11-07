@@ -201,15 +201,15 @@ def test_an_r2_key_is_checked_before_it_is_saved():
 def test_the_settings_group_connects_a_saved_backblaze_key_and_checks_relays(mac):
     storage, relays = Storage(), Relays()
     mac.server.hub.sync_call, mac.server.hub.relay_connect = storage, relays.connect
-    body = page(mac, "/settings/boards")[2]
+    body = page(mac, "/settings/profile")[2]
     assert "Where boards sync" in body and "Nostr relays" in body and "Use my saved Backblaze key" not in body
     (config_dir() / "b2.env").write_text("B2_KEY_ID=main-id\nB2_APP_KEY=main-secret\n")
-    assert "Use my saved Backblaze key" in page(mac, "/settings/boards")[2]
-    status, headers, _ = post(mac, "/hub/boards/b2-env", next="/settings/boards")
-    assert headers["Location"] == "/settings/boards?saved=bucket#sync" and not (config_dir() / "b2.env").exists()
-    body = page(mac, "/settings/boards")[2]
+    assert "Use my saved Backblaze key" in page(mac, "/settings/profile")[2]
+    status, headers, _ = post(mac, "/hub/boards/b2-env", next="/settings/profile")
+    assert headers["Location"] == "/settings/profile?saved=bucket#sync" and not (config_dir() / "b2.env").exists()
+    body = page(mac, "/settings/profile")[2]
     assert "Backblaze B2" in body and "magpiary-boards-" in body and "main-secret" not in body and not re.search(r"[\">\s]s1[\"<\s]", body)
-    _, headers, _ = post(mac, "/hub/boards/check-relays", next="/settings/boards")
+    _, headers, _ = post(mac, "/hub/boards/check-relays", next="/settings/profile")
     assert "note=3%20of%203%20relays%20answered" in headers["Location"]
-    _, headers, _ = post(mac, "/hub/boards/remove-bucket", next="/settings/boards")
+    _, headers, _ = post(mac, "/hub/boards/remove-bucket", next="/settings/profile")
     assert headers["Location"].endswith("saved=nobucket#sync") and bs.load_bucket() is None

@@ -33,7 +33,7 @@ def digest_on(mac, monkeypatch):
 
 
 def test_every_page_with_technical_settings_ends_in_a_folded_advanced_block(mac):
-    for path in ("ai", "storage", "boards", "profile", "privacy"):  # (Phones keeps its Advanced inside each phone)
+    for path in ("ai", "storage", "profile", "privacy"):  # (Phones keeps its Advanced inside each phone)
         body = page(mac, f"/settings/{path}")[2]
         assert 'class="adv" id="advanced" data-adv' in body, path
         assert body.index("Advanced settings") > body.index("sgroup"), path
@@ -42,7 +42,7 @@ def test_every_page_with_technical_settings_ends_in_a_folded_advanced_block(mac)
 
 def test_what_moved_into_advanced_is_inside_it_and_the_rest_is_outside(mac):
     for path, inside, outside in (("storage", "Removing Magpiary", "Your library"),
-                                  ("boards", "Where boards sync", "Your boards"), ("profile", "Your identity", "Your public face"),
+                                  ("profile", "Where boards sync", "Your boards"), ("profile", "Your identity", "Your public face"),
                                   ("privacy", "Where your data lives", "What leaves this Mac"),
                                   ("ai", "Pause summaries", "AI keys")):
         body = page(mac, f"/settings/{path}")[2].split('id="setpane"')[1]  # (the page list's search box carries every title)
@@ -61,9 +61,9 @@ def test_the_links_page_is_gone_and_its_settings_moved(mac):
 def test_the_list_is_grouped_in_the_agreed_order_and_opens_where_a_look_is_needed(mac):
     body = page(mac, "/settings/ai")[2]
     nav = body[body.index('class="setnav"'):body.index('class="setpane"')]
-    order = [nav.index(f'href="/settings/{k}"') for k in ("profile", "phones", "ai", "ask", "agents", "boards", "appearance", "storage", "privacy")]
+    order = [nav.index(f'href="/settings/{k}"') for k in ("profile", "phones", "ai", "appearance", "storage", "privacy")]
     assert order == sorted(order)
-    assert nav.index(">You<") < order[0] < nav.index(">Using Magpiary<") < order[1] and order[5] < nav.index(">This hub<") < order[6]
+    assert nav.index(">You<") < order[0] < nav.index(">Using Magpiary<") < order[1] and order[2] < nav.index(">This hub<") < order[3]
     assert "Your phones" in page(mac, "/settings")[2]  # no phone yet: Settings opens there
     mac.store.add_phone("Work iPhone")
     mac.store.set_setting("ai_mode", "private")
@@ -75,7 +75,7 @@ def test_goals_live_in_the_profile_marked_private_and_every_ai_can_read_them(mac
 
     digest_on(mac, monkeypatch)
     body = page(mac, "/settings/profile")[2]
-    assert 'id="goals"' in body and "never shared with friends" in body and "never go to a board" in body
+    assert 'id="goals"' in body and "never shared with friends" in body
     post(mac, "/hub/digest/goals", goals="Learn to bake", next="/settings/profile#goals")
     assert "Learn to bake" in page(mac, "/settings/ai")[2].split('id="digest"')[1]
     assert "Learn to bake" in ask_open.build_prompt("q", [], [], "your library", goals="Learn to bake")
@@ -190,7 +190,7 @@ def test_the_search_index_covers_every_page_and_every_anchor_exists(mac):
             continue  # shown only while the pairing service runs
         body = pages.setdefault(p, page(mac, f"/settings/{p}")[2])
         assert f'id="{a}"' in body, (p, a)
-    assert set(pages) == {"profile", "ai", "ask", "agents", "phones", "storage", "boards", "appearance", "privacy"}
+    assert set(pages) == {"profile", "ai", "phones", "storage", "appearance", "privacy"}
     assert "data-setsearch" in page(mac, "/settings/ai")[2]
 
 
@@ -385,3 +385,17 @@ def test_about_has_a_support_link_that_is_a_plain_outbound_link(mac):
     here = page(mac, "/settings/storage")[2]
     assert 'id="support"' in here
     assert 'href="https://www.buymeacoffee.com/magpiary" target="_blank" rel="noopener"' in here
+
+
+def test_the_three_merged_pages_redirect_and_keep_query_and_anchor(mac):
+    """Ask, AI agents and Shared boards became folds and groups on AI & login and Profile & boards (8 Nov 2026)."""
+    for old, new in (("ask", "ai"), ("agents", "ai"), ("boards", "profile")):
+        status, headers, _ = page(mac, f"/settings/{old}")
+        assert (status, headers["Location"]) == (303, f"/settings/{new}"), old
+    status, headers, _ = page(mac, "/settings/boards?saved=bucket")
+    assert headers["Location"] == "/settings/profile?saved=bucket"
+    body = page(mac, "/settings/ai")[2]
+    assert 'id="ask"' in body and 'id="agents"' in body  # the folds the old links open
+    assert "Where boards sync" in page(mac, "/settings/profile")[2]
+    nav = body[body.index('class="setnav"'):body.index('class="setpane"')]
+    assert all(f'href="/settings/{k}"' not in nav for k in ("ask", "agents", "boards"))
