@@ -124,3 +124,5 @@ assert "if (vid && vid.paused) { const p = vid.play();" in js, "Full screen must
 print("phone back/fullscreen round 4 smoke: ok")
 assert ".postpage > .crumbbar { position: absolute !important; top: 0;" in css and "html:has(.cardm .stage.pvplaying) .postpage > .crumbbar { opacity: 0; }" in css, "buttons over the media at the top, hidden while playing"
 print("phone post overlay round 5 smoke: ok")
+assert "margin-top: 0; border-radius: 20px; background: transparent; }" in css and "border-radius: 999px 0 0 999px !important; margin-right: 0;" in css, "rounded media corners; Back+Autoplay one pill"
+print("phone post pill round 6 smoke: ok")

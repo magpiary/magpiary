@@ -261,7 +261,7 @@
      the screen gets narrower, centred, so the picture itself keeps its one rounded corner (no black box, no bars). --mar is the media's
      width/height, set on the stage by the page. */
   .cardm.pagemode .vid .stage { flex: none !important; height: auto !important; min-height: 0 !important; max-height: none !important; aspect-ratio: var(--mar, 1.7778) !important;
-    --sw: min(100vw, calc(85svh * var(--mar, 100))); width: var(--sw) !important; margin-inline: calc((100% - var(--sw)) / 2); margin-top: 0; border-radius: 0 0 20px 20px; background: transparent; }
+    --sw: min(100vw, calc(85svh * var(--mar, 100))); width: var(--sw) !important; margin-inline: calc((100% - var(--sw)) / 2); margin-top: 0; border-radius: 20px; background: transparent; }
   /* a post has no logo bar on a phone: the toolbar (back, open, More) is the first thing, and it scrolls away with the page */
   html:has(.postpage) #top { display: none !important; }
   html:has(.postpage) #view { padding-top: 0 !important; }
@@ -338,4 +338,13 @@
   .postpage > .crumbbar .pgback, .postpage > .crumbbar .pacts, .postpage > .crumbbar .pvautozone .pvauto { background: rgb(12 12 14 / .62) !important; box-shadow: 0 0 0 1px rgb(255 255 255 / .14) !important; }
   html:has(.cardm .stage.pvplaying) .postpage > .crumbbar { opacity: 0; }
   html:has(.cardm .stage.pvplaying) .postpage > .crumbbar > * { pointer-events: none; }
+}
+
+/* ---- post page buttons, round 6 (owner, 7 Nov): Back and Autoplay are one pill with a hair-line between, the buttons sit nearer the
+   screen edges, and the media has rounded corners at the top again ---- */
+@media (max-width: 760px) {
+  .postpage > .crumbbar { padding-left: 6px !important; padding-right: 6px !important; }
+  .postpage > .crumbbar .pgback { border-radius: 999px 0 0 999px !important; margin-right: 0; }
+  .postpage > .crumbbar > .pvautozone { margin-left: 1px; }
+  .postpage > .crumbbar > .pvautozone .pvauto { border-radius: 0 999px 999px 0 !important; padding: 0 14px 0 12px; }
 }
