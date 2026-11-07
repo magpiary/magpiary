@@ -593,4 +593,4 @@ def test_certificate_guide_lets_the_phone_say_the_install_is_done(door):
     mac_post(door, "/hub/access/pair")
     token = door.primary.hub._pairing[0]
     page = door.primary.hub.access_guide(f"/phone-access/{token}", "192.168.1.20").body.decode()
-    assert 'id="inst"' in page and "I've installed it" in page and "mark(3)" in page
+    assert 'id="inst"' in page and "I've installed the profile" in page and "mark(3)" in page

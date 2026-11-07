@@ -75,7 +75,7 @@ def certificate_guide(token: str, https_port: int, fingerprint_on_mac: bool = Tr
 <div class="more"><p>Tap <b>Profile Downloaded</b> at the top. Tap <b>Install</b> (top right), enter your passcode, then tap
 <b>Install</b> and <b>Install</b> again, then <b>Done</b>.</p>
 <p>No <b>Profile Downloaded</b> at the top? Go to <b>General → VPN &amp; Device Management</b> and tap <b>{e(CA_NAME)}</b>.</p>
-<button class="btn2" id="inst" type="button">I've installed it</button>
+<button class="btn2" id="inst" type="button">I've installed the profile</button>
 <p class="fine" style="margin-top:8px">This page can't see inside Settings, so tell it when you're done.</p></div></li>
 <li class="next" data-s="3"><h3>Trust it</h3>
 <p>One more switch in Settings.</p>
