@@ -273,7 +273,7 @@ def test_switch_is_off_by_default_and_toggles_from_the_mac(tmp_path):
     try:
         assert not access.enabled(d.store)
         page = mac_get(d, "/settings/phones").body.decode()
-        assert "Open the library on a phone" in page and "Pair a phone" not in page
+        assert "Phone access" in page and "Off until you turn it on" in page and "Pair a phone" not in page
         mac_post(d, "/hub/access/toggle", enabled="1")
         assert access.enabled(d.store)
         assert "Pair a phone" in mac_get(d, "/settings/phones").body.decode()
@@ -286,7 +286,7 @@ def test_switch_is_off_by_default_and_toggles_from_the_mac(tmp_path):
 def test_pairing_guide_serves_only_the_public_certificate_with_a_good_code(door):
     mac_post(door, "/hub/access/pair")
     page = mac_get(door, "/settings/phones").body.decode()
-    assert "Fingerprint" in page and access.ca_fingerprint() in page
+    assert "fingerprint" in page and " ".join(access.ca_fingerprint().split(" ")[:8]) in page and "data-access" in page
     token = door.primary.hub._pairing[0]
     hub = door.primary.hub
     guide = hub.access_guide(f"/phone-access/{token}", "192.168.1.20")
@@ -549,7 +549,7 @@ def test_phone_settings_hide_pairing_and_phone_access(door):
     mac_post(door, "/hub/access/pair")
     door.pair()
     page = door.request("GET", "/settings/phones?qr=http://x")[1]
-    assert "Phone access" not in page and "Pair a phone" not in page and "Fingerprint" not in page
+    assert "Phone access" not in page and "Pair a phone" not in page and "fingerprint" not in page
 
 
 @pytest.mark.parametrize("path,form", [("/hub/settings/mode", {"mode": "private"}), ("/hub/awake", {"enabled": "1"}),

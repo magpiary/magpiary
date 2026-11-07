@@ -196,6 +196,7 @@ class Devices:
         self.store = store
         self._now = now or (lambda: datetime.now().astimezone().isoformat(timespec="seconds"))
         self._pairs: dict[str, float] = {}  # one-time pairing tokens -> expiry (monotonic seconds)
+        self._stages: dict[str, set[str]] = {}  # how far each pairing code has got: opened, downloaded, trusted, paired
         self._lock = threading.Lock()
         self._seen: dict[int, float] = {}
         with store._lock:
@@ -212,6 +213,22 @@ class Devices:
             self._pairs = {t: exp for t, exp in self._pairs.items() if exp > now}
             self._pairs[token] = now + PAIR_FOR
         return token
+
+    def mark(self, token: str, stage: str) -> None:
+        """Note that the phone with this pairing code reached a stage (the Mac's pairing card ticks it off)."""
+        with self._lock:
+            if len(self._stages) > 50:
+                self._stages.clear()
+            if any(hmac.compare_digest(token.encode(), t.encode()) for t in self._pairs) or token in self._stages:
+                self._stages.setdefault(token, set()).add(stage)
+
+    def progress(self, token: str, clock: float | None = None) -> dict:
+        import time
+
+        with self._lock:
+            now = clock if clock is not None else time.monotonic()
+            exp = next((e for t, e in self._pairs.items() if hmac.compare_digest(token.encode(), t.encode())), 0)
+            return {"left": max(0, int(exp - now)), "stages": sorted(self._stages.get(token, set()))}
 
     def pair_token_valid(self, token: str, clock: float | None = None) -> bool:
         import time

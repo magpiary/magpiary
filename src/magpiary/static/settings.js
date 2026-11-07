@@ -406,3 +406,40 @@
     });
   })();
 })();
+
+// Phone access: the pairing card ticks off the steps as the phone gets through them, and counts the code down.
+(() => {
+  const card = document.querySelector("[data-access]");
+  if (!card) return;
+  const order = ["opened", "downloaded", "trusted", "paired"];
+  const steps = [...card.querySelectorAll(".pa-steps li")], live = card.querySelector("[data-live]"), timer = card.querySelector("[data-timer]");
+  const words = {
+    none: "Waiting for the phone to scan the code…",
+    opened: "The phone opened the code. Next: download and install the certificate.",
+    downloaded: "Certificate downloaded. Now install and trust it in the phone's Settings.",
+    trusted: "The phone trusts this Mac. Tap Continue on the phone.",
+    paired: "Paired. This phone can now open your library.",
+  };
+  let left = Number(card.dataset.left) || 0, done = false;
+  const paint = (stages) => {
+    const reached = Math.max(-1, ...stages.map((s) => order.indexOf(s)));
+    steps.forEach((li, i) => li.className = i <= reached ? "pa-done" : i === reached + 1 ? "pa-now" : "");
+    live.textContent = left <= 0 && reached < 3 ? "This code has expired. Choose New code." : words[reached < 0 ? "none" : order[reached]];
+    live.classList.toggle("ok", reached >= 2);
+    if (reached >= 3 && !done) { done = true; setTimeout(() => location.reload(), 1400); }
+  };
+  paint([]);
+  setInterval(() => {
+    left = Math.max(0, left - 1);
+    if (timer) timer.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+  }, 1000);
+  const poll = async () => {
+    if (!document.body.contains(card)) return;
+    try {
+      const r = await fetch("/access.json", { cache: "no-store" });
+      if (r.ok) { const d = await r.json(); left = d.left; paint(d.stages || []); }
+    } catch (_) { /* the Mac answers again on the next round */ }
+    if (!done) setTimeout(poll, 2000);
+  };
+  poll();
+})();

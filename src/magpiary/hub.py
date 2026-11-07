@@ -260,6 +260,8 @@ class Hub(
             return self.lock_get(path, q)
         if path == "/panel.json":
             return self.panel_json()
+        if path == "/access.json":  # the Mac's pairing card: how far the phone has got (never offered to a phone)
+            return self.access_json()
         if path == "/":
             if self.needs_welcome():
                 return Response(303, b"", headers={"Location": "/welcome"})

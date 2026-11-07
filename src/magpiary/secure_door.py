@@ -87,12 +87,14 @@ class SecureHandler(Handler):
             self._refuse("pairing code expired or already used", "This pairing code has expired. Make a new one on your Mac.", 410)
             return
         if method == "GET":
+            devices.mark(token, "trusted")  # this page only loads once the phone trusts the certificate
             self.send_page(phone_guide.pair_form(token, PAIR_PATH + token))
             return
         form = self._read_form(2000) or {}
         if not devices.spend_pair_token(token):
             self._refuse("pairing code expired or already used", "This pairing code has expired. Make a new one on your Mac.", 410)
             return
+        devices.mark(token, "paired")
         _, key = devices.add(form.get("name", "iPhone"), self.headers.get("User-Agent", ""))
         cookie = f"{access.COOKIE}={key}; Max-Age={COOKIE_AGE}; Path=/; Secure; HttpOnly; SameSite=Strict"
         self.send_page(Response(303, b"", headers={"Location": APP_PATH, "Set-Cookie": cookie}))
