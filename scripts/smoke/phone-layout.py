@@ -87,13 +87,13 @@ print("phone swipe fade / nav hold / board names smoke: ok")
 # post view: one-row toolbar, Ask hidden, video capped, tab strip fades at the edge with more tabs
 assert ".crumbbar { flex-wrap: nowrap !important;" in css, "post toolbar must be one row"
 assert ".pvask, .pvactions:has(> .pvask:only-child) { display: none !important; }" in css, "Ask chip must be hidden on the phone"
-assert "calc(85svh * var(--mar, 100))" in css, "post video must be capped at 85% of the screen"
+assert "calc(85lvh * var(--mar, 100))" in css, "media capped at 85% tall"
 assert ".tabs.pvtabs.pmoreR {" in css and "pmoreR" in js, "post tab strip needs an edge fade"
 print("phone post view smoke: ok")
 
 # post view round 2: media 90% wide (cap 75%), toolbar back/open/More, swipe + edge arrows, link buttons one line with logos,
 # tab strip sideways only, pop-ups not held invisible by the page fade, Back keeps the filter, pull to refresh on a post
-assert "calc(85svh * var(--mar, 100))" in css, "media capped at 85% tall"
+assert "calc(85lvh * var(--mar, 100))" in css, "media capped at 85% tall"
 assert "html:has(.postpage) #top { display: none !important; }" in css, "no logo bar on a post"
 assert "padding: 0 12px !important; gap: 10px; align-items: center; }" in css, "link buttons centred vertically"
 assert ".crumbbar .pacts > :is([data-pagenav], .rb.off, .pgpos, [data-addboard], [data-copylink]) { display: none !important; }" in css, "toolbar icons"
@@ -109,12 +109,12 @@ assert r'/^\/item\/\d+/.test(location.pathname)' in js, "pull to refresh on a po
 print("phone post view round 2 smoke: ok")
 assert "mag-backing" not in js, "the old Back note is gone"
 print("phone post back smoke: ok")
-assert "top: calc(env(safe-area-inset-top, 0px) + 6px) !important; padding-top: 6px;" in css and ".ptabsbg.show { display: block; }" in css and "ptabsbg" in js, "stuck post tabs: higher, full-width background only while stuck"
+assert "top: calc(env(safe-area-inset-top, 0px) + 6px) !important; padding-top: 6px;" in css and "box-shadow: 0 0 0 100vmax var(--fade-0, #101015) !important;" in css, "pinned post tabs: higher, own full-bleed background"
 print("phone post tabs sticky smoke: ok")
 assert ".pscroll > [data-pane] { min-height: calc(100svh - 300px); }" in css and "top: -500px" in css, "short tabs keep room; background reaches over the top"
 assert "function pin(wasStuck)" in js, "switching tabs while stuck must keep the bar pinned"
 print("phone post tab switch smoke: ok")
-assert "--sw: min(100vw, calc(85svh * var(--mar, 100)));" in css, "player full viewport width (height cap 85%)"
+assert "calc(85lvh * var(--mar, 100))" in css, "player width: 8px inside the screen, height cap 85% of the large viewport"
 assert "padding: 0 !important; width: 44px; justify-content: center;" in css, "back arrow centred"
 assert ".cardm.pagemode .stage .pvautozone { position: absolute; z-index: 21;" in css and "insertAdjacentElement" not in js, "autoplay stays in the player, placed beside Back by CSS"
 assert 'webkitEnterFullscreen' in js and ".stage.pfs" in css and '.pvb[data-pv="fit"] { display: none; }' in css, "full screen fallback; fit button hidden"
@@ -134,9 +134,17 @@ assert ".cardm.pagemode .stage .pvautozone { left: 84px;" in css and ".postpage 
 print("phone post buttons round 9 smoke: ok")
 assert ".cardm.pagemode .stage .pvautozone { left: 62px; }" in css and "padding-left: 8px !important; padding-right: 8px !important;" in css and ".pgback::after { border-radius: 999px; }" in css, "buttons near the edges, round tap shapes"
 print("phone post buttons round 10 smoke: ok")
-assert ".cardm.pagemode .stage .pvautozone { left: 66px;" in css and "background: rgb(250 250 252 / .74)" not in css and "left: calc(-1 * max(var(--pad, 16px), 24px)) !important;" in css, "equal 12px gaps; right pill stays dark"
+assert ".cardm.pagemode .stage .pvautozone { left: 66px;" in css and "background: rgb(250 250 252 / .74)" not in css and "left: var(--cl, calc(-1 * max(var(--pad, 16px), 24px))) !important;" in css, "equal 12px gaps; right pill stays dark"
 print("phone post buttons round 11 smoke: ok")
 assert ":root[data-theme] .postpage :is(.pvpile, .pvaddbtn) { display: inline-flex; align-items: center;" in css, "pile pill label centred"
 print("phone post audit smoke: ok")
 assert ".postpage .frow > small { font-size: 12px; }" in css and "padding-block: 10px; margin-block: -10px;" in css, "post page: bigger hit areas, no text under 12px in labels"
 print("phone post hit areas smoke: ok")
+assert '"--cw"' in js and "sr.width" in js, "button row aligned to the media's own width"
+print("phone post width/row alignment smoke: ok")
+assert ".cardm.pagemode .pscroll > [data-pane] { padding-bottom: 170px; }" in css and '.cardm.pagemode .pscroll { padding-bottom: 0 !important; }' in css, "tab bar container reaches the page end"
+print("phone post sticky container smoke: ok")
+assert 'nav.classList.add("pfix")' in js and ".tabs.pvtabs.pfix { position: fixed !important;" in css, "tab strip is pinned with position fixed (immune to iOS rubber-banding)"
+print("phone post pinned tabs smoke: ok")
+assert "html:has(.postpage)::before { content: \"\"; position: fixed; left: 0; right: 0; top: -500px;" in css, "solid cap behind the status bar on post pages"
+print("phone post status-bar cap smoke: ok")

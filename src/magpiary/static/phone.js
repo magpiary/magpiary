@@ -380,20 +380,35 @@ document.addEventListener("click", (ev) => {
   restore();
 })();
 
-/* Post tab strip: while it is stuck near the top, a full-width layer in the page's top colour sits behind it and runs off the left,
-   right and top edges. It is not there when the tabs are in their place in the page. */
+/* Post tab strip, pinned. While the strip is at the top it is position: fixed (a placeholder keeps its room in the page) instead of
+   sticky: iOS moves sticky elements with the page while it rubber-bands past the end, so the bar slid away and the page showed through;
+   fixed elements stay put. Its own background (in the page's top colour) runs off the left, right and top edges. */
 (function () {
   "use strict";
-  let bg = null, queued = false;
+  let ph = null, probe = null, queued = false;
+  function release(nav) {
+    nav.classList.remove("pfix"); nav.style.removeProperty("--fl"); nav.style.removeProperty("--fw");
+    if (ph) ph.hidden = true;
+  }
   function update() {
     queued = false;
     const nav = document.querySelector(".cardm.pagemode .tabs.pvtabs");
-    if (!nav || innerWidth > 760) { if (bg) bg.classList.remove("show"); return; }
-    if (!bg) { bg = document.createElement("div"); bg.className = "ptabsbg"; bg.setAttribute("aria-hidden", "true"); document.body.appendChild(bg); }
-    const r = nav.getBoundingClientRect(), stick = parseFloat(getComputedStyle(nav).top) || 0;
-    const stuck = r.top <= stick + 0.5 && r.bottom > 0 && window.scrollY > 0;
-    bg.style.height = Math.max(0, r.bottom) + 500 + "px";  // 500px above the screen too: the page rubber-banding must not uncover anything
-    bg.classList.toggle("show", stuck);
+    if (!nav) return;
+    if (innerWidth > 760) { release(nav); return; }
+    if (!ph) { ph = document.createElement("div"); ph.className = "pvtabsph"; ph.hidden = true; ph.setAttribute("aria-hidden", "true"); nav.parentElement.insertBefore(ph, nav); }
+    const cs = getComputedStyle(nav), mt = parseFloat(cs.marginTop) || 0, mb = parseFloat(cs.marginBottom) || 0;
+    const fixed = nav.classList.contains("pfix");
+    // where the strip sits in the page when it is not pinned: the placeholder's top (when pinned) or its own top
+    const naturalTop = fixed ? ph.getBoundingClientRect().top + mt : nav.getBoundingClientRect().top;
+    if (!probe) { probe = document.createElement("div"); probe.style.cssText = "position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none"; document.body.appendChild(probe); }
+    const top = probe.offsetHeight + 6;  // the strip pins 6px under the status bar (same as its CSS top)
+    const stuck = naturalTop <= top;
+    if (stuck && !fixed) {
+      const r = nav.getBoundingClientRect();
+      ph.style.height = r.height + "px"; ph.style.marginTop = mt + "px"; ph.style.marginBottom = mb + "px"; ph.hidden = false;
+      nav.style.setProperty("--fl", r.left + "px"); nav.style.setProperty("--fw", r.width + "px");
+      nav.classList.add("pfix");
+    } else if (!stuck && fixed) { release(nav); }
   }
   const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
   addEventListener("scroll", queue, { passive: true });
@@ -413,7 +428,7 @@ document.addEventListener("click", (ev) => {
     const nav = document.querySelector(".cardm.pagemode .tabs.pvtabs");
     const pane = nav && nav.parentElement.querySelector("[data-pane]:not([hidden])");
     if (!wasStuck || !pane) return;
-    const stick = parseFloat(getComputedStyle(nav).top) || 0;
+    const stick = parseFloat(getComputedStyle(nav).top) || 0;  // fixed: its top is the pin position
     const mb = parseFloat(getComputedStyle(nav).marginBottom) || 0;
     const naturalTop = docTop(pane) - mb - nav.offsetHeight;
     window.scrollTo({ top: Math.max(0, naturalTop - stick), behavior: "instant" });
@@ -421,8 +436,8 @@ document.addEventListener("click", (ev) => {
   document.addEventListener("click", function (ev) {
     const a = ev.target instanceof Element ? ev.target.closest(".cardm.pagemode .tabs.pvtabs a[data-tab]") : null;
     if (!a || innerWidth > 760 || a.classList.contains("off")) return;
-    const nav = a.closest(".tabs"), r = nav.getBoundingClientRect(), stick = parseFloat(getComputedStyle(nav).top) || 0;
-    const wasStuck = r.top <= stick + 1 && window.scrollY > 0;
+    const nav = a.closest(".tabs");
+    const wasStuck = nav.classList.contains("pfix");
     setTimeout(() => pin(wasStuck), 0);   // after the page has shown the new tab
     setTimeout(() => pin(wasStuck), 160);  // and again once its fade-in and any content settling are done
   }, true);
@@ -458,4 +473,26 @@ document.addEventListener("click", (ev) => {
     if (asked && asked.catch) asked.catch(pseudo);
     setTimeout(() => { if (!document.fullscreenElement && !document.webkitFullscreenElement) pseudo(); }, 450);  // an embedded browser may neither refuse nor allow
   }, true);
+})();
+
+/* Post page: the button row (Back, Open, More) is exactly as wide as the media, whatever the media's size (a tall reel is narrower than the
+   screen on a phone with Safari's toolbars showing), so the right pill never sticks out past the picture's corner. */
+(function () {
+  "use strict";
+  let q = false;
+  function align() {
+    q = false;
+    const bar = document.querySelector(".postpage > .crumbbar"), stage = document.querySelector(".cardm.pagemode .stage");
+    if (!bar || !stage || innerWidth > 760) return;
+    const pp = bar.parentElement.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+    bar.style.setProperty("--cl", Math.round(sr.left - pp.left) + "px");
+    bar.style.setProperty("--cw", Math.round(sr.width) + "px");
+    bar.style.setProperty("--ct", Math.round(sr.top - pp.top) + "px");
+  }
+  const queue = () => { if (!q) { q = true; requestAnimationFrame(align); } };
+  addEventListener("resize", queue); addEventListener("load", queue); addEventListener("pageshow", queue); addEventListener("orientationchange", queue);
+  new MutationObserver(queue).observe(document.documentElement, { childList: true, subtree: true });
+  const vid = () => document.querySelector(".cardm.pagemode .stage video"); 
+  document.addEventListener("loadedmetadata", queue, true);
+  align();
 })();

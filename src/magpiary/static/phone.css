@@ -298,7 +298,9 @@
 /* ---- post tab strip, stuck (owner, 7 Nov): no logo bar above it any more, so it sticks near the very top (just under the status bar),
    and it has a solid page-coloured background so the text scrolling under it does not show through ---- */
 @media (max-width: 760px) {
-  :root[data-theme] .cardm.pagemode .tabs.pvtabs { top: calc(env(safe-area-inset-top, 0px) + 6px) !important; padding-top: 6px; z-index: 14; }
+  :root[data-theme] .cardm.pagemode .tabs.pvtabs { top: calc(env(safe-area-inset-top, 0px) + 6px) !important; padding-top: 6px; z-index: 14; position: relative !important; }
+  :root[data-theme] .cardm.pagemode .tabs.pvtabs.pfix { position: fixed !important; left: var(--fl) !important; width: var(--fw) !important; margin: 0 !important; z-index: 14;
+    background: var(--fade-0, #101015) !important; box-shadow: 0 0 0 100vmax var(--fade-0, #101015) !important; clip-path: inset(-100vmax -100vmax 0 -100vmax); -webkit-mask-image: none !important; mask-image: none !important; }
   /* the bar's background is a separate full-width layer (phone.js sizes it) that exists only while the tabs are stuck: it runs off
      the left, right and top edges in the dark colour at the top of the page, with a hard edge under the tabs */
   .ptabsbg { display: none; position: fixed; left: 0; right: 0; top: -500px; height: 0; z-index: 13; pointer-events: none; background: var(--fade-0, #101015); }
@@ -401,10 +403,10 @@
 /* ---- round 11 (owner, 7 Nov): the same gap at the top and at both sides (12px; the top gap is measured under the phone's status bar), the
    row laid out from the page's own width (100vw also counts a scrollbar and pushed the right button out), and the right pair stays the dark pill ---- */
 @media (max-width: 760px) {
-  .postpage > .crumbbar { left: calc(-1 * max(var(--pad, 16px), 24px)) !important; right: calc(-1 * max(var(--pad, 16px), 24px)) !important; width: auto !important;
-    padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px 12px !important; }
+  .postpage > .crumbbar { left: var(--cl, calc(-1 * max(var(--pad, 16px), 24px))) !important; right: auto !important; width: var(--cw, auto) !important; top: var(--ct, 0px) !important; box-sizing: border-box;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px 12px !important; }  /* phone.js sets --cl/--cw/--ct: the row is exactly as wide as the media */
   .cardm.pagemode .stage .pvautozone { left: 66px; top: calc(env(safe-area-inset-top, 0px) + 12px); }
-  .cardm.pagemode .vid .stage { --sw: min(calc(100% + 2 * max(var(--pad, 16px), 24px)), calc(85svh * var(--mar, 100))); }
+  .cardm.pagemode .vid .stage { --sw: min(calc(100% + 2 * max(var(--pad, 16px), 24px) - 16px), calc(85lvh * var(--mar, 100))); }  /* 8px of page beside the media so its rounded corners show; the cap uses the large viewport (Safari's toolbars made svh too small) */
 }
 
 /* Autoplay: nothing behind it when tapped or hovered; only its switch changes (purple when on) */
@@ -428,4 +430,20 @@
   .postpage .fchip :is(a, button) { padding-inline: 10px; margin-inline: -4px; }
   .postpage .frow > small { font-size: 12px; }          /* "Length" and its kind were 11px */
   .postpage .bd { font-size: 12px; }                    /* "No link found yet" was 10.5px */
+}
+
+/* the tab bar can stick to the very end of the page: its container (the page body under the media) used to end 240px before the page
+   did (padding), so at the bottom, and while rubber-banding there, the bar was pushed out and the page showed through. The spacing for the
+   bottom bar now lives inside the last pane, so the container reaches the end of the page. */
+@media (max-width: 760px) {
+  body[data-page="card"] .wrap { padding-bottom: 0; }
+  .cardm.pagemode .pscroll { padding-bottom: 0 !important; }
+  .cardm.pagemode .pscroll > [data-pane] { padding-bottom: 170px; }
+}
+
+/* the strip behind the status bar: content that scrolls up under it used to fade (iOS blurs it). A solid cap in the page's top colour now
+   sits there, so the media is cut off cleanly. It reaches 500px above the layout viewport, which is where the status bar is on iOS. */
+@media (max-width: 760px) {
+  html:has(.postpage)::before { content: ""; position: fixed; left: 0; right: 0; top: -500px; height: 500px; background: var(--fade-0, #101015); z-index: 12; pointer-events: none; }
+  .ptabsbg { display: none !important; }
 }
