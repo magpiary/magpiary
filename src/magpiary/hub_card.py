@@ -194,7 +194,8 @@ class CardPages:
         elif q.get("view", [""])[0] == "piles":
             trail = [("Library", "/"), ("Piles", frm)]
         else:
-            trail = [("Library", "/")]
+            # a filtered Library (source, type, tag, author, links...): Back returns to that same filtered list
+            trail = [("Library", frm if frm.startswith("/?") else "/")]
         parts = "".join(f'<a href="{e(href)}" data-crumb>{e(label)}</a><i aria-hidden="true">›</i>' for label, href in trail)
         label, href = trail[-1]
         label = label.strip("“”") if label.startswith("“") is False else "search results"
@@ -380,6 +381,7 @@ class CardPages:
                                    "Restore to library" if item["shelf"] == "trash" else "Back to library", "mi"))
         if item["status"] == "archived":
             acts.append(f'<button type="button" class="mi" data-addboard="{item["id"]}">Add to board…</button>')
+        acts.append(f'<button type="button" class="mi pmi" data-copylink="{e(item["canonical_url"])}">Copy link</button>')  # shown on a phone only (its toolbar has no room for the icon)
         acts.append(extra_menu)
         if item["shelf"] != "trash":
             acts.append(self._form("/hub/shelf", {"id": item["id"], "shelf": "trash", "next": "/"}, "Remove…", "mi bad",

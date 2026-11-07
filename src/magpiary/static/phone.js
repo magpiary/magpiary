@@ -113,7 +113,7 @@ document.addEventListener("click", (ev) => {
   if (location.pathname !== "/nest") location.assign("/nest");
 }, true);
 
-/* Pull to refresh on the library: at the top of the page, pull down and let go. Phone-sized screens only. */
+/* Pull to refresh on the library and on a post page: at the top of the page, pull down and let go. Phone-sized screens only. */
 (() => {
   if (window.__phonePull) return;
   window.__phonePull = true;
@@ -134,7 +134,7 @@ document.addEventListener("click", (ev) => {
     e.classList.toggle("ready", px >= THRESHOLD);
   };
   const reset = () => { if (!el) return; el.classList.remove("pulling", "ready"); el.style.setProperty("--pull", "0px"); el.style.setProperty("--prog", 0); };
-  const allowed = (t) => phone.matches && location.pathname === "/" && !busy && !document.body.classList.contains("lock")
+  const allowed = (t) => phone.matches && (location.pathname === "/" || /^\/item\/\d+/.test(location.pathname)) && !busy && !document.body.classList.contains("lock")
     && !document.body.classList.contains("askopen") && !(t instanceof Element && t.closest("input, textarea, select, [contenteditable], .spanel, .sover, .modal, .nestsheet, .pmore"))
     && !document.querySelector("#sover:not([hidden])");
   document.addEventListener("touchstart", (ev) => {
@@ -292,4 +292,53 @@ document.addEventListener("click", (ev) => {
   addEventListener("load", scan);
   new MutationObserver(function () { clearTimeout(scan.t); scan.t = setTimeout(scan, 120); }).observe(document.documentElement, { childList: true, subtree: true });
   scan();
+})();
+
+/* Post view: swipe left/right goes to the next/previous post, and two faint arrows on the media do the same by tap.
+   It reuses the page's own Previous/Next links (hub.js slides the page), so history and "n of m" behave as on the Mac.
+   Not started from: the tab strip, inputs, anything that scrolls sideways, or the bottom of the video (its controls). */
+(function () {
+  "use strict";
+  const ARROW = (d) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>';
+  const link = (label) => document.querySelector('.postpage a[data-pagenav][aria-label="' + label + '"]');
+  function edges() {
+    const stage = document.querySelector(".cardm.pagemode .stage");
+    if (!stage || stage.querySelector(".pedge")) return;
+    [["Previous post", "pl", "M15 5l-7 7 7 7"], ["Next post", "pr", "M9 5l7 7-7 7"]].forEach(function (s) {
+      if (!link(s[0])) return;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "pedge " + s[1]; b.setAttribute("aria-label", s[0]); b.innerHTML = ARROW(s[2]);
+      b.addEventListener("click", function () { const a = link(s[0]); if (a) a.click(); });
+      stage.appendChild(b);
+    });
+  }
+  function sideways(el) {
+    for (; el && el !== document.body; el = el.parentElement) {
+      if (el.scrollWidth > el.clientWidth + 2 && /(auto|scroll)/.test(getComputedStyle(el).overflowX)) return true;
+    }
+    return false;
+  }
+  let t0 = null;
+  document.addEventListener("touchstart", function (ev) {
+    t0 = null;
+    if (innerWidth > 760 || ev.touches.length !== 1 || !document.querySelector(".postpage")) return;
+    const el = ev.target, p = ev.touches[0];
+    if (el.closest("input, textarea, select, .pvtabs, .pedge, .pop, .chooser, .sover, .modal")) return;
+    if (el.tagName === "VIDEO" || el.closest(".stage")) {
+      const v = el.closest(".stage") && el.closest(".stage").getBoundingClientRect();
+      if (v && p.clientY > v.bottom - 64) return;  // the player's own controls
+    }
+    if (sideways(el)) return;
+    t0 = { x: p.clientX, y: p.clientY, t: performance.now() };
+  }, { passive: true });
+  document.addEventListener("touchend", function (ev) {
+    if (!t0) return;
+    const p = ev.changedTouches[0], dx = p.clientX - t0.x, dy = p.clientY - t0.y, dt = performance.now() - t0.t;
+    t0 = null;
+    if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.8 || dt > 700) return;
+    const a = link(dx > 0 ? "Previous post" : "Next post");
+    if (a) a.click();
+  }, { passive: true });
+  new MutationObserver(function () { clearTimeout(edges.t); edges.t = setTimeout(edges, 80); }).observe(document.documentElement, { childList: true, subtree: true });
+  edges();
 })();

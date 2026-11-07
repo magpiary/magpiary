@@ -90,3 +90,18 @@ assert ".pvask, .pvactions:has(> .pvask:only-child) { display: none !important; 
 assert ".cardm.pagemode .stage { max-height: min(62svh, 520px) !important;" in css, "post video must be capped"
 assert ".tabs.pvtabs.pmoreR {" in css and "pmoreR" in js, "post tab strip needs an edge fade"
 print("phone post view smoke: ok")
+
+# post view round 2: media 90% wide (cap 75%), toolbar back/open/More, swipe + edge arrows, link buttons one line with logos,
+# tab strip sideways only, pop-ups not held invisible by the page fade, Back keeps the filter, pull to refresh on a post
+assert ".cardm.pagemode .stage { width: 90vw !important;" in css and "max-height: 75svh !important;" in css, "media 90% wide, capped"
+assert ".crumbbar .pacts > :is([data-pagenav], .rb.off, .pgpos, [data-addboard], [data-copylink]) { display: none !important; }" in css, "toolbar icons"
+assert ".crumbbar::before { display: none !important; }" in css, "no fade behind the toolbar"
+assert 'class="mi pmi" data-copylink=' in (src / "hub_card.py").read_text(), "Copy link must be in the More menu"
+assert "pedge" in js and 'a[data-pagenav][aria-label="' in js and "touchend" in js.split("Post view: swipe left/right")[-1], "post swipe + edge arrows"
+assert ".pvactions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr));" in css, "equal-width link buttons"
+assert ".pvactions .pvprimary > .fav { flex: none;" in css and ".pvactions .pvprimary.find::before" in css, "logos on link buttons"
+assert ".tabs.pvtabs { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;" in css, "tab strip sideways only"
+assert "body > :is(#top, #view) { animation: pfadein" in css, "page fade must not hold body pop-ups at opacity 0 (board chooser)"
+assert 'trail = [("Library", frm if frm.startswith("/?") else "/")]' in (src / "hub_card.py").read_text(), "Back must keep the filter"
+assert r'/^\/item\/\d+/.test(location.pathname)' in js, "pull to refresh on a post"
+print("phone post view round 2 smoke: ok")
