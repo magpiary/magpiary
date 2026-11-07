@@ -498,13 +498,20 @@
   .setnavh, .setnavh:first-child { display: block !important; margin: 22px 4px 8px; font-size: 12px; }
   .setside > .setnav > .setnavh:first-child { margin-top: 4px; }
   .setcard, .setpriv { display: grid !important; grid-template-columns: 30px minmax(0, 1fr) 14px; grid-template-rows: auto auto; column-gap: 14px; row-gap: 1px; align-items: center;
-    min-height: 56px; padding: 8px 14px !important; margin: 0 0 8px !important; border-radius: 14px; border: 1px solid var(--line, rgb(255 255 255 / .12)); background: var(--chip, rgb(255 255 255 / .05)); }
+    min-height: 60px; padding: 8px 4px !important; margin: 0 !important; border-radius: 0 !important; border: 0 !important; border-bottom: 1px solid var(--line, rgb(255 255 255 / .1)) !important; background: none !important; box-shadow: none !important; }
+  .setcard:hover, .setpriv:hover { background: none !important; }
+  .setcard:active, .setpriv:active { background: var(--chip, rgb(255 255 255 / .06)) !important; }
+  html:has(.setlayout) #top { display: none !important; }
+  html:has(.setlayout) .wrap { padding-top: calc(env(safe-area-inset-top, 0px) + 12px) !important; }
   .setcard .seticon, .setpriv .seticon { grid-row: span 2; width: 30px; height: 30px; }
   .setcard > b, .setpriv b { grid-column: 2; font-size: 16px; align-self: end; }
   .setcard .setstat, .setpriv small { display: block !important; grid-column: 2; font-size: 12px; align-self: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .setpriv > span:not(.seticon) { grid-column: 2; grid-row: span 2; display: grid; justify-items: start; align-content: center; text-align: left; }
+  .setpriv > span:not(.seticon) > :is(b, small) { grid-column: auto !important; align-self: auto; }  /* inside their own grid: a column number here pushed the label to the middle */
+  /* the last row of each group has no line under it */
+  .setnav > .setcard:last-child, .setnav > .setcard:has(+ .setnavh), .setpriv { border-bottom: 0 !important; }
   .setcard::after, .setpriv::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 8px; height: 8px; border-top: 2px solid var(--fg-3, #888); border-right: 2px solid var(--fg-3, #888); transform: rotate(45deg); justify-self: end; margin-right: 2px; }
-  .setcard.on, .setpriv.on { background: var(--chip, rgb(255 255 255 / .05)); box-shadow: none; }
+  .setcard.on, .setpriv.on { background: none !important; box-shadow: none !important; }
   .setsupport { display: block; text-align: center; margin: 18px 0 6px; padding: 12px; font-size: 14px; color: var(--fg-2); }
   .setback { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -6px 0 8px -8px; padding: 0 12px 0 8px; font-weight: 600; font-size: 16px; color: var(--accent, var(--fg)); }
   .setback::before { content: ""; width: 9px; height: 9px; border-left: 2.5px solid currentColor; border-bottom: 2.5px solid currentColor; transform: rotate(45deg); margin-right: 4px; }

@@ -403,6 +403,8 @@
       if (samePage && $("#setpane", view) && $("#setpane", fresh)) {
         // Settings: the list on the left stays, only the open section changes
         $(".setnav", view).innerHTML = $(".setnav", fresh).innerHTML;
+        $(".setlayout", view).className = $(".setlayout", fresh).className;  // the phone shows the list or one section by this class
+        $$(".setpriv", view).forEach((x, i) => { const f = $$(".setpriv", fresh)[i]; if (f) x.className = f.className; });
         const help = $("#sethelp", view), fhelp = $("#sethelp", fresh);
         if (help && fhelp) { help.innerHTML = fhelp.innerHTML; G()?.from($$(".hwrap > *", help), { opacity: 0, y: 10, duration: .35, stagger: .04, clearProps: "opacity,transform" }); }
         if (scrollY > 0) scrollTo({ top: 0, behavior: "instant" });

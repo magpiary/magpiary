@@ -169,3 +169,9 @@ print("phone settings two-layer smoke: ok")
 assert '".setpane .info.open"' in js and ".setpane .info.open .ttip { opacity: 1; }" in css, "settings tip opens on tap"
 assert ".setpane form.picks { grid-template-columns: repeat(2" in css and ".setpane .srow:has(> .src > form > .sw:only-of-type)" in css, "settings pickers 2 columns, lone switch at the row's right"
 print("phone settings sections smoke: ok")
+hubjs = open("src/magpiary/static/hub.js").read()
+assert '$(".setlayout", view).className = $(".setlayout", fresh).className' in hubjs, "Settings swap keeps list/section class in step (rows open)"
+assert "html:has(.setlayout) #top { display: none !important; }" in css and "border-radius: 0 !important; border: 0 !important; border-bottom" in css, "Settings: no top bar, flat rows"
+print("phone settings open/flat smoke: ok")
+assert ".setpriv > span:not(.seticon) > :is(b, small) { grid-column: auto !important;" in css and ".setnav > .setcard:has(+ .setnavh)" in css, "Privacy row left-aligned like the rest; last row of a group has no line"
+print("phone settings last-row/privacy smoke: ok")
