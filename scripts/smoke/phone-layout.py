@@ -181,3 +181,5 @@ print("phone settings flat-rows smoke: ok")
 assert ".setpane .srow .sw { position: absolute !important; right: 0; top: 14px;" in css and "details.menu > .pop { position: fixed !important; left: 16px !important;" in css, "settings: switch always top right, menus on screen"
 assert "line-clamp: 2" in css and "Settings: explanations are clamped" in js, "settings: explanations clamped to two lines, tap opens"
 print("phone settings column/menu/clamp smoke: ok")
+assert "#keys .addrow, #keys .dots, #keys .draghandle, #keysdanger, #addkey-adv, #search, #instagram, #home, #chrome, #downloads, #library" in css, "Mac-only settings hidden on the phone"
+print("phone settings Mac-only smoke: ok")

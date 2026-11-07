@@ -616,3 +616,14 @@
 @media (max-width: 760px) {
   .setpane .srow > .src:has(.sw):not(:has(.btn, select, input:not([type="hidden"]), a, .engst:not(:empty), .engrm:not(:empty), small, .kstat)) > :not(form) { display: none; }
 }
+
+@media (max-width: 760px) {
+  /* What stays on the Mac: keys and secrets, setup and install, files and folders, wide-screen options, delete actions.
+     The phone keeps looking, switching and small choices (see phone-settings-table.md in the session notes). */
+  .setpane :is(#keys .addrow, #keys .dots, #keys .draghandle, #keysdanger, #addkey-adv, #search, #instagram, #home, #chrome, #downloads, #library, #receiver, #mac,
+                #remove, #sync, #delete, #lives, #width, #glassstrength, #beta, #versioncheck, #backup, #restore, #pairnew, #phones > .srows > .addrow, #phones .gnote, #phones .dots) { display: none !important; }
+  .setboxes:has(#sync) details.adv, .setboxes:has(#library) details.adv, .setboxes:has(#mac) details.adv { display: none !important; }
+  .setpane #keys .keyrow { pointer-events: auto; }
+  .setpane #keys .keyrow .slead { width: 32px !important; }
+  .setpane #keys .keyrow > .src { margin-left: 44px !important; flex-basis: calc(100% - 44px) !important; }
+}
