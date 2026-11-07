@@ -61,9 +61,9 @@ def test_the_links_page_is_gone_and_its_settings_moved(mac):
 def test_the_list_is_grouped_in_the_agreed_order_and_opens_where_a_look_is_needed(mac):
     body = page(mac, "/settings/ai")[2]
     nav = body[body.index('class="setnav"'):body.index('class="setpane"')]
-    order = [nav.index(f'href="/settings/{k}"') for k in ("profile", "phones", "ai", "appearance", "storage", "privacy")]
+    order = [nav.index(f'href="/settings/{k}"') for k in ("profile", "phones", "ai", "ask", "agents", "appearance", "storage", "privacy")]
     assert order == sorted(order)
-    assert nav.index(">You<") < order[0] < nav.index(">Using Magpiary<") < order[1] and order[2] < nav.index(">This hub<") < order[3]
+    assert nav.index(">You<") < order[0] < nav.index(">Using Magpiary<") < order[1] and order[4] < nav.index(">This hub<") < order[5]
     assert "Your phones" in page(mac, "/settings")[2]  # no phone yet: Settings opens there
     mac.store.add_phone("Work iPhone")
     mac.store.set_setting("ai_mode", "private")
@@ -190,7 +190,7 @@ def test_the_search_index_covers_every_page_and_every_anchor_exists(mac):
             continue  # shown only while the pairing service runs
         body = pages.setdefault(p, page(mac, f"/settings/{p}")[2])
         assert f'id="{a}"' in body, (p, a)
-    assert set(pages) == {"profile", "ai", "phones", "storage", "appearance", "privacy"}
+    assert set(pages) == {"profile", "ai", "ask", "agents", "phones", "storage", "appearance", "privacy"}
     assert "data-setsearch" in page(mac, "/settings/ai")[2]
 
 
@@ -387,15 +387,9 @@ def test_about_has_a_support_link_that_is_a_plain_outbound_link(mac):
     assert 'href="https://www.buymeacoffee.com/magpiary" target="_blank" rel="noopener"' in here
 
 
-def test_the_three_merged_pages_redirect_and_keep_query_and_anchor(mac):
-    """Ask, AI agents and Shared boards became folds and groups on AI & login and Profile & boards (8 Nov 2026)."""
-    for old, new in (("ask", "ai"), ("agents", "ai"), ("boards", "profile")):
-        status, headers, _ = page(mac, f"/settings/{old}")
-        assert (status, headers["Location"]) == (303, f"/settings/{new}"), old
-    status, headers, _ = page(mac, "/settings/boards?saved=bucket")
-    assert headers["Location"] == "/settings/profile?saved=bucket"
-    body = page(mac, "/settings/ai")[2]
-    assert 'id="ask"' in body and 'id="agents"' in body  # the folds the old links open
+def test_the_old_boards_page_redirects_and_keeps_query_and_anchor(mac):
+    """Shared boards moved onto Profile & boards (8 Nov 2026); Ask and AI agents stay pages of their own."""
+    assert page(mac, "/settings/boards")[1]["Location"] == "/settings/profile"
+    assert page(mac, "/settings/boards?saved=bucket")[1]["Location"] == "/settings/profile?saved=bucket"
     assert "Where boards sync" in page(mac, "/settings/profile")[2]
-    nav = body[body.index('class="setnav"'):body.index('class="setpane"')]
-    assert all(f'href="/settings/{k}"' not in nav for k in ("ask", "agents", "boards"))
+    assert page(mac, "/settings/ask")[0] == 200 and page(mac, "/settings/agents")[0] == 200

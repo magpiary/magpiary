@@ -551,7 +551,7 @@ def test_help_page_lists_every_chapter_once_and_every_jump_lands(mac):
     jumps = re.findall(r'href="#(help-[^"]+)"', body)
     assert len(jumps) > len(helptext.TOPICS) and all(ids[j] == 1 for j in jumps)
     assert "What&#x27;s new" in body or "What's new" in body
-    assert "Ask Magpiary" in page(mac, "/settings/ai")[2] and "Use Ask Magpiary" in page(mac, "/settings/ai")[2]
+    assert "Ask Magpiary" in page(mac, "/settings/ask")[2] and "Turn Ask on" in page(mac, "/settings/ask")[2]
     assert 'href="/help#help-nest"' in page(mac, "/help?frag=1&ctx=nest")[2]  # All help opens at the same chapter
 
 

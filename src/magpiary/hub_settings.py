@@ -25,13 +25,14 @@ from magpiary.web import Response, e
 
 # The addresses "phones" and "storage" stay as they were, so old links keep working; only the names changed (1 Nov 2026).
 BACKUP_SETTING = "last_backup_at"
-SECTIONS = {"profile": "Profile & boards", "phones": "Phone", "ai": "AI & login", "appearance": "Appearance", "storage": "Library & this Mac"}
-NAV_GROUPS = (("You", ("profile",)), ("Using Magpiary", ("phones", "ai")), ("This hub", ("appearance", "storage")))
-# Six pages since 8 Nov 2026 (owner): Ask Magpiary and AI agents are folds on AI & login, Shared boards sits on Profile & boards.
-# The old addresses redirect, keeping the query and the #anchor, so every old link and form return still lands.
-MOVED = {"ask": "ai", "agents": "ai", "boards": "profile"}
+SECTIONS = {"profile": "Profile & boards", "phones": "Phone", "ai": "AI & login", "ask": "Ask Magpiary", "agents": "AI agents",
+            "appearance": "Appearance", "storage": "Library & this Mac"}
+NAV_GROUPS = (("You", ("profile",)), ("Using Magpiary", ("phones", "ai", "ask", "agents")), ("This hub", ("appearance", "storage")))
+# Shared boards sits on Profile & boards since 8 Nov 2026 (owner); Ask Magpiary and AI agents stay pages of their own.
+# The old boards address redirects, keeping the query and the #anchor, so every old link and form return still lands.
+MOVED = {"boards": "profile"}
 PAGES = {**SECTIONS, "privacy": "Privacy"}  # Privacy sits apart, under the list
-SECTION_ICONS = {"profile": ("people", "var(--t-place)"), "ai": ("sparkle", "var(--t-design)"), "phones": ("phone", "var(--t-place)"),
+SECTION_ICONS = {"profile": ("people", "var(--t-place)"), "ai": ("sparkle", "var(--t-design)"), "ask": ("comment", "var(--t-design)"), "agents": ("terminal", "var(--t-tool)"), "phones": ("phone", "var(--t-place)"),
                  "storage": ("library", "var(--t-discussion)"), "appearance": ("palette", "var(--t-tool)"), "privacy": ("lock", "#3d3d3d")}
 SUPPORT_URL = "https://www.buymeacoffee.com/magpiary"  # opens in the browser on click; nothing is sent from the app
 
@@ -81,17 +82,17 @@ SEARCH_INDEX = [
     ("Web search key", "tavily brave search links finding directories wikidata limit", "ai", "search"),
     ("Pause summaries", "pause stop limit transcribing nest budget", "ai", "pause"),
     ("Remove all keys", "delete keys", "ai", "advanced"),
-    ("Turn Ask Magpiary on or off", "ask chat question assistant switch hide", "ai", "onoff"),
-    ("Who answers Ask", "claude code codex chatgpt gemini key engine", "ai", "engine"),
-    ("Answer depth and web search", "short deep web", "ai", "answers"),
-    ("Ask model and effort", "haiku sonnet opus effort", "ai", "model"),
-    ("Ask tokens and limit", "token usage spend limit warning", "ai", "usage"),
-    ("Let AI agents use Magpiary", "cli terminal command line claude code codex agent mcp switch on off enable disable", "ai", "switch"),
-    ("What AI agents may do", "agent permission read save links notes", "ai", "switch"),
-    ("Connect an AI agent", "copy command claude code codex mcp", "ai", "connect"),
-    ("What AI agents did", "agent activity log recent clear", "ai", "activity"),
-    ("Hide saves from AI agents", "agent private hide tag", "ai", "hide"),
-    ("Daily limits for AI agents", "agent limit links notes per day", "ai", "limit-add"),
+    ("Turn Ask Magpiary on or off", "ask chat question assistant switch hide", "ask", "onoff"),
+    ("Who answers Ask", "claude code codex chatgpt gemini key engine", "ask", "engine"),
+    ("Answer depth and web search", "short deep web", "ask", "answers"),
+    ("Ask model and effort", "haiku sonnet opus effort", "ask", "model"),
+    ("Ask tokens and limit", "token usage spend limit warning", "ask", "usage"),
+    ("Let AI agents use Magpiary", "cli terminal command line claude code codex agent mcp switch on off enable disable", "agents", "switch"),
+    ("What AI agents may do", "agent permission read save links notes", "agents", "switch"),
+    ("Connect an AI agent", "copy command claude code codex mcp", "agents", "connect"),
+    ("What AI agents did", "agent activity log recent clear", "agents", "activity"),
+    ("Hide saves from AI agents", "agent private hide tag", "agents", "hide"),
+    ("Daily limits for AI agents", "agent limit links notes per day", "agents", "limit-add"),
     ("Your boards", "shared boards invite friends", "profile", "boards"),
     ("Where boards sync", "relays nostr bucket b2 backblaze r2 s3", "profile", "sync"),
     ("Theme", "light dark colour mode", "appearance", "theme"),
@@ -240,7 +241,7 @@ class SettingsPages:
         error = q.get("error", "")[:200]
         flash = ((f'<div class="flash">{e(saved)}</div>' if saved else "")
                  + (f'<div class="flash err">{e(error)}</div>' if error else ""))
-        body = {"profile": self._profile_section, "ai": self._ai_section, "phones": self._phones_section,
+        body = {"profile": self._profile_section, "ai": self._ai_section, "ask": self._ask_section, "agents": self._agents_section, "phones": self._phones_section,
                 "storage": self._storage_section, "appearance": self._look_section,
                 "privacy": self._privacy_section}[section](q)
         icon, colour = SECTION_ICONS[section]
@@ -344,7 +345,7 @@ class SettingsPages:
         counts = self.store.hub_counts()["shelves"]
         status = {"profile": (identity.profile(self.store)["name"] or "No name yet", False),
                   "phones": (f'{len(phones)} phone{"" if len(phones) == 1 else "s"} paired' if phones else "No phone yet", not phones),
-                  "ai": (ai, mode == "smart" and not working),
+                  "ai": (ai, mode == "smart" and not working), "ask": self.ask_status(), "agents": (self._agent_state()[0], False),
                   "appearance": (ui.THEMES[ui.appearance(self.store)["theme"]], False),
                   "storage": (f'{sum(counts.values())} saves', False)}
         return {k: status[k] for k in SECTIONS}
@@ -374,8 +375,6 @@ class SettingsPages:
         """AI keys first, then Summaries: the Smart or Private switch, and the Digest, Ask and Deeper dive that need Smart."""
         return "".join([self._keys_group(q), self._summaries_group(), self._digest_group(q), self._deep_group(),
                         self._finding_group(), self._instagram_group(),
-                        _adv(self._ask_section(q, nested=True), "Who answers, how deep, the web", gid="ask", label="Ask Magpiary", pill=""),
-                        _adv(self._agents_section(q, nested=True), "Let Claude Code or Codex use your saves", gid="agents", label="AI agents", pill=""),
                         _adv(_group("Pause summaries", _row("Pause or limit them", "The switches for summaries and transcribing are in the Nest, where you can see the work.",
                                                             '<a class="btn sm" href="/nest">Open the Nest</a>', lead=ui.icon("clock")), gid="pause")
                              + self._keys_danger(), "Pausing summaries, removing keys")])
@@ -409,7 +408,7 @@ class SettingsPages:
         ask_on = askconfig.enabled(self.store)
         rows += _row("Ask Magpiary", "Ask questions about your saves and get answers with the posts they came from.",
                      f'<span class="modectl">{_stat("On" if ask_on else "Off", "ok" if ask_on else "")}'
-                     f'<a class="btn sm" href="/settings/ai#ask">Open</a></span>', lead=ui.icon("book"), sid="summaries-ask")
+                     f'<a class="btn sm" href="/settings/ask">Open</a></span>', lead=ui.icon("book"), sid="summaries-ask")
         return _group("Summaries", rows, gid="mode",
                       more=_more("<p>In both modes the transcript and the frames are made on this Mac, and the video itself "
                                  "is never sent anywhere. You can switch any time; posts already read stay as they are.</p>"
@@ -451,7 +450,7 @@ class SettingsPages:
         today = date.today().isoformat()
         all_keys = keyring.load()
         mine = [k for k in all_keys if keyring.PROVIDERS[k.provider]["kind"] == kind]
-        back = "/settings/ai"
+        back = "/settings/agents"
         rows = []
         for n, k in enumerate(mine):
             state, tone = self._key_state(k, all_keys, today)
@@ -504,7 +503,7 @@ class SettingsPages:
             control = (self._switch("/hub/engine/allow", on, {"kind": kind, "enabled": "0", "next": "/settings/ai#keys"},
                                     {"kind": kind, "enabled": "1", "next": "/settings/ai#keys"}, f"Allow {eng.SHORT[kind]}",
                                     confirm="" if on else confirm)
-                       if on or here else '<a class="btn sm" href="/settings/ai#engine">Set it up</a>')
+                       if on or here else '<a class="btn sm" href="/settings/ask#engine">Set it up</a>')
             rows[kind] = _row(eng.LOCAL[kind], desc, control, lead=_handle(eng.SHORT[kind], on and here) + logo, sid=f"local-{kind}",
                               cls="keyrow" + ("" if on and here else " offrow"))
         return rows
@@ -556,7 +555,7 @@ class SettingsPages:
         providers = {p: v for p, v in keyring.PROVIDERS.items() if v["kind"] == kind}
         options = "".join(f'<option value="{p}">{e(v["name"])}</option>' for p, v in providers.items())
         guides = self._key_guides(providers)
-        back = "/settings/ai"
+        back = "/settings/agents"
         if kind == "search":
             fields = (f'<input type="hidden" name="tier" value="free"><div class="form"><label for="search-provider">Service'
                       f'</label><select name="provider" id="search-provider">{options}</select><label for="search-key">Key</label>'

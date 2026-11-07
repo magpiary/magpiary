@@ -5,7 +5,7 @@ from magpiary import askconfig, ui
 from magpiary import keys as keyring
 from magpiary.web import e
 
-BACK = "/settings/ai"
+BACK = "/settings/ask"
 KEY_WARN = {"free": "A free key can run out quickly: every question counts against its daily limit.",
             "paid": "Billed per use by the provider; a question costs a little more than a summary."}
 
@@ -102,7 +102,7 @@ class AskSettings:
             asked = f"{qs} question" + ("" if qs == 1 else "s") if used else ""
             usage += f'<div class="actl-use"><span>{name}</span><b>{askconfig.compact(total) if used else "—"}</b><small>{asked}</small></div>'
         return (f'<div class="actl"><h4>Who answers</h4>{who}{model}<div class="actl-row"><span class="actl-name">Allow web search</span>{web}</div>'
-                f'<h4>Tokens used</h4><div class="actl-uses">{usage}</div><a class="actl-all" href="/settings/ai#ask">All Ask settings →</a></div>')
+                f'<h4>Tokens used</h4><div class="actl-uses">{usage}</div><a class="actl-all" href="/settings/ask">All Ask settings →</a></div>')
 
     def _ask_engines(self) -> str:
         from magpiary import ask_codex, ask_setup

@@ -236,10 +236,10 @@ def test_with_ask_off_no_ask_button_tab_or_panel_shows_anywhere(mac, lib):
         assert "data-ask=" not in body and "data-askdock" not in body and "data-askscope" not in body and 'data-tab="ask"' not in body and 'class="pvask"' not in body, path
     assert page(mac, "/ask/panel?scope=library:all")[0] == 404
     assert post(mac, "/hub/ask/send", scope="library:all", q="hi")[0] == 404
-    settings = page(mac, "/settings/ai")[2]
+    settings = page(mac, "/settings/ask")[2]
     assert 'id="onoff"' in settings and 'id="engine"' not in settings
-    post(mac, "/hub/askset", on="1", next="/settings/ai")
-    on = page(mac, "/settings/ai")[2]
+    post(mac, "/hub/askset", on="1", next="/settings/ask")
+    on = page(mac, "/settings/ask")[2]
     assert 'id="engine"' in on and 'id="model"' in on and 'id="usage"' in on and 'data-askscope="library:auto"' in page(mac, "/")[2] and "data-askdock" in page(mac, "/")[2]
 
 
@@ -250,19 +250,19 @@ def test_the_settings_tab_saves_engine_model_effort_web_and_limits(mac, lib, mon
     monkeypatch.setattr(ask_codex, "available", lambda: False)
     monkeypatch.setattr("magpiary.ask_setup.installed", lambda engine: engine == "claude")  # not this Mac's real tools
     monkeypatch.setattr(type(mac.server.hub), "_claude_state", lambda self: {"installed": True, "signed_in": True})
-    body = page(mac, "/settings/ai")[2]
+    body = page(mac, "/settings/ask")[2]
     assert "Haiku 5.5" in body and "Active" in body and "Codex" in body and "Not set up" in body
-    post(mac, "/hub/askset", model="sonnet", effort="high", next="/settings/ai")
-    post(mac, "/hub/askset", web="0", tokens="0", limit="medium", period="day", next="/settings/ai")
+    post(mac, "/hub/askset", model="sonnet", effort="high", next="/settings/ask")
+    post(mac, "/hub/askset", web="0", tokens="0", limit="medium", period="day", next="/settings/ask")
     from magpiary import askconfig
     s = mac.store
     assert (askconfig.claude_model(s), askconfig.claude_effort(s), askconfig.web_allowed(s), askconfig.show_tokens(s)) == ("sonnet", "high", False, False)
     assert askconfig.limit(s) == 25 * askconfig.TOKENS_PER_QUESTION and "about 25 questions a day" in askconfig.limit_words(s)
-    post(mac, "/hub/askset", period="month", next="/settings/ai")
+    post(mac, "/hub/askset", period="month", next="/settings/ask")
     assert askconfig.limit(s) == 25 * 30 * askconfig.TOKENS_PER_QUESTION and "about 750 questions a month" in askconfig.limit_words(s)
-    post(mac, "/hub/askset", effort="bogus", model="bad name; rm -rf", limit="huge", next="/settings/ai")  # nonsense is ignored
+    post(mac, "/hub/askset", effort="bogus", model="bad name; rm -rf", limit="huge", next="/settings/ask")  # nonsense is ignored
     assert askconfig.limit_preset(s) == "medium"
-    page_html = page(mac, "/settings/ai")[2]
+    page_html = page(mac, "/settings/ask")[2]
     assert "A different model" not in page_html and 'name="limit_day"' not in page_html and "Extra high" in page_html and "Per month" in page_html
     assert askconfig.claude_effort(s) == "high" and askconfig.claude_model(s) == "sonnet"
     cmd = ask_open.command("claude", "sonnet", "high", web=False)
@@ -289,7 +289,7 @@ def test_tokens_are_recorded_shown_under_the_answer_and_a_limit_warns_before_sen
     assert "2.1k in · 340 out · Haiku 5.5" in done["html"] and not any("usage" in e for e in done["events"])
     from magpiary import askconfig
     assert mac.store.ask_usage_since(askconfig.periods(mac.store._now())["day"])[0]["tokens_in"] == 2100
-    assert "2.1k in" in page(mac, "/settings/ai")[2]
+    assert "2.1k in" in page(mac, "/settings/ask")[2]
     mac.store.set_setting("ask_limit", "low")
     mac.store.ask_usage_add(scope, "claude", "Haiku 5.5", 140_000, 20_000)  # over Low (about 10 questions, 150k tokens)
     assert 'class="askmeter' not in page(mac, "/ask/panel?scope=library:all")[2]  # no meter in the panel; the limit only warns
@@ -310,17 +310,17 @@ def test_turning_ask_on_needs_examplecreator_to_answer_and_turning_it_off_stops_
     monkeypatch.setattr(asking, "claude_available", lambda: False)
     monkeypatch.setattr("magpiary.keys.usable", lambda *a, **k: [])
     monkeypatch.setattr("magpiary.ask_codex.available", lambda: False)
-    status, headers, _ = post(mac, "/hub/askset", on="1", next="/settings/ai")
+    status, headers, _ = post(mac, "/hub/askset", on="1", next="/settings/ask")
     assert status == 303 and "error=" in headers["Location"] and mac.store.get_setting("ask_state", "") != "on"
     assert "needs an AI" in page(mac, headers["Location"])[2]
     monkeypatch.setattr(asking, "claude_available", lambda: True)
     monkeypatch.setattr(type(hub), "_claude_state", lambda self: {"installed": True, "signed_in": True})
-    assert post(mac, "/hub/askset", on="1", next="/settings/ai")[1]["Location"] == "/settings/ai"
+    assert post(mac, "/hub/askset", on="1", next="/settings/ask")[1]["Location"] == "/settings/ask"
     assert mac.store.get_setting("ask_state", "") == "on" and json.loads(page(mac, "/activity.json")[2])["ask"] is True
     # an answer being written is stopped when Ask is switched off, and the off switch asks first
-    assert 'data-confirm="Turn off Ask Magpiary?' in page(mac, "/settings/ai")[2]
+    assert 'data-confirm="Turn off Ask Magpiary?' in page(mac, "/settings/ask")[2]
     hub.__dict__["_ask_jobs"] = {"j1": {"events": [], "done": False, "html": "", "at": 0, "stop": False}}
-    post(mac, "/hub/askset", on="0", next="/settings/ai")
+    post(mac, "/hub/askset", on="0", next="/settings/ask")
     assert hub._ask_jobs["j1"]["stop"] is True and json.loads(page(mac, "/activity.json")[2])["ask"] is False
     assert post(mac, "/hub/ask/stop", job="j1")[0] == 404  # Ask is off: even this answers nothing
 
@@ -433,8 +433,8 @@ def test_codex_can_be_chosen_with_its_model_and_effort_never_above_medium(mac, l
     from magpiary import ask_codex, askconfig
 
     monkeypatch.setattr(ask_codex, "available", lambda: True)
-    assert 'aria-label="Use Codex' in page(mac, "/settings/ai")[2]
-    post(mac, "/hub/askset", engine="codex", cmodel="gpt-6-sol", ceffort="high", next="/settings/ai")
+    assert 'aria-label="Use Codex' in page(mac, "/settings/ask")[2]
+    post(mac, "/hub/askset", engine="codex", cmodel="gpt-6-sol", ceffort="high", next="/settings/ask")
     assert mac.store.get_setting(askconfig.ENGINE) == "codex" and mac.store.get_setting(askconfig.CODEX_MODEL) == "gpt-6-sol"
     assert askconfig.codex_effort(mac.store) == "medium"  # "high" is refused
     engine = mac.server.hub.ask_engine()
@@ -554,7 +554,7 @@ def test_the_full_page_has_a_controls_column_whose_changes_come_back_to_the_page
     assert 'name="next" value="/ask?scope=library:piles"' in body or "/ask?scope=library:piles" in body
     status, headers, _ = post(mac, "/hub/askset", web="0", next="/ask?scope=library:piles")
     assert status == 303 and headers["Location"] == "/ask?scope=library:piles"
-    assert post(mac, "/hub/askset", web="1", next="https://evil.test/")[1]["Location"] == "/settings/ai"  # only Ask's own page is allowed back
+    assert post(mac, "/hub/askset", web="1", next="https://evil.test/")[1]["Location"] == "/settings/ask"  # only Ask's own page is allowed back
     assert 'data-askdockstate' in page(mac, "/")[2]
 
 
@@ -567,7 +567,7 @@ def test_answer_depth_is_remembered_changes_the_prompt_and_the_run_limits(mac):
     assert "Go deep" in ask_open.system("deep") and "Be economical" in ask_open.system("short") and "Be economical" not in ask_open.system("normal")
     cmd = lambda depth: ask_open.command("claude", depth=depth)
     assert cmd("short")[cmd("short").index("--max-turns") + 1] == "8" and cmd("deep")[cmd("deep").index("--max-turns") + 1] == "24"
-    post(mac, "/hub/askset", depth="short", next="/settings/ai")
+    post(mac, "/hub/askset", depth="short", next="/settings/ask")
     assert askconfig.depth(mac.store) == "short"
 
 
