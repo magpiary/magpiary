@@ -512,3 +512,25 @@ def test_certificate_reset_is_served_to_new_connections(door):
 def test_no_hsts_on_the_phone_door(door):
     door.pair()
     assert "Strict-Transport-Security" not in door.request("GET", "/")[2]
+
+
+# ---- the phone setup pages ----
+
+def test_certificate_guide_has_the_exact_ios_words_and_a_live_trust_check(door):
+    mac_post(door, "/hub/access/pair")
+    token = door.primary.hub._pairing[0]
+    page = door.primary.hub.access_guide(f"/phone-access/{token}", "192.168.1.20").body.decode()
+    for words in ("Profile Downloaded", "Certificate Trust Settings", "Magpiary local network CA", "General → About",
+                  "VPN &amp; Device Management", "Enable full trust for root certificates"):
+        assert words in page, words
+    assert f"https://magpiary.local:{access.https_port(door.primary.server_port)}/static/apple-touch-icon.png" in page  # the live check
+    assert f"/phone/pair/{token}" in page and "viewport-fit=cover" in page
+
+
+def test_pair_and_home_screen_pages_are_phone_sized(door):
+    token = door.devices.new_pair_token()
+    page = door.request("GET", f"/phone/pair/{token}", key="")[1]
+    assert 'maxlength="40"' in page and "min-height:52px" in page and "font:16px" in page  # no iOS zoom, big tap targets
+    door.pair()
+    home = door.request("GET", "/phone/app")[1]
+    assert "Open as Web App" in home and "Add to Home Screen" in home

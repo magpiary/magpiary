@@ -14,7 +14,7 @@ import subprocess
 import threading
 from urllib.parse import parse_qs, urlsplit
 
-from magpiary import access
+from magpiary import access, phone_guide
 from magpiary.receiver import HUB_PAGES, HUB_PREFIXES, Handler, Server, log
 from magpiary.web import Response, alone_page, e, phone_page
 
@@ -87,11 +87,7 @@ class SecureHandler(Handler):
             self._refuse("pairing code expired or already used", "This pairing code has expired. Make a new one on your Mac.", 410)
             return
         if method == "GET":
-            body = ('<main class="alone"><h1>Pair this phone</h1><p>Name it, so you can tell it apart on your Mac.</p>'
-                    f'<form method="post" action="{e(PAIR_PATH + token)}"><input name="name" value="iPhone" maxlength="40" '
-                    'style="font-size:16px;padding:10px;width:100%;box-sizing:border-box" autocomplete="off">'
-                    '<p><button class="btn" type="submit">Pair this phone</button></p></form></main>')
-            self.send_page(phone_page("Pair this phone", body))
+            self.send_page(phone_guide.pair_form(token, PAIR_PATH + token))
             return
         form = self._read_form(2000) or {}
         if not devices.spend_pair_token(token):
@@ -111,14 +107,7 @@ class SecureHandler(Handler):
             return
         token = self.server.devices.new_app_token(device["id"])
         link = f"{APP_PATH}/{token}"
-        body = ('<main class="alone"><h1>Add to your Home Screen</h1>'
-                '<p>Tap <b>Share</b> (the square with the arrow) in Safari, then <b>Add to Home Screen</b>, then <b>Add</b>.</p>'
-                '<p>The icon opens the library on its own, without Safari bars.</p>'
-                '<p><a class="btn" href="/">Open the library</a></p></main>'
-                f'<script>history.replaceState(null,"",{link!r});</script>')
-        page = phone_page("Add to Home Screen", body)
-        page.body = page.body.replace(b"<title>", f'<link rel="manifest" href="{link}/manifest.webmanifest"><title>'.encode(), 1)
-        self.send_page(page)
+        self.send_page(phone_guide.home_screen(link))
 
     def _app(self, method: str, device: dict | None) -> None:
         rest = urlsplit(self.path).path.removeprefix(APP_PATH + "/").strip("/")

@@ -3,11 +3,10 @@ the switch, the pairing QR and its guided steps, the paired phones with Revoke, 
 can never reach these (phone_gate.py)."""
 
 import time
-from urllib.parse import quote
 
 from magpiary import access, ui
 from magpiary.hub_settings import _fold, _group, _menu, _row, _stat
-from magpiary.web import Response, alone_page, e, phone_page
+from magpiary.web import Response, alone_page, e
 
 RISK = ("Anyone on this network who gets past the next two checks could open your library: they would need a phone you paired "
         "here, and your PIN if the hub lock is on. Everything travels encrypted, but a paired phone that is lost can open the "
@@ -59,8 +58,9 @@ class AccessPages:
         url = f"http://{access.NAME}:{self.port}/phone-access/{token}"
         qr = segno.make(url, error="m").svg_inline(border=2, omitsize=True, dark="#000", light="#fff")
         left = max(0, int(access.PAIR_FOR - (time.monotonic() - self._pairing[1])))
-        steps = ("Scan this code with the iPhone camera and tap the banner.",
-                 "Tap <b>Download certificate</b>, then <b>Allow</b>. In Settings tap <b>Profile Downloaded</b> and <b>Install</b>.",
+        steps = ("Scan this code with the iPhone camera and tap the banner. The page that opens walks the phone through the rest and "
+                 "ticks each step off as it works.",
+                 "On the phone: <b>Download certificate</b> → <b>Allow</b> → Settings → <b>Profile Downloaded</b> → <b>Install</b>.",
                  "Settings → General → About → <b>Certificate Trust Settings</b>: switch on <b>Magpiary local network CA</b>.",
                  "Open the certificate on the phone (Settings → Profile Downloaded → More Details) and check its SHA-256 fingerprint matches the one below, then tap <b>Continue</b> on the phone.")
         lis = "".join(f"<li>{s}</li>" for s in steps)
@@ -138,13 +138,6 @@ class AccessPages:
             return Response(200, access.ca_pem(), "application/x-x509-ca-cert",
                             headers={"Content-Disposition": 'attachment; filename="magpiary-local-network-ca.crt"',
                                      "Cache-Control": "no-store"})
-        port = access.https_port(self.port)
-        body = ('<main class="alone"><h1>Set up this phone</h1>'
-                f'<p><a class="btn" href="/phone-access/{quote(token)}/ca.crt">Download certificate</a></p>'
-                "<ol><li>Tap <b>Allow</b>, then open <b>Settings</b> and tap <b>Profile Downloaded</b>, then <b>Install</b>.</li>"
-                "<li>Settings → General → About → <b>Certificate Trust Settings</b>: switch on <b>Magpiary local network CA</b>.</li>"
-                "<li>Before you trust it, open the certificate's <b>More Details</b> on the phone and check that its <b>SHA-256</b> "
-                "fingerprint is the one shown on your Mac. This page cannot show it to you: anything on this network could change it.</li></ol>"
-                f'<p><a class="btn" href="https://{access.NAME}:{port}/phone/pair/{quote(token)}">Continue</a></p>'
-                "<p>If the Continue button says it cannot connect securely, step 2 is not done yet.</p></main>")
-        return phone_page("Set up this phone", body)
+        from magpiary import phone_guide
+
+        return phone_guide.certificate_guide(token, access.https_port(self.port))
