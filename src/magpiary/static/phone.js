@@ -1,4 +1,7 @@
 /* Phone bar: Search opens the big search, More opens a small menu. Event delegation, so it survives page changes. */
+(function () {
+  if (window.__phoneJs) return;  // one guard for the whole file: loading it twice must not register anything twice
+  window.__phoneJs = true;
 (() => {
   if (window.__phoneBar) return;  // the page can load this file again when it swaps pages
   window.__phoneBar = true;
@@ -534,4 +537,43 @@ document.addEventListener("click", function (ev) {
   });
   new MutationObserver(function () { setTimeout(mark, 50); }).observe(document.body, { childList: true, subtree: true });
   addEventListener("load", mark); setTimeout(mark, 400); setTimeout(mark, 1500);
+})();
+
+/* A video the Mac is still preparing for the iPhone answers 503 with Retry-After, and the video element just gives up.
+   Show a message in the player, ask for one byte every few seconds, and reload the video when the Mac says it is ready. */
+(function () {
+  if (!window.matchMedia || !matchMedia("(max-width: 760px)").matches) return;
+  var EVERY_MS = 4000, GIVE_UP_MS = 10 * 60 * 1000, waiting = new WeakSet();
+  function say(stage, text) {
+    var n = stage.querySelector(".pvprep");
+    if (!n) { n = document.createElement("div"); n.className = "pvprep"; n.setAttribute("role", "status"); stage.appendChild(n); }
+    n.textContent = text;
+  }
+  function clear(stage) { var n = stage.querySelector(".pvprep"); if (n) n.remove(); }
+  function probe(url) {
+    return fetch(url, { headers: { Range: "bytes=0-0" }, credentials: "same-origin", cache: "no-store" });
+  }
+  function poll(v, url, stage, since) {
+    probe(url).then(function (r) {
+      if (r.status === 200 || r.status === 206) { clear(stage); waiting.delete(v); v.src = url; v.load(); return; }
+      if (Date.now() - since > GIVE_UP_MS || r.status !== 503) throw new Error("gave up");
+      setTimeout(function () { poll(v, url, stage, since); }, EVERY_MS);
+    }).catch(function () {
+      if (Date.now() - since > GIVE_UP_MS) { say(stage, "Could not prepare this video. Try again later."); waiting.delete(v); return; }
+      setTimeout(function () { poll(v, url, stage, since); }, EVERY_MS);
+    });
+  }
+  document.addEventListener("error", function (ev) {
+    var v = ev.target;
+    if (!(v instanceof HTMLVideoElement) || waiting.has(v)) return;
+    var url = v.currentSrc || v.src, stage = v.closest(".stage");
+    if (!url || !stage) return;
+    probe(url).then(function (r) {
+      if (r.status !== 503 || !r.headers.get("Retry-After") || waiting.has(v)) return;
+      waiting.add(v);
+      say(stage, "Getting this video ready for your iPhone…");
+      setTimeout(function () { poll(v, url, stage, Date.now()); }, EVERY_MS);
+    }).catch(function () { /* offline: the player's own error stays */ });
+  }, true);   // an error event does not bubble, so listen while it travels down
+})();
 })();

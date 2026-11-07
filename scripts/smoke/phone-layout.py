@@ -19,6 +19,8 @@ print("phone bar smoke: ok")
 
 # pull to refresh
 js = (src / "static/phone.js").read_text()
+assert js.lstrip().split("\n", 1)[1].lstrip().startswith("(function () {\n  if (window.__phoneJs) return;") and js.rstrip().endswith("})();"), "phone.js must sit behind one window.__phoneJs guard"
+assert js.count("window.__phoneJs") == 2 and "pvprep" in js and ".pvprep" in css, "whole-file guard and the video-preparing message"
 assert "__phonePull" in js and "location.reload()" in js, "pull to refresh missing"
 assert ".ptr" in css, "pull indicator styles missing"
 print("pull to refresh smoke: ok")

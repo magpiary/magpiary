@@ -636,5 +636,10 @@
   .setpane #keys .keyrow > .src { margin-left: 44px !important; flex-basis: calc(100% - 44px) !important; }
 }
 
+@media (max-width: 760px) {
+  /* a video the Mac is still preparing for this iPhone: a small message in the player (phone.js) */
+  .cardm.pagemode .stage .pvprep { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; max-width: calc(100% - 48px); padding: 10px 16px; border-radius: 14px; background: rgb(0 0 0 / .72); color: #fff; font-size: 14px; line-height: 1.35; text-align: center; pointer-events: none; }
+}
+
 /* the Add to Home Screen link has no use inside the Home Screen app itself */
 @media (display-mode: standalone) { [data-homescreen] { display: none !important; } }
