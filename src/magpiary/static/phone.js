@@ -367,3 +367,26 @@ document.addEventListener("click", (ev) => {
   addEventListener("pageshow", check);
   check();
 })();
+
+/* Post tab strip: while it is stuck near the top, a full-width layer in the page's top colour sits behind it and runs off the left,
+   right and top edges. It is not there when the tabs are in their place in the page. */
+(function () {
+  "use strict";
+  let bg = null, queued = false;
+  function update() {
+    queued = false;
+    const nav = document.querySelector(".cardm.pagemode .tabs.pvtabs");
+    if (!nav || innerWidth > 760) { if (bg) bg.classList.remove("show"); return; }
+    if (!bg) { bg = document.createElement("div"); bg.className = "ptabsbg"; bg.setAttribute("aria-hidden", "true"); document.body.appendChild(bg); }
+    const r = nav.getBoundingClientRect(), stick = parseFloat(getComputedStyle(nav).top) || 0;
+    const stuck = r.top <= stick + 0.5 && r.bottom > 0 && window.scrollY > 0;
+    bg.style.height = Math.max(0, r.bottom) + "px";
+    bg.classList.toggle("show", stuck);
+  }
+  const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+  addEventListener("scroll", queue, { passive: true });
+  addEventListener("resize", queue);
+  addEventListener("pageshow", queue);
+  new MutationObserver(queue).observe(document.documentElement, { childList: true, subtree: true });
+  update();
+})();
