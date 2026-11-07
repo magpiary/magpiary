@@ -4390,3 +4390,10 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .srow:has(> .slead):not(.phone2) > .srmore > .xmore { margin-left: 51px; width: auto; }
 .srow.deeprow { padding-left: 68px; }
 .srow:has(> .slead) > .srmore > a.link { display: inline-block; margin-left: 42px; }
+
+/* The phone-access icon (8 Nov 2026, owner): flat, no pill, a true round 44px target with the icon dead centre; the green dot sits
+   against the icon and, being absolute, never changes the padding. */
+:root[data-theme] .top .bar .ubtn.phacc, .ubtn.phacc { width: 44px; min-width: 44px; padding: 0; gap: 0; justify-content: center; background: none; box-shadow: none; border: 0; border-radius: 50%; }
+:root[data-theme] .top .bar .ubtn.phacc:hover, .ubtn.phacc:hover { background: var(--chip); }
+.phacc svg { display: block; margin: 0; }
+.phacc .phdot { top: 11px; right: 11px; }
