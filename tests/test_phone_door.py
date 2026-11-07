@@ -427,3 +427,16 @@ def test_add_to_home_screen_page_names_the_icon_magpiary(door):
     body = door.request("GET", "/phone/app")[1]
     assert 'rel="apple-touch-icon" href="/static/apple-touch-icon.png"' in body
     assert 'name="apple-mobile-web-app-title" content="Magpiary"' in body
+
+
+def test_home_screen_manifest_opens_full_screen_and_starts_at_the_one_time_link(door):
+    import json as j
+
+    door.pair("Maya")
+    body = door.request("GET", "/phone/app")[1]
+    assert 'rel="manifest"' in body
+    token = body.split('replaceState(null,"",')[1].split(")")[0].strip("'\"").rsplit("/", 1)[1]
+    status, text, headers = door.request("GET", f"/phone/app/{token}/manifest.webmanifest", key="")
+    m = j.loads(text)
+    assert status == 200 and m["display"] == "standalone" and m["start_url"] == f"/phone/app/{token}" and m["name"] == "Magpiary"
+    assert door.request("GET", "/phone/app/not-a-token/manifest.webmanifest", key="")[0] == 404

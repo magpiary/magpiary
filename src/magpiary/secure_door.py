@@ -6,6 +6,7 @@ and comes from a private address with a Host name we vouch for. The Mac's plain-
 """
 
 import http.cookies
+import json
 import ipaddress
 import socket
 import ssl
@@ -117,11 +118,25 @@ class SecureHandler(Handler):
                 '<p>The icon opens the library on its own, without Safari bars.</p>'
                 '<p><a class="btn" href="/">Open the library</a></p></main>'
                 f'<script>history.replaceState(null,"",{link!r});</script>')
-        self.send_page(phone_page("Add to Home Screen", body))
+        page = phone_page("Add to Home Screen", body)
+        page.body = page.body.replace(b"<title>", f'<link rel="manifest" href="{link}/manifest.webmanifest"><title>'.encode(), 1)
+        self.send_page(page)
 
     def _app(self, method: str, device: dict | None) -> None:
-        token = urlsplit(self.path).path.removeprefix(APP_PATH + "/").strip("/")
+        rest = urlsplit(self.path).path.removeprefix(APP_PATH + "/").strip("/")
+        token, _, tail = rest.partition("/")
         devices = self.server.devices
+        if tail == "manifest.webmanifest":  # says "open as a full-screen app", and where the icon starts (this one-time link)
+            if devices.app_token_device(token) is None:
+                self.send_json(404, {"error": "expired"})
+                return
+            manifest = {"name": "Magpiary", "short_name": "Magpiary", "start_url": f"{APP_PATH}/{token}", "scope": "/",
+                        "display": "standalone", "background_color": "#0f0f0f", "theme_color": "#0f0f0f",
+                        "icons": [{"src": "/static/apple-touch-icon.png", "sizes": "180x180", "type": "image/png",
+                                   "purpose": "any"}]}
+            self.send_page(Response(200, json.dumps(manifest).encode(), "application/manifest+json",
+                                    headers={"Cache-Control": "no-store"}))
+            return
         if device is not None:  # already holds a key (Safari, or the icon after its first launch): just go in
             self.send_page(Response(303, b"", headers={"Location": "/"}))
             return
