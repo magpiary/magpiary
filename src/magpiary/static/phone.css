@@ -394,6 +394,20 @@
   .postpage > .crumbbar :is(.pgback, .pgback::after, .pacts > a, .pacts > button, .pacts > details > summary),
   .cardm.pagemode .stage .pvautozone .pvauto { border-radius: 999px !important; -webkit-tap-highlight-color: transparent; }
   .postpage > .crumbbar .pgback::after { border-radius: 999px; }
-  .postpage > .crumbbar .pgback:is(:hover, :active, :focus-visible), .cardm.pagemode .stage .pvautozone .pvauto:is(:hover, :active, :focus-visible) { background: rgb(255 255 255 / .2) !important; outline: none; }
+  .postpage > .crumbbar .pgback:is(:hover, :active, :focus-visible) { background: rgb(255 255 255 / .2) !important; outline: none; }
   .postpage > .crumbbar .pacts > :is(a, button, summary):is(:hover, :active), .postpage > .crumbbar .pacts > details > summary:is(:hover, :active) { background: rgb(255 255 255 / .2) !important; }
+}
+
+/* ---- round 11 (owner, 7 Nov): the same gap at the top and at both sides (12px; the top gap is measured under the phone's status bar), the
+   row laid out from the page's own width (100vw also counts a scrollbar and pushed the right button out), and the right pair stays the dark pill ---- */
+@media (max-width: 760px) {
+  .postpage > .crumbbar { left: calc(-1 * max(var(--pad, 16px), 24px)) !important; right: calc(-1 * max(var(--pad, 16px), 24px)) !important; width: auto !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px 12px !important; }
+  .cardm.pagemode .stage .pvautozone { left: 66px; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+  .cardm.pagemode .vid .stage { --sw: min(calc(100% + 2 * max(var(--pad, 16px), 24px)), calc(85svh * var(--mar, 100))); }
+}
+
+/* Autoplay: nothing behind it when tapped or hovered; only its switch changes (purple when on) */
+@media (max-width: 760px) {
+  .cardm.pagemode .stage .pvautozone .pvauto, .cardm.pagemode .stage .pvautozone .pvauto:is(:hover, :active, :focus, :focus-visible) { background: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent; outline: none; }
 }
