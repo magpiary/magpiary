@@ -114,3 +114,8 @@ print("phone post tabs sticky smoke: ok")
 assert ".pscroll > [data-pane] { min-height: calc(100svh - 300px); }" in css and "top: -500px" in css, "short tabs keep room; background reaches over the top"
 assert "function pin(wasStuck)" in js, "switching tabs while stuck must keep the bar pinned"
 print("phone post tab switch smoke: ok")
+assert "--sw: min(98vw, calc(75svh * var(--mar, 100)));" in css, "player 98% wide"
+assert "padding: 0 !important; width: 44px; justify-content: center;" in css, "back arrow centred"
+assert ".crumbbar > .pvautozone" in css and "back.insertAdjacentElement" in js, "autoplay beside Back"
+assert 'webkitEnterFullscreen' in js and ".stage.pfs" in css and '.pvb[data-pv="fit"] { display: none; }' in css, "full screen fallback; fit button hidden"
+print("phone player round 3 smoke: ok")

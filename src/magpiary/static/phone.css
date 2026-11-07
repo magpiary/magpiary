@@ -261,8 +261,7 @@
      the screen gets narrower, centred, so the picture itself keeps its one rounded corner (no black box, no bars). --mar is the media's
      width/height, set on the stage by the page. */
   .cardm.pagemode .vid .stage { flex: none !important; height: auto !important; min-height: 0 !important; max-height: none !important; aspect-ratio: var(--mar, 1.7778) !important;
-    width: min(100%, calc(75svh * var(--mar, 100))) !important; margin-inline: auto; border-radius: 20px; background: transparent; }
-  .cardm.pagemode .stage video { object-fit: cover; }
+    --sw: min(98vw, calc(75svh * var(--mar, 100))); width: var(--sw) !important; margin-inline: calc((100% - var(--sw)) / 2); border-radius: 20px; background: transparent; }
   /* a post has no logo bar on a phone: the toolbar (back, open, More) is the first thing, and it scrolls away with the page */
   html:has(.postpage) #top { display: none !important; }
   html:has(.postpage) #view { padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important; }
@@ -310,4 +309,20 @@
 /* a tab with little in it still leaves enough page below the bar to scroll to its top with the bar pinned (blank space under it) */
 @media (max-width: 760px) {
   .cardm.pagemode .pscroll > [data-pane] { min-height: calc(100svh - 300px); }
+}
+
+/* ---- player, round 3 (owner, 7 Nov): media 98% of the screen width; Autoplay beside the Back button; Back arrow centred; the "show the
+   whole video" button is gone (the stage already has the media's own shape, so there is nothing to uncrop); full screen works ---- */
+@media (max-width: 760px) {
+  :root[data-theme] .pgback { padding: 0 !important; width: 44px; justify-content: center; }
+  .pvb[data-pv="fit"] { display: none; }
+  .crumbbar > .pvautozone { position: static; display: flex; align-items: center; width: auto; height: 44px; margin-left: 10px; }
+  .crumbbar > .pvautozone .pvauto { position: relative; top: auto; left: auto; height: 44px; padding: 0 12px 0 16px; opacity: 1 !important; pointer-events: auto !important; }
+  /* full screen where the browser has no full-screen for a page element: the player fills the screen (phone.js adds .pfs) */
+  html.pfs-on, html.pfs-on body { overflow: hidden; }
+  html.pfs-on .pbar, html.pfs-on .ptabsbg { display: none !important; }
+  .cardm.pagemode .vid .stage.pfs { position: fixed !important; inset: 0; z-index: 90; width: 100vw !important; height: 100dvh !important; max-height: none !important; aspect-ratio: auto !important; margin: 0 !important; border-radius: 0 !important; background: #000; }
+  .stage.pfs video { object-fit: contain !important; }
+  .cardm.pagemode .stage.pfs .pedge { display: none; }
+  .stage.pfs .pvbar { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); }
 }

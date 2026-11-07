@@ -415,3 +415,34 @@ document.addEventListener("click", (ev) => {
     setTimeout(() => pin(wasStuck), 160);  // and again once its fade-in and any content settling are done
   }, true);
 })();
+
+/* Post player: Autoplay moves next to the Back button, and Full screen works on a phone. iPhone Safari has no full screen for a
+   page element, only for the video itself (webkitEnterFullscreen); where neither works (an embedded browser) the player fills the
+   screen instead (.pfs). A second tap on the same button leaves it. */
+(function () {
+  "use strict";
+  function moveAutoplay() {
+    if (innerWidth > 760) return;
+    const zone = document.querySelector(".cardm.pagemode .stage .pvautozone"), back = document.querySelector(".crumbbar .pgback");
+    if (zone && back) back.insertAdjacentElement("afterend", zone);
+  }
+  const root = document.documentElement;
+  const leave = (stage) => { stage.classList.remove("pfs"); root.classList.remove("pfs-on"); };
+  document.addEventListener("click", function (ev) {
+    const btn = ev.target instanceof Element ? ev.target.closest('.stage [data-pv="full"]') : null;
+    if (!btn || innerWidth > 760) return;
+    const stage = btn.closest(".stage"), vid = stage.querySelector("video");
+    ev.stopImmediatePropagation(); ev.preventDefault();
+    if (stage.classList.contains("pfs")) { leave(stage); return; }
+    if (document.fullscreenElement || document.webkitFullscreenElement) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    const pseudo = () => { stage.classList.add("pfs"); root.classList.add("pfs-on"); };
+    if (!document.fullscreenEnabled && vid && vid.webkitEnterFullscreen) { try { vid.webkitEnterFullscreen(); return; } catch (e) { /* fall through */ } }
+    if (!stage.requestFullscreen) { pseudo(); return; }
+    let asked;
+    try { asked = stage.requestFullscreen(); } catch (e) { pseudo(); return; }
+    if (asked && asked.catch) asked.catch(pseudo);
+    setTimeout(() => { if (!document.fullscreenElement && !document.webkitFullscreenElement) pseudo(); }, 450);  // an embedded browser may neither refuse nor allow
+  }, true);
+  new MutationObserver(function () { clearTimeout(moveAutoplay.t); moveAutoplay.t = setTimeout(moveAutoplay, 60); }).observe(document.documentElement, { childList: true, subtree: true });
+  moveAutoplay();
+})();
