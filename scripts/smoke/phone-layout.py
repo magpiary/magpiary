@@ -107,7 +107,7 @@ assert "body > :is(#top, #view) { animation: pfadein" in css, "page fade must no
 assert 'trail = [("Library", frm if frm.startswith("/?") else "/")]' in (src / "hub_card.py").read_text(), "Back must keep the filter"
 assert r'/^\/item\/\d+/.test(location.pathname)' in js, "pull to refresh on a post"
 print("phone post view round 2 smoke: ok")
-assert 'const KEY = "mag-backing"' in js and "location.replace(n.href)" in js, "Back must leave the post in one tap"
+assert "mag-backing" not in js, "the old Back note is gone"
 print("phone post back smoke: ok")
 assert "top: calc(env(safe-area-inset-top, 0px) + 6px) !important; padding-top: 6px;" in css and ".ptabsbg.show { display: block; }" in css and "ptabsbg" in js, "stuck post tabs: higher, full-width background only while stuck"
 print("phone post tabs sticky smoke: ok")
@@ -119,6 +119,6 @@ assert "padding: 0 !important; width: 44px; justify-content: center;" in css, "b
 assert ".crumbbar > .pvautozone" in css and "back.insertAdjacentElement" in js, "autoplay beside Back"
 assert 'webkitEnterFullscreen' in js and ".stage.pfs" in css and '.pvb[data-pv="fit"] { display: none; }' in css, "full screen fallback; fit button hidden"
 print("phone player round 3 smoke: ok")
-assert 'history.go(-steps)' in js and 'mag-base' in js, "Back must unwind however many entries swipes left"
+assert "location.replace(href)" in js and "history.go(" not in js and "mag-listpos" in js, "Back must go to the list address, not count history entries"
 assert "if (vid && vid.paused) { const p = vid.play();" in js, "Full screen must also start the video"
 print("phone back/fullscreen round 4 smoke: ok")

@@ -343,47 +343,41 @@ document.addEventListener("click", (ev) => {
   edges();
 })();
 
-/* Post view Back: one tap must leave the post. Back normally uses the browser's history (same scroll, same filters), but when the
-   entry before this one is another copy of a post page (a reload, a deep link, posts stepped through), the first tap only lands on
-   a post again and a second tap is needed. So a tap on Back leaves a short note; a post page that opens while the note is fresh
-   goes on to the list the Back button points at. List pages clear the note. */
+/* Post view Back (phone): one tap, always the list the post was opened from (its address is the Back button's own link, so the
+   filter, view, pile or board is kept). It does not count history entries: swipes between posts, reloads and deep links can leave
+   any number of them and every version of "go back" that relied on them landed on the wrong post. The list's scroll position is
+   saved when a post is opened from it and put back when it comes up again. */
 (function () {
   "use strict";
-  const KEY = "mag-backing";
-  const read = () => { try { return JSON.parse(sessionStorage.getItem(KEY) || "null"); } catch (e) { return null; } };
-  const clear = () => { try { sessionStorage.removeItem(KEY); } catch (e) { /* fine */ } };
+  const POS = "mag-listpos";
+  const onPost = () => /^\/item\/\d+/.test(location.pathname);
   document.addEventListener("click", function (ev) {
     if (innerWidth > 760 || !(ev.target instanceof Element)) return;
-    if (ev.target.closest(".postpage a[data-pagenav]")) { try { sessionStorage.setItem("mag-step", "1"); } catch (e) { /* fine */ } return; }  // stepping to a neighbour: not a new start
-    const b = ev.target.closest(".postpage [data-pgback]");
-    if (!b) return;
-    try { sessionStorage.setItem(KEY, JSON.stringify({ href: b.getAttribute("href") || "/", t: Date.now() })); } catch (e) { /* fine */ }
-    // however many entries the swipes left in the history (a phone may add one per post), go back exactly to where the first post was opened
-    let base = 0; try { base = +sessionStorage.getItem("mag-base") || 0; } catch (e) { /* fine */ }
-    const steps = history.length - base + 1;
-    if (base && steps > 1 && steps <= 40) {
-      ev.preventDefault(); ev.stopImmediatePropagation();
-      try { sessionStorage.setItem("mag-slide", "right"); } catch (e) { /* fine */ }
-      history.go(-steps);
+    const open = ev.target.closest('a[href^="/item/"]');
+    if (open && !onPost() && !open.closest("#pbar, #pmore")) {  // a post opened from a list: remember the list and where it was scrolled
+      try { sessionStorage.setItem(POS, JSON.stringify({ url: location.pathname + location.search, y: Math.round(window.scrollY), t: Date.now() })); } catch (e) { /* fine */ }
+      return;
     }
+    const back = ev.target.closest(".postpage [data-pgback]");
+    if (!back || !onPost()) return;
+    const href = back.getAttribute("href") || "/";
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    try { sessionStorage.setItem("mag-slide", "right"); } catch (e) { /* fine */ }
+    location.replace(href);
   }, true);
-  function noteBase() {  // the history length at the post that was opened from a list; swiping on to neighbours keeps it
-    if (!/^\/item\/\d+/.test(location.pathname)) return;
-    try {
-      if (sessionStorage.getItem("mag-step")) sessionStorage.removeItem("mag-step");
-      else sessionStorage.setItem("mag-base", String(history.length));
-    } catch (e) { /* fine */ }
+  function restore() {
+    if (onPost()) return;
+    let p = null;
+    try { p = JSON.parse(sessionStorage.getItem(POS) || "null"); sessionStorage.removeItem(POS); } catch (e) { /* fine */ }
+    if (!p || Date.now() - p.t > 600000 || p.url !== location.pathname + location.search || !p.y) return;
+    let tries = 0;
+    (function put() {  // the list draws in a moment after the page opens: try for about a second
+      window.scrollTo({ top: p.y, behavior: "instant" });
+      if (++tries < 12 && Math.abs(window.scrollY - p.y) > 2) setTimeout(put, 90);
+    })();
   }
-  function check() {
-    const n = read();
-    if (!n) return;
-    if (!/^\/item\/\d+/.test(location.pathname)) { clear(); return; }
-    clear();
-    if (Date.now() - n.t < 4000 && innerWidth <= 760 && /^\/(\?|$|pile\/|board\/)/.test(n.href)) location.replace(n.href);
-  }
-  addEventListener("pageshow", check);
-  noteBase();
-  check();
+  addEventListener("pageshow", restore);
+  restore();
 })();
 
 /* Post tab strip: while it is stuck near the top, a full-width layer in the page's top colour sits behind it and runs off the left,
