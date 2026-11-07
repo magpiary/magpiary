@@ -72,7 +72,8 @@ class SecureHandler(Handler):
         device = self.server.devices.check(self._key())
         if device is None:
             self._refuse("no valid key (not paired, or revoked)",
-                         "This phone isn't paired with this Mac, or it was removed. Pair it again from Settings on the Mac.", 401)
+                         "This phone isn't paired with this Mac, or it was removed. Pair it again from Settings on the Mac. "
+                         "If this is a Home Screen icon, delete it, open the address in Safari and add it again from the page that follows pairing.", 401)
             return False, None
         if self.server.devices.touch(device["id"], ip):
             self.server.announce(device["name"])

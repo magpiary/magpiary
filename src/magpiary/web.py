@@ -107,7 +107,9 @@ def page(title: str, body: str, status: int = 200, extra_head: str = "") -> Resp
 def phone_page(title: str, body: str, status: int = 200) -> Response:
     """A page for the phone or another device, in the hub's dark look."""
     doc = (f'<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,'
-           f'initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f0f0f"><title>{e(title)} – Magpiary'
+           f'initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f0f0f">'
+           f'<link rel="apple-touch-icon" href="/static/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes">'
+           f'<meta name="apple-mobile-web-app-title" content="Magpiary"><title>{e(title)} – Magpiary'
            f"</title><style>{PHONE_STYLE}</style><body>{body}</body></html>")
     return Response(status, doc.encode(), headers={"Cache-Control": "no-store"})
 

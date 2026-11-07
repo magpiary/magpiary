@@ -420,3 +420,10 @@ def test_turning_the_lock_on_locks_every_phone_again(door):
     assert door.primary.hub._main_lock.enabled
     status, _, headers = door.request("GET", "/")
     assert status == 303 and headers["Location"].startswith("/lock")
+
+
+def test_add_to_home_screen_page_names_the_icon_magpiary(door):
+    door.pair()
+    body = door.request("GET", "/phone/app")[1]
+    assert 'rel="apple-touch-icon" href="/static/apple-touch-icon.png"' in body
+    assert 'name="apple-mobile-web-app-title" content="Magpiary"' in body
