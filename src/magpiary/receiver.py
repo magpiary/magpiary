@@ -237,8 +237,9 @@ class Handler(BaseHTTPRequestHandler):
         if response.stream is None:
             self.wfile.write(response.body)
             return
-        path, start, remaining = response.stream
-        with open(path, "rb") as f:  # chunks, so a long video never sits in memory
+        source, start, remaining = response.stream
+        f = source if hasattr(source, "read") else open(source, "rb")  # the file the headers were worked out from
+        with f:  # chunks, so a long video never sits in memory
             f.seek(start)
             while remaining > 0:
                 chunk = f.read(min(1 << 20, remaining))
@@ -269,7 +270,8 @@ class Handler(BaseHTTPRequestHandler):
         elif parts.path in HUB_PAGES or parts.path.startswith(HUB_PREFIXES):
             self.send_page(self.server.hub.get(parts.path, parse_qs(parts.query), self.client_address[0],
                                                self.headers.get("Host", ""), self.headers.get("Range", ""),
-                                               self.headers.get("User-Agent", "")))
+                                               self.headers.get("User-Agent", ""),
+                                               if_range=self.headers.get("If-Range", "")))
         elif setup and (parts.path == "/install" or parts.path.startswith(("/install/", "/s/"))):
             self.send_page(setup.get(parts.path, parse_qs(parts.query), self.client_address[0],
                                      self.headers.get("Host", "")))

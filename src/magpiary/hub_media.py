@@ -4,6 +4,7 @@ Routes and the local-access and lock checks stay in Hub. Files are still resolve
 inside the configured library before a response is streamed by the receiver.
 """
 
+import os
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -35,7 +36,7 @@ class MediaPages:
     library: Path | None
 
     def _media(
-        self, item_id: int, name: str, range_header: str, width: str = "", user_agent: str = ""
+        self, item_id: int, name: str, range_header: str, width: str = "", user_agent: str = "", if_range: str = ""
     ) -> Response:
         item = self.store.item_by_id(item_id)
         if (
@@ -64,9 +65,26 @@ class MediaPages:
             and (copy := thumbs.small(path, int(width)))
         ):
             path = copy
-        size = path.stat().st_size
+        try:
+            f = open(path, "rb")  # one open file: its size and its bytes can never come from two different files
+        except OSError:
+            return Response(404, b"not found", "text/plain")
+        response = self._ranged(f, path, range_header, if_range)
+        if response.stream is None:
+            f.close()
+        return response
+
+    @staticmethod
+    def _ranged(f, path: Path, range_header: str, if_range: str) -> Response:
+        """Answer from the open file `f`: the whole file, or the part Range asks for. A conversion that swaps the
+        path afterwards cannot change what this answer sends."""
+        info = os.fstat(f.fileno())
+        size = info.st_size
+        etag = f'"{size:x}-{info.st_mtime_ns:x}"'  # strong validator: changes whenever the bytes are replaced
         start, end = 0, size - 1
         status = 200
+        if if_range and if_range.strip() != etag:
+            range_header = ""  # the caller's copy is another version: send all of this one
         if m := re.fullmatch(r"bytes=(\d*)-(\d*)", range_header.strip()):
             if m.group(1):
                 start = int(m.group(1))
@@ -74,24 +92,18 @@ class MediaPages:
             elif m.group(2):
                 start = max(size - int(m.group(2)), 0)
             if start > end or start >= size:
-                return Response(
-                    416, b"", "text/plain", headers={"Content-Range": f"bytes */{size}"}
-                )
+                return Response(416, b"", "text/plain", headers={"Content-Range": f"bytes */{size}"})
             status = 206
         headers = {
             "Accept-Ranges": "bytes",
             "Cache-Control": f"private, max-age={MEDIA_CACHE_SECONDS}",
+            "ETag": etag,
             "X-Content-Type-Options": "nosniff",
         }
         if status == 206:
             headers["Content-Range"] = f"bytes {start}-{end}/{size}"
-        response = Response(
-            status,
-            b"",
-            MEDIA_TYPES.get(path.suffix.lower(), "application/octet-stream"),
-            headers,
-        )
-        response.stream = (path, start, end - start + 1)
+        response = Response(status, b"", MEDIA_TYPES.get(path.suffix.lower(), "application/octet-stream"), headers)
+        response.stream = (f, start, end - start + 1)
         return response
 
     def _profile_photo(self) -> Response:

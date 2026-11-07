@@ -91,7 +91,7 @@ class Response:
     body: bytes
     content_type: str = "text/html; charset=utf-8"
     headers: dict = field(default_factory=dict)
-    stream: tuple | None = None  # (path, start, length): a file sent in chunks instead of body
+    stream: tuple | None = None  # (open file or path, start, length): a file sent in chunks instead of body
 
 
 def e(text: object) -> str:

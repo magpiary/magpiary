@@ -209,7 +209,7 @@ class Hub(
     # ---- routing ------------------------------------------------------------------------
 
     def get(self, path: str, query: dict, client_ip: str, host: str, range_header: str = "", user_agent: str = "",
-            device: dict | None = None) -> Response:
+            device: dict | None = None, if_range: str = "") -> Response:
         """`device` is set only by the secure door (receiver.SecureHandler) after it checked the phone's key."""
         self._ctx.device = device
         try:
@@ -218,7 +218,7 @@ class Hub(
                 return self._phone_refused(phone_gate.why_refused(path))
             if device is not None:
                 query = {k: v for k, v in query.items() if k != "qr"}  # a Shortcut pairing code is shown on the Mac only
-            return self._get(path, query, client_ip, host, range_header, user_agent)
+            return self._get(path, query, client_ip, host, range_header, user_agent, if_range)
         finally:
             self._ctx.device = None
 
@@ -247,7 +247,8 @@ class Hub(
         finally:
             self._ctx.device = None
 
-    def _get(self, path: str, query: dict, client_ip: str, host: str, range_header: str = "", user_agent: str = "") -> Response:
+    def _get(self, path: str, query: dict, client_ip: str, host: str, range_header: str = "", user_agent: str = "",
+             if_range: str = "") -> Response:
         refused = self._door(client_ip, host)
         if refused:
             return refused
@@ -356,7 +357,7 @@ class Hub(
         if m := re.fullmatch(r"/pile/(\d+)", path):
             return self.pile_page(int(m.group(1)))
         if m := re.fullmatch(r"/media/(\d+)/([^/]+)", path):
-            return self._media(int(m.group(1)), m.group(2), range_header, q.get("w", ""), user_agent)
+            return self._media(int(m.group(1)), m.group(2), range_header, q.get("w", ""), user_agent, if_range)
         return self.shell("Not found", '<p class="empty">Nothing here. <a class="link" href="/">Back to the library</a></p>',
                           "missing", 404)
 

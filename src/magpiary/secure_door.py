@@ -175,7 +175,8 @@ class SecureHandler(Handler):
             return
         self.send_page(self.server.hub.get(parts.path, parse_qs(parts.query), self.client_address[0],
                                            self.headers.get("Host", ""), self.headers.get("Range", ""),
-                                           self.headers.get("User-Agent", ""), device=device))
+                                           self.headers.get("User-Agent", ""), device=device,
+                                           if_range=self.headers.get("If-Range", "")))
 
     def do_POST(self) -> None:
         ok, device = self._gate()
