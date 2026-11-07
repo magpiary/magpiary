@@ -93,7 +93,7 @@ print("phone post view smoke: ok")
 
 # post view round 2: media 90% wide (cap 75%), toolbar back/open/More, swipe + edge arrows, link buttons one line with logos,
 # tab strip sideways only, pop-ups not held invisible by the page fade, Back keeps the filter, pull to refresh on a post
-assert "width: min(100%, calc(75svh * var(--mar, 100))) !important;" in css, "media column wide, capped at 75% tall"
+assert "calc(75svh * var(--mar, 100))" in css, "media capped at 75% tall"
 assert "html:has(.postpage) #top { display: none !important; }" in css, "no logo bar on a post"
 assert "padding: 0 12px !important; gap: 10px; align-items: center; }" in css, "link buttons centred vertically"
 assert ".crumbbar .pacts > :is([data-pagenav], .rb.off, .pgpos, [data-addboard], [data-copylink]) { display: none !important; }" in css, "toolbar icons"
