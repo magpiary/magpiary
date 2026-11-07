@@ -1366,7 +1366,7 @@ not a pill.
 Today the hub refuses every request that is not from the Mac itself (`local_only` in `web.py`, 403 "This Mac only"). This
 adds an opt-in way to open the library from a phone on the same network.
 
-**Built 7 Nov 2026** (modules `access.py`, `secure_door.py`, `phone_gate.py`, `hub_access.py`, `menubar.py`; tests `test_access_certs.py`,
+**Built 7 Nov 2026** (modules `access.py`, `secure_door.py`, `phone_gate.py`, `hub_access.py`; tests `test_access_certs.py`,
 `test_phone_door.py`; smoke `scripts/smoke/phone-access.py`). Choices made with the owner: HTTPS port is the hub port + 100
 (8865 for the first account); `magpiary.local` is announced with macOS's own `dns-sd -P` (no new dependency; the Mac's own
 `.local` name still works if it fails); AI actions (re-run summary, Deeper dive, Digest, links again, screen again) work on the
@@ -1403,7 +1403,7 @@ refused even with a key.
 
 **Mac side**
 - Subtle phone icon with a green glowing dot in the nav bar while access is on.
-- Menu bar icon, and a notification on each new connection.
+- A notification on each new connection (the owner dropped the menu bar icon on 8 Nov: the app's own nav icon is enough).
 - Access log in Settings: paired phones, last seen, refused attempts.
 
 **Phone experience**
