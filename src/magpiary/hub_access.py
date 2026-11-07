@@ -65,7 +65,7 @@ class AccessPages:
                  "Check that the fingerprint below matches the one on the phone, then tap <b>Continue</b> on the phone.")
         lis = "".join(f"<li>{s}</li>" for s in steps)
         return (f'<div class="srow"><div class="srl"><b>Pair a phone</b><p>This code works once, for about {left // 60 + 1} minutes.</p>'
-                f'<div class="pcode" style="max-width:220px">{qr}</div><ol class="hint">{lis}</ol>'
+                f'<div class="acode" style="width:200px;background:#fff;padding:6px;border-radius:12px;margin:10px 0">{qr}</div><ol class="hint">{lis}</ol>'
                 f'<p class="hint">Fingerprint (SHA-256) to compare:<br><code style="word-break:break-all">{e(access.ca_fingerprint())}</code></p>'
                 f'<p class="hint">If the address does not open, use <code>{e(self.mac_name())}</code> instead of {access.NAME}.</p></div></div>')
 
@@ -87,6 +87,15 @@ class AccessPages:
         refused = sum(1 for r in entries if r["kind"] == "refused")
         return _fold("Access log", f"{refused} refused in the last entries" if refused else "who connected and what was refused",
                      f'<div class="padvbody"><ul class="hint">{lines}</ul></div>')
+
+    def access_button(self) -> str:
+        """Top bar, Mac only: a quiet phone icon with a green glowing dot while phone access is on."""
+        if getattr(self._ctx, "device", None) is not None or not access.enabled(self.store):
+            return ""
+        n = len(self.devices.active())
+        tip = f"Phone access is on ({n} phone{'' if n == 1 else 's'} paired)"
+        return (f'<a class="ubtn phacc" href="/settings/phones#phoneaccess" id="t-phacc" aria-label="{e(tip)}" title="{e(tip)}">'
+                f'{ui.icon("phone")}<i class="phdot" aria-hidden="true"></i></a>')
 
     def mac_name(self) -> str:
         from magpiary.system import local_name

@@ -320,3 +320,50 @@ def test_a_phone_cannot_use_the_access_settings(door):
 def test_mac_hub_still_refuses_other_addresses(door):
     refused = door.primary.hub.get("/", {}, "192.168.1.20", "magpiary.local")
     assert refused.status == 403
+
+
+def test_nav_phone_icon_only_while_access_is_on_and_only_for_the_mac(tmp_path):
+    d = Door(tmp_path)
+    try:
+        assert "phacc" not in mac_get(d, "/").body.decode()
+        mac_post(d, "/hub/access/toggle", enabled="1")
+        assert 'class="ubtn phacc"' in mac_get(d, "/").body.decode()
+        d.pair()
+        assert "phacc" not in d.request("GET", "/")[1]  # not shown on the phone itself
+    finally:
+        d.stop()
+
+
+def test_menubar_summary_reads_the_switch_and_the_count(door):
+    from magpiary import menubar
+
+    assert menubar.summary(door.store) == (True, "Phone access is on · 0 phones paired")
+    door.pair()
+    assert menubar.summary(door.store)[1].endswith("1 phone paired")
+    door.store.set_setting(access.SETTING, "")
+    assert menubar.summary(door.store)[0] is False
+
+
+def test_door_opens_and_closes_with_the_switch_and_starts_helpers(tmp_path):
+    from magpiary.secure_door import Door as OpenDoor
+
+    d = Door(tmp_path)
+    try:
+        events = []
+
+        class FakeBonjour:
+            def sync(self, ip): events.append("bonjour")
+            def stop(self): events.append("bonjour-stop")
+
+        door = OpenDoor(d.primary, lambda: "test-mac.local", bonjour=FakeBonjour(), port=0)
+        door.start_menubar = lambda: events.append("menubar")
+        door.poll()
+        assert door.server is None  # off by default: nothing listens
+        d.store.set_setting(access.SETTING, "1")
+        door.poll()
+        assert door.server is not None and "menubar" in events and "bonjour" in events
+        d.store.set_setting(access.SETTING, "")
+        door.poll()
+        assert door.server is None and "bonjour-stop" in events
+    finally:
+        d.stop()

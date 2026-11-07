@@ -74,7 +74,7 @@ class WallPages:
                 f'<kbd>/</kbd><div class="spanel" id="spanel" role="listbox" hidden></div></form></div>'
                 f'<a class="btn dark addp" href="/add" id="addbtn" title="Paste a link to any post or page">{ui.icon("plus")} <span class="lbl">Add a post</span></a>'
                 f'<nav class="seg shelfsw" id="shelfsw" aria-label="Library, Archive, Trash"><i class="slider" aria-hidden="true"></i>{shelves}</nav>'
-                f'<div class="right">' + self.lock_button() + self.digest_button(active) + self.map_button(active) +
+                f'<div class="right">' + self.access_button() + self.lock_button() + self.digest_button(active) + self.map_button(active) +
                 f'<a class="ubtn nestbtn{busy}{" on" if active == "nest" else ""}" href="/nest" id="t-nest" data-mood="{mood}" '
                 f'title="The nest: {e(line)}">{ui.icon("activity", "ico nesti")}<span class="lbl">Nest</span><span class="nline" id="nline">{e(line)}</span>'
                 f'<span class="nbadge" id="nbadge" data-badge{"" if needs else " hidden"}>{needs}</span></a>'

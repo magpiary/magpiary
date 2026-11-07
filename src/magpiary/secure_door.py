@@ -204,6 +204,8 @@ class Door:
         self.primary, self.mac_name, self.announce = primary, mac_name, announce
         self.port = port if port is not None else access.https_port(primary.server_port)
         self.bonjour = bonjour or Bonjour(self.port)
+        self.menubar = None  # the menu bar icon's process while the door is open
+        self.start_menubar = self._start_menubar
         self.server: SecureServer | None = None
         self.thread: threading.Thread | None = None
 
@@ -229,10 +231,27 @@ class Door:
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True, name="phone-door")
         self.thread.start()
         log(f"phone door open on https port {self.port}")
+        self.start_menubar()
+
+    def _start_menubar(self) -> None:
+        import sys
+
+        from magpiary.config import db_path
+
+        try:
+            self.menubar = subprocess.Popen(
+                [sys.executable, "-m", "magpiary.menubar", str(db_path()),
+                 f"http://localhost:{self.primary.server_port}/settings/phones#phoneaccess"],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            self.menubar = None
 
     def _close(self) -> None:
         server, self.server = self.server, None
         self.bonjour.stop()
+        if self.menubar and self.menubar.poll() is None:
+            self.menubar.terminate()
+        self.menubar = None
         if server:
             server.shutdown()
             server.server_close()

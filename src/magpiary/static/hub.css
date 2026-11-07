@@ -4289,3 +4289,10 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .reader figcaption, .reader .rdcap { color: var(--fg-3); font-size: 13px; text-align: center; margin-top: 8px; }
 
 .pold { display: block; margin-top: 4px; font-size: 13px; line-height: 1.45; color: var(--warn, #f0b35a); max-width: 60ch; }
+
+/* Phone access is on: a quiet phone icon with a small green glowing dot (Mac top bar only) */
+.phacc { position: relative; }
+.phacc .phdot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #34d27b;
+  box-shadow: 0 0 6px 1px rgba(52, 210, 123, .7); }
+@media (prefers-reduced-motion: no-preference) { .phacc .phdot { animation: phglow 2.4s ease-in-out infinite; } }
+@keyframes phglow { 50% { box-shadow: 0 0 9px 3px rgba(52, 210, 123, .35); } }

@@ -1361,10 +1361,21 @@ is the default when both are), then paid keys. Free-tier keys are last.
 **Deeper dive button.** In its own tab, and in the post's More actions (⋯) menu. "Suggested" is shown as coloured text,
 not a pill.
 
-## Phone access to the library on the local network (owner decisions, 6 Nov 2026; not built)
+## Phone access to the library on the local network (owner decisions, 6 Nov 2026; built 7 Nov on branch phone-secure-access, Mac-tested only)
 
 Today the hub refuses every request that is not from the Mac itself (`local_only` in `web.py`, 403 "This Mac only"). This
-adds an opt-in way to open the library from a phone on the same network. Nothing below is built yet.
+adds an opt-in way to open the library from a phone on the same network.
+
+**Built 7 Nov 2026** (modules `access.py`, `secure_door.py`, `phone_gate.py`, `hub_access.py`, `menubar.py`; tests `test_access_certs.py`,
+`test_phone_door.py`; smoke `scripts/smoke/phone-access.py`). Choices made with the owner: HTTPS port is the hub port + 100
+(8865 for the first account); `magpiary.local` is announced with macOS's own `dns-sd -P` (no new dependency; the Mac's own
+`.local` name still works if it fails); AI actions (re-run summary, Deeper dive, Digest, links again, screen again) work on the
+phone behind a confirm page. Details that follow from the decisions: the phone door serves only hub pages (never the `/v1`
+send API); a phone is allowed only what `phone_gate.py` lists (an allow-list, so Settings, AI keys, lock settings, Ask,
+Doctor and Welcome are refused by the server); each paired phone has its own lock state under the same PIN and wrong-PIN
+wait (a phone unlocking never unlocks the Mac); the pairing guide the QR opens is the one plain-HTTP page, and it serves only
+the public certificate (the fingerprint check on the Mac screen is what protects it); requests from public addresses are
+refused even with a key.
 
 **Access**
 - Off by default. A manual toggle in Settings > Advanced; it stays on until switched off.
