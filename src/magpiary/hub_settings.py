@@ -711,7 +711,7 @@ class SettingsPages:
         if browser:
             items = (self._form("/hub/browsers/add", back, "New code", "", confirm="A new code lets you pair the extension again. The "
                                 "current pairing keeps working until the new code is used.")
-                     + "<hr>" + self._form("/hub/phones/remove", {"name": browser["name"]}, "Remove Chrome", "bad",
+                     + "<hr>" + self._form("/hub/phones/remove", {"name": browser["name"], **back}, "Remove Chrome", "bad",
                                            confirm="Remove Chrome? The extension can no longer save links until you pair it again."))
             rows += _row("Chrome", "", _stat("Paired", "ok") + _menu("More for Chrome", items), lead=ui.icon("ext"), cls="phone2")
         elif not code:
@@ -868,7 +868,7 @@ class SettingsPages:
         name = form.get("name", "").strip()
         if path == "/hub/phones/remove":
             self.store.revoke_phone(name)
-            return Response(303, b"", headers={"Location": "/settings/phones?saved=phone"})
+            return Response(303, b"", headers={"Location": back + "?saved=phone"})
         if path == "/hub/browsers/add":  # the Chrome extension: a one-time code to paste into it (15 minutes)
             name, code = self.setup.pair_browser("Chrome")
             return Response(303, b"", headers={"Location": f"{back}?chromecode={quote(code)}"})

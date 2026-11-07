@@ -177,7 +177,7 @@ def forget_authority(folder: Path | None = None) -> None:
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS paired_devices (
     id INTEGER PRIMARY KEY, name TEXT NOT NULL, key_hash TEXT NOT NULL, agent TEXT NOT NULL DEFAULT '',
-    paired_at TEXT NOT NULL, last_seen TEXT, revoked_at TEXT);
+    paired_at TEXT NOT NULL, last_seen TEXT, revoked_at TEXT, parent_id INTEGER);
 CREATE TABLE IF NOT EXISTS access_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, device_id INTEGER, kind TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
     address TEXT NOT NULL DEFAULT '');
@@ -201,6 +201,8 @@ class Devices:
         self._seen: dict[int, float] = {}
         with store._lock:
             store._db.executescript(SCHEMA)
+            if "parent_id" not in {r[1] for r in store._db.execute("PRAGMA table_info(paired_devices)")}:
+                store._db.execute("ALTER TABLE paired_devices ADD COLUMN parent_id INTEGER")  # a database from before the Home Screen app
 
     # ---- pairing tokens (one use, ten minutes, memory only) ----
 
@@ -237,6 +239,13 @@ class Devices:
             now = clock if clock is not None else time.monotonic()
             return any(hmac.compare_digest(token.encode(), t.encode()) and exp > now for t, exp in self._pairs.items())
 
+    def cancel_pair_token(self, token: str) -> None:
+        """Make a pairing code useless at once (the Mac pressed Cancel, made a new code, or switched access off)."""
+        with self._lock:
+            for t in list(self._pairs):
+                if hmac.compare_digest(token.encode(), t.encode()):
+                    self._pairs.pop(t)
+
     def spend_pair_token(self, token: str, clock: float | None = None) -> bool:
         import time
 
@@ -272,27 +281,33 @@ class Devices:
         return dict(row) if row else None
 
     def claim_app_token(self, token: str, agent: str = "", wall: float | None = None) -> tuple[int, str] | None:
-        """Spend a hand-over link: the Home Screen app gets its own key (listed as "<phone> app"). Once only."""
-        device = self.app_token_device(token, wall)
-        if device is None:
-            return None
-        with self.store._lock, self.store._db:
-            gone = self.store._db.execute("DELETE FROM app_tokens WHERE token_hash=?", (_hash(token),)).rowcount
-        if not gone:
-            return None
-        name = device["name"] if device["name"].endswith(" app") else device["name"] + " app"
-        return self.add(name, agent)
+        """Spend a hand-over link: the Home Screen app gets its own key (listed as "<phone> app"), tied to the phone it came
+        from. Once only. Checking the phone, spending the link and making the key happen under one lock, which revoking also
+        takes, so a phone revoked a moment earlier never yields a key."""
+        with self.store._lock:
+            device = self.app_token_device(token, wall)
+            if device is None:
+                return None
+            with self.store._db:
+                gone = self.store._db.execute("DELETE FROM app_tokens WHERE token_hash=?", (_hash(token),)).rowcount
+                root = self.store._db.execute("SELECT COALESCE(parent_id, id) FROM paired_devices WHERE id=?",
+                                              (device["id"],)).fetchone()[0]
+            if not gone:
+                return None
+            name = device["name"] if device["name"].endswith(" app") else device["name"] + " app"
+            return self.add(name, agent, parent=root)
 
     # ---- phones ----
 
-    def add(self, name: str, agent: str = "") -> tuple[int, str]:
-        """Pair a phone. Returns (id, key); the key is not kept anywhere else."""
+    def add(self, name: str, agent: str = "", parent: int | None = None) -> tuple[int, str]:
+        """Pair a phone. Returns (id, key); the key is not kept anywhere else. `parent` ties a Home Screen app's own key to
+        the phone it came from, so revoking the phone revokes the app too."""
         key = secrets.token_urlsafe(32)
         name = " ".join(name.split())[:40] or "iPhone"
         with self.store._lock, self.store._db:
             cur = self.store._db.execute(
-                "INSERT INTO paired_devices (name, key_hash, agent, paired_at) VALUES (?,?,?,?)",
-                (name, _hash(key), agent[:200], self._now()))
+                "INSERT INTO paired_devices (name, key_hash, agent, paired_at, parent_id) VALUES (?,?,?,?,?)",
+                (name, _hash(key), agent[:200], self._now(), parent))
         self.log("paired", cur.lastrowid, name)
         return cur.lastrowid, key
 
@@ -321,13 +336,24 @@ class Devices:
         return first
 
     def revoke(self, device_id: int) -> bool:
+        """Revoke a phone and everything tied to it: its Home Screen app keys and any link not yet used."""
         with self.store._lock, self.store._db:
-            cur = self.store._db.execute(
-                "UPDATE paired_devices SET revoked_at=? WHERE id=? AND revoked_at IS NULL", (self._now(), device_id))
-        self._seen.pop(device_id, None)
-        if cur.rowcount:
+            ids = {device_id}
+            while True:
+                more = {r[0] for r in self.store._db.execute(
+                    f"SELECT id FROM paired_devices WHERE parent_id IN ({','.join('?' * len(ids))})", tuple(ids))} - ids
+                if not more:
+                    break
+                ids |= more
+            marks = ",".join("?" * len(ids))
+            rows = self.store._db.execute(
+                f"UPDATE paired_devices SET revoked_at=? WHERE id IN ({marks}) AND revoked_at IS NULL", (self._now(), *ids)).rowcount
+            self.store._db.execute(f"DELETE FROM app_tokens WHERE device_id IN ({marks})", tuple(ids))
+        for i in ids:
+            self._seen.pop(i, None)
+        if rows:
             self.log("revoked", device_id)
-        return bool(cur.rowcount)
+        return bool(rows)
 
     def revoke_all(self) -> int:
         n = 0

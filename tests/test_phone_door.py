@@ -560,7 +560,7 @@ def test_phone_settings_hide_pairing_and_phone_access(door):
 
 
 @pytest.mark.parametrize("path,form", [("/hub/settings/mode", {"mode": "private"}), ("/hub/awake", {"enabled": "1"}),
-                                       ("/hub/ui", {"theme": "dark"}), ("/hub/digest/on", {"enabled": "1"}),
+                                       ("/hub/ui", {"theme": "dark"}), ("/hub/digest/on", {"enabled": "0"}),
                                        ("/hub/deep/on", {"enabled": "1"}), ("/hub/agents/on", {"enabled": "1"}),
                                        ("/hub/askset", {"enabled": "1"}), ("/hub/phones/wifi", {"name": "x", "mode": "any"}),
                                        ("/hub/profile", {"name": "Maya"})])
@@ -607,3 +607,67 @@ def test_phone_css_hide_list_ids_still_exist_on_the_settings_pages(door):
     assert 'id="instagram"' in pages["ai"] and 'id="home"' in pages["phones"]
     src = (Path(__file__).parent.parent / "src/magpiary/hub_settings.py").read_text()
     assert 'gid="chrome"' in src  # shown only with the pairing service, on Library & this Mac
+
+
+# ---- fixes from the second Codex review (8 Nov) ----
+
+def test_revoking_a_phone_revokes_its_home_screen_app_and_unused_links(door):
+    door.pair("Maya")
+    parent = door.devices.active()[0]["id"]
+    unused = door.devices.new_app_token(parent)
+    token = door.devices.new_app_token(parent)
+    claimed = door.devices.claim_app_token(token)
+    assert claimed and len(door.devices.active()) == 2
+    door.devices.revoke(parent)
+    assert door.devices.active() == [] and door.devices.check(claimed[1]) is None
+    assert door.devices.claim_app_token(unused) is None  # a link not yet used died with the phone
+
+
+def test_a_claim_after_the_phone_was_revoked_gives_no_key(door):
+    door.pair("Maya")
+    parent = door.devices.active()[0]["id"]
+    token = door.devices.new_app_token(parent)
+    door.devices.revoke(parent)
+    assert door.devices.claim_app_token(token) is None and door.devices.active() == []
+
+
+def test_a_claim_made_by_the_app_is_tied_to_the_original_phone(door):
+    door.pair("Maya")
+    parent = door.devices.active()[0]["id"]
+    _, key = door.devices.claim_app_token(door.devices.new_app_token(parent))
+    app = door.devices.check(key)
+    second = door.devices.claim_app_token(door.devices.new_app_token(app["id"]))  # the app makes a link of its own
+    door.devices.revoke(parent)
+    assert door.devices.check(key) is None and door.devices.check(second[1]) is None
+
+
+def test_cancel_and_new_code_stop_the_old_pairing_code(door):
+    mac_post(door, "/hub/access/pair")
+    first = door.primary.hub._pairing[0]
+    mac_post(door, "/hub/access/pair")  # a new code replaces it
+    assert door.request("POST", f"/phone/pair/{first}", {"name": "x"}, key="")[0] == 410
+    second = door.primary.hub._pairing[0]
+    mac_post(door, "/hub/access/cancel")
+    assert door.request("POST", f"/phone/pair/{second}", {"name": "x"}, key="")[0] == 410
+    assert door.devices.active() == []
+
+
+def test_settings_that_start_ai_work_need_the_confirm_tap_and_installs_stay_on_the_mac(door):
+    door.pair()
+    csrf = door.primary.hub._csrf
+    for path, form in (("/hub/engine/allow", {"kind": "claude_code", "enabled": "1"}), ("/hub/settings/mode", {"mode": "smart"}),
+                       ("/hub/digest/on", {"enabled": "1"})):
+        status, body, _ = door.request("POST", path, {"csrf": csrf, **form})
+        assert "Use your AI?" in body, path
+    assert door.request("POST", "/hub/askset", {"csrf": csrf, "setup": "claude"})[0] == 403
+    assert door.request("POST", "/hub/askset", {"csrf": csrf, "remove": "codex"})[0] == 403
+    assert door.request("POST", "/hub/engine/allow", {"csrf": csrf, "kind": "claude_code", "enabled": "0"})[0] in (200, 303)
+    assert door.request("POST", "/hub/askset", {"csrf": csrf, "on": "1"})[0] in (200, 303)
+
+
+def test_phone_more_menu_has_no_map_or_digest(door):
+    door.pair()
+    menu = door.request("GET", "/")[1].split('id="pmore"')[1].split("</nav>")[0]
+    for gone in ('href="/map"', 'href="/digest"'):
+        assert gone not in menu
+    assert 'href="/?shelf=archive"' in menu and 'href="/help"' in menu and "Add to Home Screen" in menu

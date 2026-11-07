@@ -117,8 +117,6 @@ class WallPages:
                 + '<div class="pmore" id="pmore" role="menu" hidden>'
                 + f'<a role="menuitem" href="/?shelf=archive">{ui.icon("archive")}<span>Archive</span></a>'
                 + f'<a role="menuitem" href="/?shelf=trash">{ui.icon("trash")}<span>Trash</span></a>'
-                + f'<a role="menuitem" href="/digest">{ui.icon("digest")}<span>Digest</span></a>'
-                + f'<a role="menuitem" href="/map">{ui.icon("grid3")}<span>Map</span></a>'
                 + f'<a role="menuitem" href="/help">{ui.icon("book")}<span>Help</span></a>'
                 + (f'<a role="menuitem" href="/phone/app" data-homescreen>{ui.icon("phone")}<span>Add to Home Screen</span></a>'
                    if getattr(self._ctx, "device", None) is not None else "")  # only a paired phone, through the secure door

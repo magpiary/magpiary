@@ -157,25 +157,32 @@ class AccessPages:
 
     # ---- posts from the Mac ----
 
+    def _drop_pairing(self) -> None:
+        if self._pairing:
+            self.devices.cancel_pair_token(self._pairing[0])
+        self._pairing = None
+
     def access_post(self, path: str, form: dict) -> Response | None:
         if not path.startswith("/hub/access/"):
             return None
         if path == "/hub/access/toggle":
             on = form.get("enabled") == "1"
             self.store.set_setting(access.SETTING, "1" if on else "")
-            self._pairing = None if not on else self._pairing
+            if not on:
+                self._drop_pairing()
             self.devices.log("enabled" if on else "disabled")
         elif path == "/hub/access/pair" and access.enabled(self.store):
             access.ca_certificate()  # made on first use
+            self._drop_pairing()  # a new code replaces the old one, which stops working
             self._pairing = (self.devices.new_pair_token(), time.monotonic())
         elif path == "/hub/access/cancel":
-            self._pairing = None
+            self._drop_pairing()
         elif path == "/hub/access/revoke" and form.get("id", "").isdigit():
             self.devices.revoke(int(form["id"]))
         elif path == "/hub/access/reset":
             self.devices.revoke_all()
             access.forget_authority()
-            self._pairing = None
+            self._drop_pairing()
         return Response(303, b"", headers={"Location": BACK})
 
     # ---- the guide a phone opens from the QR (plain HTTP: it carries only the public certificate) ----
