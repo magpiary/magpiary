@@ -348,3 +348,16 @@
   .postpage > .crumbbar > .pvautozone { margin-left: 1px; }
   .postpage > .crumbbar > .pvautozone .pvauto { border-radius: 0 999px 999px 0 !important; padding: 0 14px 0 12px; }
 }
+
+/* ---- post page buttons, round 7 (owner, 7 Nov): plain white icons and label with a soft shadow behind them; no pills, no shade ---- */
+@media (max-width: 760px) {
+  .postpage > .crumbbar { background: none !important; padding-bottom: 12px !important; }
+  .postpage > .crumbbar .pgback, .postpage > .crumbbar .pacts, .postpage > .crumbbar .pvautozone .pvauto,
+  .postpage > .crumbbar .pacts > :is(a, button), .postpage > .crumbbar .pacts > details > summary { background: none !important; box-shadow: none !important; border: 0 !important; color: #fff !important; }
+  .postpage > .crumbbar :is(.pgback, .pacts, .pvauto) { filter: drop-shadow(0 1px 3px rgb(0 0 0 / .65)) drop-shadow(0 0 8px rgb(0 0 0 / .35)); }
+  .postpage > .crumbbar .pacts { padding: 0; gap: 0; }
+  .postpage > .crumbbar .pgback { border-radius: 0 !important; width: 44px; }
+  .postpage > .crumbbar > .pvautozone { margin-left: 0; }
+  .postpage > .crumbbar .pvauto { border-radius: 0 !important; padding: 0 10px 0 4px; font-weight: 600; }
+  .postpage > .crumbbar .pvauto i { background: rgb(255 255 255 / .38); }
+}

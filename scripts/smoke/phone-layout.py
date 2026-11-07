@@ -126,3 +126,5 @@ assert ".postpage > .crumbbar { position: absolute !important; top: 0;" in css a
 print("phone post overlay round 5 smoke: ok")
 assert "margin-top: 0; border-radius: 20px; background: transparent; }" in css and "border-radius: 999px 0 0 999px !important; margin-right: 0;" in css, "rounded media corners; Back+Autoplay one pill"
 print("phone post pill round 6 smoke: ok")
+assert "drop-shadow(0 1px 3px rgb(0 0 0 / .65))" in css and ".postpage > .crumbbar { background: none !important; padding-bottom: 12px !important; }" in css, "plain white buttons with a soft shadow"
+print("phone post plain buttons round 7 smoke: ok")
