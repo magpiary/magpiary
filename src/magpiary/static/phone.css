@@ -532,18 +532,58 @@
   .setpane .tchip button { width: 36px; height: 36px; margin-block: -6px; }
   .setpane .pedbtn { position: relative; } .setpane .pedbtn::after { content: ""; position: absolute; inset: -6px; }
   .setpane :is(.pkicker, .pno, .pkicker span) { font-size: 12px !important; }
-  /* a row that is only a switch: the switch sits at the right of the title, not on a line of its own */
-  .setpane .srow:has(> .src > form > .sw:only-of-type):not(:has(> .src .btn, > .src select, > .src input:not([type="hidden"]))) { grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 12px; }
-  .setpane .srow:has(> .src > form > .sw:only-of-type):not(:has(> .slead)):not(:has(> .src .btn, > .src select, > .src input:not([type="hidden"]))) { grid-template-columns: minmax(0, 1fr) auto; }
-  .setpane .srow:has(> .src > form > .sw:only-of-type):not(:has(> .src .btn, > .src select, > .src input:not([type="hidden"]))) > .src { grid-column: -2; grid-row: 1; align-self: center; margin: 0; padding: 0; }
-  .setpane form.picks { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px; }
-  .setpane form.picks > .pick { width: auto; }
+  /* Sections are flat: no boxes, just rows. Icon at the left, text beside it, controls on their own line under the text (a lone switch stays at the right of the title) */
+  .setpane :is(.srows, .sgroup.hero > .srows, .sgroup.careful .srows, .sgroup.plain .srows, .sgroup.flatgrp .srows) { background: none !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; }
+  .setpane .srow:not(.addrow, .pfull, .rstack) { display: flex !important; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; padding: 14px 0 !important; min-height: 0 !important; background: none !important; border-radius: 0 !important; }
+  .setpane .srow.sub { padding-left: 0 !important; }
+  .setpane .srow .slead { flex: none; width: 32px; height: 32px; background: none; border-radius: 0; }
+  .setpane .srow.keyrow .slead { width: auto; display: inline-flex; gap: 4px; align-items: center; }
+  .setpane .srow .srl { flex: 1 1 0; min-width: 0; }
+  .setpane .srow > .src { flex: 0 0 100%; margin: 0; justify-content: flex-start; }
+  .setpane .srow:has(> .slead):not(.keyrow) > .src { flex-basis: calc(100% - 44px); margin-left: 44px; }
+  .setpane :is(.srow.addrow, .srow.rstack, .srow.pfull, .plock, .dgset, .advbody) { padding-inline: 0 !important; background: none !important; box-shadow: none !important; border-radius: 0 !important; }
+  .setpane .srow.rstack, .setpane .srow.addrow { padding-block: 14px !important; }
+  .setpane .srow.rstack > :not(.slead, .srl) { margin-left: 0 !important; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .setpane .deepengine { display: grid !important; grid-template-columns: minmax(0, 1fr); width: 100%; margin: 4px 0 0; }
+  .setpane .deepengine .deeppick { min-width: 0 !important; }
+  .setpane .deepengine :is(select, em) { width: 100%; max-width: 100%; box-sizing: border-box; }
   .setpane .glassticks button { min-height: 40px; min-width: 44px; }
   .setpane input[type="range"] { min-height: 40px; }
   /* the little (i) tips open as a card above the bottom bar instead of a hover bubble that runs off the screen */
   .setpane .info .ttip { position: fixed; left: 16px; right: 16px; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); top: auto; transform: none; width: auto; max-width: none; padding: 12px 14px; font-size: 14px; line-height: 1.4; z-index: 60; }
   .setpane .info.open .ttip { opacity: 1; }
   .setpane .info { position: relative; cursor: pointer; } .setpane .info::after { content: ""; position: absolute; inset: -10px; }
+  .setpane .dghead { gap: 12px; }
+  .setpane .sgroup.feat .srows { background: none !important; box-shadow: none !important; }
+  .setpane .sgroup.feat .srow { padding: 14px 0 !important; min-height: 0 !important; }
+  .setpane .hrun { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; padding: 14px 0; }
+  .setpane .hrun .hico { flex: none; width: 32px; height: 32px; background: none !important; box-shadow: none !important; border-radius: 0 !important; display: grid; place-items: center; }
+  .setpane .hrun .hrt { flex: 1 1 0; min-width: 0; }
+  .setpane .hrun .btn.dark { flex: 0 0 100%; margin: 0 0 0 44px; max-width: calc(100% - 44px); height: 44px; justify-content: center; }
+  .setpane .hopt { margin-top: 0; padding: 14px 0; gap: 12px; }
+  .setpane .hopt .hsw { order: 2; margin-left: auto; flex: none; }
+  .setpane .hopt > span:not(.hsw) { order: 1; flex: 1 1 0; min-width: 0; }
+  .setpane .src > .btn.dark, .setpane .srow .btn.dark { background: var(--fg); color: var(--bg); }
+  .setpane form.picks { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)) !important; }
+  .setpane .segbar { display: flex !important; flex-wrap: nowrap !important; width: 100%; }
+  .setpane .segbar > button { flex: 1 1 auto; min-width: 0; white-space: nowrap; padding-inline: 6px; text-align: center; justify-content: center; font-size: 13px; }
+  .setpane .engctl { display: flex !important; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 10px 14px; margin: 0; padding: 0; }
+  .setpane .engctl > span:empty { display: none; }
+  .setpane .src > * { margin-left: 0; }
+  .setpane .sgh { padding-inline: 0 !important; }
+  .setpane .gnote { padding-inline: 0 !important; font-size: 14px; background: none !important; }
+  .setpane .padv > summary { padding-inline: 0 !important; }
+  .setpane details.adv { background: none !important; box-shadow: none !important; border: 0 !important; border-top: 1px solid var(--line, rgb(255 255 255 / .1)) !important; border-radius: 0 !important; }
+  .setpane details.adv > summary { padding-inline: 0 !important; }
+  .setpane details.adv > summary .advpill { display: none; }
+  .setpane .srow.keyrow > .src { flex-basis: calc(100% - 84px); margin-left: 84px; }
+  .setpane .srow > .src:has(> form > .sw:only-of-type):not(:has(.btn, select, input:not([type="hidden"]))) { flex: none; margin: 0; align-self: center; }
+  .setpane .srow .src :is(select, input:not([type="checkbox"], [type="radio"], [type="hidden"]), .deeppick) { max-width: 100%; }
+  .setpane .deepengine .deeppick, .setpane .src .deeppick { width: 100%; min-width: 0; }
+  .setpane .deeppick select { width: 100%; }
+  .setpane .pillbar { display: flex; flex-wrap: nowrap; width: 100%; }
+  .setpane .pillbar .pillc { flex: 1 1 0; min-width: 0; }
+  .setpane .pillbar .pillc span { width: 100%; justify-content: center; text-align: center; height: auto; min-height: 34px; padding: 4px 8px; font-size: 13px; line-height: 1.15; }
   .setpane .segbar > button, .setpane .seg-b, .setpane .askseg button { min-height: 40px; }
   .setpane .seg-b small { font-size: 12px !important; }
 }

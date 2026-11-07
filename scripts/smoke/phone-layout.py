@@ -167,7 +167,7 @@ assert ".setcard::after, .setpriv::after" in css and ".setpane .info .ttip { pos
 assert ".setback, .setsupport { display: none; }" in css.split("@media")[0], "phone-only settings bits hidden on the Mac"
 print("phone settings two-layer smoke: ok")
 assert '".setpane .info.open"' in js and ".setpane .info.open .ttip { opacity: 1; }" in css, "settings tip opens on tap"
-assert ".setpane form.picks { grid-template-columns: repeat(2" in css and ".setpane .srow:has(> .src > form > .sw:only-of-type)" in css, "settings pickers 2 columns, lone switch at the row's right"
+assert ".setpane form.picks { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr))" in css and ".setpane .srow > .src:has(> form > .sw:only-of-type)" in css, "settings pickers fill the width, lone switch at the row's right"
 print("phone settings sections smoke: ok")
 hubjs = open("src/magpiary/static/hub.js").read()
 assert '$(".setlayout", view).className = $(".setlayout", fresh).className' in hubjs, "Settings swap keeps list/section class in step (rows open)"
@@ -175,3 +175,6 @@ assert "html:has(.setlayout) #top { display: none !important; }" in css and "bor
 print("phone settings open/flat smoke: ok")
 assert ".setpriv > span:not(.seticon) > :is(b, small) { grid-column: auto !important;" in css and ".setnav > .setcard:has(+ .setnavh)" in css, "Privacy row left-aligned like the rest; last row of a group has no line"
 print("phone settings last-row/privacy smoke: ok")
+assert ".setpane .srow:not(.addrow, .pfull, .rstack) { display: flex !important;" in css and ".setpane .engctl { display: flex !important;" in css, "settings sections: flat flex rows, controls under the text"
+assert ".setpane .segbar { display: flex !important; flex-wrap: nowrap !important;" in css and ".setpane .deepengine { display: grid !important;" in css, "settings segmented controls and engine pickers fit the screen"
+print("phone settings flat-rows smoke: ok")
