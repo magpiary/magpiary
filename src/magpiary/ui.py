@@ -24,7 +24,7 @@ STATIC_FILES = {"hub.css": "text/css; charset=utf-8", "hub.js": "text/javascript
                 "indigo.js": "text/javascript; charset=utf-8", "digest.js": "text/javascript; charset=utf-8", "vendor/lenis.min.js": "text/javascript; charset=utf-8",
                 **{f"art/{n}.webp": "image/webp" for n in ("fly-a", "fly-b", "fly-c", "fly-d", "land-a", "land-b",
                                                            "land-c", "stack", "post", "digest-gift-1x", "digest-gift-2x")},
-                "vendor/gsap.min.js": "text/javascript; charset=utf-8",
+                "vendor/gsap.min.js": "text/javascript; charset=utf-8", "apple-touch-icon.png": "image/png",
                 "vendor/Flip.min.js": "text/javascript; charset=utf-8", "icon.svg": "image/svg+xml",
                 "emoji.json": "application/json",
                 "lock.js": "text/javascript; charset=utf-8", "settings.js": "text/javascript; charset=utf-8",
@@ -132,6 +132,9 @@ def document(title: str, body: str, look: dict, csrf: str, page: str, status: in
            f'if((!sessionStorage.getItem("mag-opened")||/[?&]opening=1/.test(location.search))&&!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("opening")}}catch(e){{}}</script>'
            f'<title>{e(title)} · Magpiary</title>'
            f'<link rel="icon" type="image/svg+xml" href="/static/icon.svg?v={v}">'
+           f'<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">'
+           f'<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">'
+           f'<meta name="apple-mobile-web-app-title" content="Magpiary">'
            f'<link rel="stylesheet" href="/static/hub.css?v={v}">'
            f'<link rel="stylesheet" href="/static/indigo.css?v={v}"><link rel="stylesheet" href="/static/map.css?v={v}">'
            f'<link rel="stylesheet" href="/static/phone.css?v={v}">'

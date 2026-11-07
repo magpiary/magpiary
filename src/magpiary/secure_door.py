@@ -20,6 +20,8 @@ from magpiary.web import Response, alone_page, e, phone_page
 HSTS = "max-age=31536000"
 COOKIE_AGE = 60 * 60 * 24 * 400
 PAIR_PATH = "/phone/pair/"
+APP_PATH = "/phone/app"
+PUBLIC_FILES = ("/static/apple-touch-icon.png",)  # only the logo: iOS fetches the Home Screen icon without our cookie
 
 
 class SecureHandler(Handler):
@@ -64,8 +66,9 @@ class SecureHandler(Handler):
         if name not in self.server.names:
             self._refuse(f"wrong host name {name[:40]}", "Open this at magpiary.local.", 421)
             return False, None
-        if urlsplit(self.path).path.startswith(PAIR_PATH):
-            return True, None
+        path = urlsplit(self.path).path
+        if path.startswith(PAIR_PATH) or path in PUBLIC_FILES or path.startswith(APP_PATH + "/"):
+            return True, self.server.devices.check(self._key())  # these decide for themselves; a key is optional
         device = self.server.devices.check(self._key())
         if device is None:
             self._refuse("no valid key (not paired, or revoked)",
@@ -96,6 +99,47 @@ class SecureHandler(Handler):
             return
         _, key = devices.add(form.get("name", "iPhone"), self.headers.get("User-Agent", ""))
         cookie = f"{access.COOKIE}={key}; Max-Age={COOKIE_AGE}; Path=/; Secure; HttpOnly; SameSite=Strict"
+        self.send_page(Response(303, b"", headers={"Location": APP_PATH, "Set-Cookie": cookie}))
+
+    # ---- the Home Screen app (iOS gives it its own cookies, so it claims its own key once) ----
+
+    def _app_landing(self, device: dict | None) -> None:
+        """Safari, paired: the steps to add the library to the Home Screen. The address is swapped for a one-time link so the
+        icon opens already paired."""
+        if device is None:
+            self._refuse("no valid key (not paired, or revoked)", "Pair this phone first.", 401)
+            return
+        token = self.server.devices.new_app_token(device["id"])
+        link = f"{APP_PATH}/{token}"
+        body = ('<main class="alone"><h1>Add to your Home Screen</h1>'
+                '<p>Tap <b>Share</b> (the square with the arrow) in Safari, then <b>Add to Home Screen</b>, then <b>Add</b>.</p>'
+                '<p>The icon opens the library on its own, without Safari bars.</p>'
+                '<p><a class="btn" href="/">Open the library</a></p></main>'
+                f'<script>history.replaceState(null,"",{link!r});</script>')
+        self.send_page(phone_page("Add to Home Screen", body))
+
+    def _app(self, method: str, device: dict | None) -> None:
+        token = urlsplit(self.path).path.removeprefix(APP_PATH + "/").strip("/")
+        devices = self.server.devices
+        if device is not None:  # already holds a key (Safari, or the icon after its first launch): just go in
+            self.send_page(Response(303, b"", headers={"Location": "/"}))
+            return
+        if devices.app_token_device(token) is None:
+            self._refuse("home screen link expired or already used", "This icon needs pairing again. Open magpiary.local in Safari, "
+                         "pair, and add it to the Home Screen from the page that follows.", 410)
+            return
+        if method == "GET":
+            body = ('<main class="alone"><h1>Opening Magpiary…</h1><p id="m">Open this from the Magpiary icon on your Home Screen.</p>'
+                    f'<form id="f" method="post" action="{e(APP_PATH + "/" + token)}"></form></main>'
+                    '<script>if(navigator.standalone){document.getElementById("m").textContent="One moment…";'
+                    'document.getElementById("f").submit()}</script>')
+            self.send_page(phone_page("Opening Magpiary", body))
+            return
+        claimed = devices.claim_app_token(token, self.headers.get("User-Agent", ""))
+        if claimed is None:
+            self._refuse("home screen link already used", "This link was already used. Pair again.", 410)
+            return
+        cookie = f"{access.COOKIE}={claimed[1]}; Max-Age={COOKIE_AGE}; Path=/; Secure; HttpOnly; SameSite=Strict"
         self.send_page(Response(303, b"", headers={"Location": "/", "Set-Cookie": cookie}))
 
     # ---- the hub, for a paired phone ----
@@ -105,8 +149,19 @@ class SecureHandler(Handler):
         if not ok:
             return
         parts = urlsplit(self.path)
-        if device is None:
+        if parts.path.startswith(APP_PATH + "/"):
+            self._app("GET", device)
+            return
+        if parts.path == APP_PATH:
+            self._app_landing(device)
+            return
+        if parts.path.startswith(PAIR_PATH):
             self._pair("GET")
+            return
+        if parts.path in PUBLIC_FILES:
+            from magpiary import ui
+
+            self.send_page(ui.static(parts.path))
             return
         if not (parts.path in HUB_PAGES or parts.path.startswith(HUB_PREFIXES)):
             self.send_json(404, {"error": "not found"})
@@ -120,7 +175,10 @@ class SecureHandler(Handler):
         if not ok:
             return
         path = urlsplit(self.path).path
-        if device is None:
+        if path.startswith(APP_PATH + "/"):
+            self._app("POST", device)
+            return
+        if path.startswith(PAIR_PATH):
             self._pair("POST")
             return
         if not path.startswith("/hub/"):

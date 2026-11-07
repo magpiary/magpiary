@@ -367,3 +367,56 @@ def test_door_opens_and_closes_with_the_switch_and_starts_helpers(tmp_path):
         assert door.server is None and "bonjour-stop" in events
     finally:
         d.stop()
+
+
+# ---- the Home Screen app: iOS keeps its cookies apart from Safari's ----
+
+def test_pairing_ends_on_the_add_to_home_screen_page(door):
+    token = door.devices.new_pair_token()
+    status, _, headers = door.request("POST", f"/phone/pair/{token}", {"name": "Maya"}, key="")
+    assert status == 303 and headers["Location"] == "/phone/app"
+
+
+def test_home_screen_icon_is_public_and_the_head_links_it(door):
+    status, body, headers = door.request("GET", "/static/apple-touch-icon.png", key="")
+    assert status == 200 and headers["Content-Type"] == "image/png"
+    door.pair()
+    assert 'rel="apple-touch-icon"' in door.request("GET", "/")[1]
+    assert door.request("GET", "/static/hub.css", key="")[0] == 401  # only the icon is public
+
+
+def test_home_screen_app_claims_its_own_key_once(door):
+    door.pair("Maya")
+    status, body, _ = door.request("GET", "/phone/app")
+    assert status == 200 and "replaceState" in body
+    token = body.split('replaceState(null,"",')[1].split(")")[0].strip("'\"").rsplit("/", 1)[1]
+    # the icon starts with no cookie of its own
+    status, page, _ = door.request("GET", f"/phone/app/{token}", key="")
+    assert status == 200 and "navigator.standalone" in page and door.devices.app_token_device(token)  # looking does not spend it
+    status, _, headers = door.request("POST", f"/phone/app/{token}", {}, key="")
+    assert status == 303 and "Secure" in headers["Set-Cookie"]
+    app_key = headers["Set-Cookie"].split(";")[0].split("=", 1)[1]
+    assert door.request("GET", "/", key=app_key)[0] == 200
+    assert [d["name"] for d in door.devices.active()] == ["Maya", "Maya app"]
+    assert door.request("POST", f"/phone/app/{token}", {}, key="")[0] == 410  # once only
+    assert door.request("GET", f"/phone/app/{token}", key=app_key)[0] == 303  # later launches simply go in
+
+
+def test_home_screen_link_dies_with_the_phone_or_the_clock(door):
+    door.pair("Maya")
+    did = door.devices.active()[0]["id"]
+    token = door.devices.new_app_token(did)
+    assert door.devices.app_token_device(token, wall=access.APP_FOR + 10**10) is None  # expired
+    door.devices.revoke(did)
+    assert door.request("POST", f"/phone/app/{token}", {}, key="")[0] == 410
+    assert door.request("GET", "/phone/app", key="")[0] == 401  # unpaired cannot make links
+
+
+def test_turning_the_lock_on_locks_every_phone_again(door):
+    door.pair()
+    assert door.request("GET", "/")[0] == 200  # lock off: the phone is open
+    csrf = door.primary.hub._csrf
+    door.primary.hub.post("/hub/lock/on", {"csrf": csrf, "pin": "135790", "again": "135790"}, "127.0.0.1", "localhost", None)
+    assert door.primary.hub._main_lock.enabled
+    status, _, headers = door.request("GET", "/")
+    assert status == 303 and headers["Location"].startswith("/lock")

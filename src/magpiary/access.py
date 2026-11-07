@@ -35,6 +35,7 @@ LEAF_DAYS = 397  # under 398: iOS refuses a longer certificate
 RENEW_BEFORE_DAYS = 30
 COOKIE = "mp_phone"
 PAIR_FOR = 600  # seconds a pairing QR works
+APP_FOR = 24 * 3600  # seconds the Home Screen hand-over link works (until its first launch)
 LOG_KEEP = 500
 SEEN_EVERY = 60  # seconds between "last seen" writes for one phone
 
@@ -180,6 +181,7 @@ CREATE TABLE IF NOT EXISTS paired_devices (
 CREATE TABLE IF NOT EXISTS access_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, device_id INTEGER, kind TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
     address TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS app_tokens (token_hash TEXT PRIMARY KEY, device_id INTEGER NOT NULL, expires REAL NOT NULL);
 """
 
 
@@ -228,6 +230,41 @@ class Devices:
                     exp = self._pairs.pop(t)
                     return exp > now
             return False
+
+    # ---- the Home Screen app: iOS keeps its cookies apart from Safari's, so it claims its own key once ----
+
+    def new_app_token(self, device_id: int, wall: float | None = None) -> str:
+        import time
+
+        token = secrets.token_urlsafe(24)
+        now = wall if wall is not None else time.time()
+        with self.store._lock, self.store._db:
+            self.store._db.execute("DELETE FROM app_tokens WHERE expires < ?", (now,))
+            self.store._db.execute("INSERT INTO app_tokens VALUES (?,?,?)", (_hash(token), device_id, now + APP_FOR))
+        return token
+
+    def app_token_device(self, token: str, wall: float | None = None) -> dict | None:
+        """The paired phone a hand-over link was made for (not spent), if the link is live and the phone not revoked."""
+        import time
+
+        now = wall if wall is not None else time.time()
+        with self.store._lock:
+            row = self.store._db.execute(
+                "SELECT d.id, d.name FROM app_tokens t JOIN paired_devices d ON d.id = t.device_id "
+                "WHERE t.token_hash=? AND t.expires>? AND d.revoked_at IS NULL", (_hash(token), now)).fetchone()
+        return dict(row) if row else None
+
+    def claim_app_token(self, token: str, agent: str = "", wall: float | None = None) -> tuple[int, str] | None:
+        """Spend a hand-over link: the Home Screen app gets its own key (listed as "<phone> app"). Once only."""
+        device = self.app_token_device(token, wall)
+        if device is None:
+            return None
+        with self.store._lock, self.store._db:
+            gone = self.store._db.execute("DELETE FROM app_tokens WHERE token_hash=?", (_hash(token),)).rowcount
+        if not gone:
+            return None
+        name = device["name"] if device["name"].endswith(" app") else device["name"] + " app"
+        return self.add(name, agent)
 
     # ---- phones ----
 

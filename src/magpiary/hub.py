@@ -218,7 +218,10 @@ class Hub(
                     return self._phone_refused(phone_gate.why_refused(path))
                 if decision == "confirm":
                     return self._phone_confirm(path, form)
-            return self._post(path, form, client_ip, host, origin)
+            done = self._post(path, form, client_ip, host, origin)
+            if device is None and path in ("/hub/lock/on", "/hub/lock/off"):
+                self._device_locks.clear()  # turning the lock on or off starts every phone over: locked, PIN needed again
+            return done
         finally:
             self._ctx.device = None
 
