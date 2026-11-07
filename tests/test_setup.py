@@ -531,7 +531,7 @@ def test_settings_can_put_the_bundled_chrome_extension_in_a_folder_and_open_it(e
     monkeypatch.setenv("MAGPIARY_HOME", str(tmp_path / "home"))
     opened = []
     monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: opened.append(cmd))
-    assert b"Get the extension" in env.request("GET", "/settings/phones")[2]
+    assert b"Get the extension" in env.request("GET", "/settings/storage")[2]
     assert env.post("/hub/extension/get", next="/settings/phones")[0] == 303
     folder = chrome_ext.target()
     assert (folder / "manifest.json").exists() and (folder / "popup.html").exists()

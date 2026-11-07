@@ -161,7 +161,7 @@ class AskSettings:
             rows.append(_row(f"{k.name}", KEY_WARN.get(k.tier if k.tier in KEY_WARN else "paid", ""), controls,
                              lead=ENGINE_LOGO.get(k.provider, ui.icon("links"))))
         if not keys:
-            rows.append(_row("An AI key", "Add a Gemini, OpenRouter, Claude or OpenAI key under AI & digest, then pick it here.",
+            rows.append(_row("An AI key", "Add a Gemini, OpenRouter, Claude or OpenAI key under AI & login, then pick it here.",
                              '<a class="btn sm" href="/settings/ai#keys">Add a key</a>', lead=ui.icon("links")))
         return _group("Who answers", "".join(rows), gid="engine",
                       desc="One is active at a time (green). Change it any time; each answer says which one wrote it.",
@@ -204,7 +204,7 @@ class AskSettings:
             return _group("Model and thinking", _row("Model and effort", "Luna at medium effort is the default: quick and light on your "
                                                      "plan. Effort stops at medium here on purpose.", form), gid="model")
         if engine is None or engine["id"] != "claude":
-            note = _row("Model", "A key answers with the model set on that key (AI & digest → AI keys).",
+            note = _row("Model", "A key answers with the model set on that key (AI & login → AI keys).",
                         '<a class="btn sm" href="/settings/ai#keys">Open keys</a>')
             return _group("Model and thinking", note, gid="model")
         model = askconfig.claude_model(self.store)
@@ -269,7 +269,7 @@ class AskSettings:
         from magpiary import modes
 
         if modes.current(self.store) != "smart":
-            return "Ask Magpiary needs an AI, and you are in Private mode. Switch to Smart under AI & digest first."
+            return "Ask Magpiary needs an AI, and you are in Private mode. Switch to Smart under AI & login first."
         state = self._claude_state() if asking.claude_available() else {"installed": False, "signed_in": False}
         if state["installed"] and state["signed_in"] is not False:
             return ""
@@ -277,7 +277,7 @@ class AskSettings:
 
         if keyring.usable() or ask_codex.available():
             return ""
-        return ("Ask Magpiary needs an AI to answer. Sign in to Claude Code or Codex on this Mac, or add an AI key under AI & digest, "
+        return ("Ask Magpiary needs an AI to answer. Sign in to Claude Code or Codex on this Mac, or add an AI key under AI & login, "
                 "then turn it on.")
 
     def askset_post(self, form: dict):

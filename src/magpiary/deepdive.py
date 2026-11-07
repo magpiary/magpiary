@@ -2,7 +2,7 @@
 docs/specs.md "Deeper dive"). The normal summary never depends on it.
 
 On or off by engines.py's one rule (on by itself with Claude Code or Codex allowed, or a paid key; never on a free key),
-switched in Settings > AI & digest > Summaries. Nothing here runs until the owner presses Deeper dive on a post, and it
+switched in Settings > AI & login > Summaries. Nothing here runs until the owner presses Deeper dive on a post, and it
 runs once per post. A long video is read in full, in sections (the creator's chapters, else about 15 minutes each):
 each section is summarised, then the whole. Its words come from the creator's own uploaded subtitles when there are
 some (never YouTube's automatic ones), else the transcript Whisper made on this Mac. Every post also gets more frames,

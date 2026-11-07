@@ -556,7 +556,7 @@ class CardPages:
             return self._form("/hub/try-login", {"id": item["id"], "next": f"/item/{item['id']}"}, "Retry with my login",
                               "btn sm")
         if site == login.DEFAULT:
-            return '<a class="btn sm" href="/settings/phones#instagram">Connect Instagram to try with your login</a>'
+            return '<a class="btn sm" href="/settings/ai#instagram">Connect Instagram to try with your login</a>'
         from magpiary.tools import in_mac_app
 
         program = "/Applications/Magpiary.app/Contents/Resources/python/bin/magpiary" if in_mac_app() else "magpiary"

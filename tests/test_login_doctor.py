@@ -103,7 +103,7 @@ def test_the_doctor_checks_offline_and_live_without_secrets(store):
 
 
 def test_the_hub_has_the_login_panel_the_item_button_and_the_doctor_page(mac):
-    body = page(mac, "/settings/phones")[2] + page(mac, "/settings/storage")[2]
+    body = page(mac, "/settings/ai")[2] + page(mac, "/settings/storage")[2]
     assert "Instagram login" in body and "magpiary login connect" in body and "/doctor" in body
     url = "https://www.instagram.com/reel/AGE2/"
     mac.store.add_link(url)

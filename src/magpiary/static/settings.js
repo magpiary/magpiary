@@ -99,7 +99,7 @@
   });
 
   // ---- the search box -----------------------------------------------------------------------------------------------------
-  const PAGES = { profile: "Your profile", ai: "AI & digest", phones: "Saving posts", storage: "Library & this Mac", boards: "Shared boards", appearance: "Appearance", privacy: "Privacy" };
+  const PAGES = { profile: "Your profile", ai: "AI & login", phones: "Phone", storage: "Library & this Mac", boards: "Shared boards", appearance: "Appearance", privacy: "Privacy" };
   let cursor = -1;
   document.addEventListener("input", (ev) => {
     const box = ev.target.closest?.("[data-setsearch] input");

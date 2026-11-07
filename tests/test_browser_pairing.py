@@ -9,7 +9,7 @@ from magpiary.setup import BROWSER_CODE_TRIES, TOKEN_TTL_SECONDS
 
 
 def add_browser(env, name=""):
-    status, headers, _ = env.post("/hub/browsers/add", name=name, next="/settings/phones")
+    status, headers, _ = env.post("/hub/browsers/add", name=name, next="/settings/storage")
     assert status == 303
     where = headers["Location"]
     return where, unquote(where.split("chromecode=")[1].split("&")[0]) if "chromecode=" in where else ""
@@ -72,15 +72,15 @@ def test_removed_browser_can_no_longer_save(env):
 
 
 def test_settings_shows_chrome_apart_from_phones_and_pairs_only_one(env):
-    page = env.request("GET", "/settings/phones")[2].decode()
+    assert 'id="chrome"' not in env.request("GET", "/settings/phones")[2].decode()  # not on the Phone page: Chrome is not a phone
+    page = env.request("GET", "/settings/storage")[2].decode()
     assert ">Pair Chrome</button>" in page and 'id="chrome"' in page          # its own group, with a button while unpaired
-    assert page.index('id="phones"') < page.index('id="chrome"')
     where, code = add_browser(env)
     waiting = env.request("GET", where)[2].decode()
     assert code in waiting and "Waiting for the extension" in waiting
     assert env.mac.store.list_phones() == []                         # a code alone pairs nothing
     key = json.loads(redeem(env, code)[1])["key"]
-    paired = env.request("GET", "/settings/phones")[2].decode()
+    paired = env.request("GET", "/settings/storage")[2].decode()
     assert "Paired" in paired and ">Pair Chrome</button>" not in paired        # one Chrome: no button once paired
     assert "Chrome on this Mac" not in paired and "saves on this Mac only" not in paired
     # a new code re-pairs the same Chrome: its key is replaced, still one row, the old key stops working
@@ -94,8 +94,8 @@ def test_phones_group_has_no_chrome_row(env):
     _, code = add_browser(env)
     redeem(env, code)
     page = env.request("GET", "/settings/phones")[2].decode()
-    phones_block = page[page.index('id="phones"'):page.index('id="chrome"')]
-    assert "Chrome" not in phones_block and "No phone yet" in phones_block
+    phones_block = page[page.index('id="phones"'):]
+    assert "Chrome" not in phones_block.split('id="phoneaccess"')[0] and "No phone yet" in phones_block
     assert "● No phone yet" in page                                   # the sidebar card does not count Chrome as a phone
 
 

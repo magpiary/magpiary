@@ -55,7 +55,7 @@ def test_the_links_page_is_gone_and_its_settings_moved(mac):
     status, headers, _ = page(mac, "/settings/links")
     assert status == 303 and headers["Location"] == "/settings/ai#search"
     assert "Add a search key" in page(mac, "/settings/ai")[2].split('id="search"')[1]
-    assert 'id="instagram"' in page(mac, "/settings/phones")[2] and 'href="/settings/links"' not in page(mac, "/settings/ai")[2]
+    assert 'id="instagram"' in page(mac, "/settings/ai")[2] and 'id="instagram"' not in page(mac, "/settings/phones")[2] and 'href="/settings/links"' not in page(mac, "/settings/ai")[2]
 
 
 def test_the_list_is_grouped_in_the_agreed_order_and_opens_where_a_look_is_needed(mac):
@@ -186,6 +186,8 @@ def test_the_search_index_covers_every_page_and_every_anchor_exists(mac):
     pages = {}
     mac.store.set_setting("ask_state", "on")  # the Ask page shows all its groups only when Ask is on
     for _, _, p, a in SEARCH_INDEX:
+        if (p, a) == ("storage", "chrome"):
+            continue  # shown only while the pairing service runs
         body = pages.setdefault(p, page(mac, f"/settings/{p}")[2])
         assert f'id="{a}"' in body, (p, a)
     assert set(pages) == {"profile", "ai", "ask", "agents", "phones", "storage", "boards", "appearance", "privacy"}

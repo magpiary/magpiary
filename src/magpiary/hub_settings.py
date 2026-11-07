@@ -1,6 +1,6 @@
 """Settings (M7a, C1+, redesigned 24 Oct and 1 Nov 2026), mixed into Hub. The sections are listed on the left under small
-headings; the open one is on the right as groups of rows: Your profile (with private goals), Saving posts (pairing, Chrome, the
-opt-in Instagram login), AI & digest (Smart or Private, keys in order, the digest, finding links), Ask Magpiary, AI agents, Shared
+headings; the open one is on the right as groups of rows: Your profile (with private goals), Phone (sending and opening the library), AI & login (Smart or Private, keys in order, the digest, finding links,
+the opt-in Instagram login), Ask Magpiary, AI agents, Shared
 boards, Appearance, Library & this Mac (folders, backup, Trash, keep awake, the health check), and Privacy (what leaves the Mac,
 where data lives, deleting it)."""
 
@@ -25,7 +25,7 @@ from magpiary.web import Response, e
 
 # The addresses "phones" and "storage" stay as they were, so old links keep working; only the names changed (1 Nov 2026).
 BACKUP_SETTING = "last_backup_at"
-SECTIONS = {"profile": "Your profile", "phones": "Saving posts", "ai": "AI & digest", "ask": "Ask Magpiary", "agents": "AI agents",
+SECTIONS = {"profile": "Your profile", "phones": "Phone", "ai": "AI & login", "ask": "Ask Magpiary", "agents": "AI agents",
             "boards": "Shared boards", "appearance": "Appearance", "storage": "Library & this Mac"}
 NAV_GROUPS = (("You", ("profile",)), ("Using Magpiary", ("phones", "ai", "ask", "agents", "boards")), ("This hub", ("appearance", "storage")))
 PAGES = {**SECTIONS, "privacy": "Privacy"}  # Privacy sits apart, under the list
@@ -35,13 +35,13 @@ SECTION_ICONS = {"profile": ("people", "var(--t-place)"), "ai": ("sparkle", "var
 SUPPORT_URL = "https://www.buymeacoffee.com/magpiary"  # opens in the browser on click; nothing is sent from the app
 
 SECTION_BLURBS = {"profile": "What friends see on a board, and what your AI knows about your goals.",
-                  "phones": "How posts reach this Mac: your phones, Chrome, and the optional Instagram login.",
-                  "ai": "Your AI keys, Smart or Private summaries, the digest, Ask, Deeper dive and finding links.",
+                  "phones": "Send posts from your iPhone to this Mac, and open your library on it.",
+                  "ai": "Your AI keys, Smart or Private summaries, the digest, Deeper dive, finding links, and the optional Instagram login.",
                   "ask": "Turn Ask on or off, choose who answers and how much it says.",
                   "agents": "Let an AI such as Claude Code or Codex search your saves, save links and leave notes, from Terminal.",
                   "boards": "Your boards, where they sync, and invites.",
                   "appearance": "Theme, tile size, tile labels, glass, interface size and page width.",
-                  "storage": "Your folders, backups and the Trash, and keeping this Mac ready.",
+                  "storage": "Your folders, backups and the Trash, saving from Chrome, and keeping this Mac ready.",
                   "privacy": "The hub lock, what leaves this Mac, where your data lives, and how to delete it."}
 SAVED = {"key": "Key checked and saved.", "login": "Instagram connected.", "model": "Model changed.",
          "mode": "Saved. New summaries follow this mode.", "budget": "Saved.", "look": "Saved.", "phone": "Phone removed.",
@@ -79,8 +79,9 @@ SEARCH_INDEX = [
     ("Your identity key", "nostr signing", "profile", "identity"),
     ("Your phones", "pair add phone iphone qr install code", "phones", "phones"),
     ("Home Wi-Fi and any Wi-Fi", "wifi network where it sends wait failed try", "phones", "phones"),
-    ("Chrome extension", "browser pair extension code", "phones", "phones"),
-    ("Instagram login", "chrome blocked private", "phones", "instagram"),
+    ("Open the library on a phone", "phone access pair iphone https certificate revoke", "phones", "phoneaccess"),
+    ("Chrome extension", "browser pair extension code", "storage", "chrome"),
+    ("Instagram login", "chrome blocked private", "ai", "instagram"),
     ("Smart summaries", "smart private mode ai summaries", "ai", "mode"),
     ("AI keys", "gemini openrouter claude openai api key model", "ai", "keys"),
     ("Digest", "weekly monthly off wrapped summary schedule", "ai", "digest"),
@@ -228,7 +229,7 @@ class SettingsPages:
     """Needs Hub's store, csrf, shell, _form, library and setup (the pairing side, when the service runs one)."""
 
     def settings_page(self, section: str, q: dict) -> Response:
-        if section == "links":  # that page's settings moved: the search key to AI & digest, the Instagram login to Saving posts
+        if section == "links":  # that page's settings moved: the search key and the Instagram login to AI & login
             return Response(303, b"", headers={"Location": "/settings/ai#search"})
         if section and section not in PAGES:
             return self.shell("Not found", '<p class="empty">No such settings page. <a class="link" href="/settings">'
@@ -369,12 +370,12 @@ class SettingsPages:
             f'{" aria-current=page" if current == "privacy" else ""}><span class="seticon" style="--c:#5b5b66">{ui.icon("lock")}</span><span><b>Privacy</b>'
             f'<small>{e(self.lock_nav_status() or "Hub lock off")}</small></span></a>')
 
-    # ---- AI & digest ------------------------------------------------------------------
+    # ---- AI & login ------------------------------------------------------------------
 
     def _ai_section(self, q: dict) -> str:
         """AI keys first, then Summaries: the Smart or Private switch, and the Digest, Ask and Deeper dive that need Smart."""
         return "".join([self._keys_group(q), self._summaries_group(), self._digest_group(q), self._deep_group(),
-                        self._finding_group(),
+                        self._finding_group(), self._instagram_group(),
                         _adv(_group("Pause summaries", _row("Pause or limit them", "The switches for summaries and transcribing are in the Nest, where you can see the work.",
                                                             '<a class="btn sm" href="/nest">Open the Nest</a>', lead=ui.icon("clock")), gid="pause")
                              + self._keys_danger(), "Pausing summaries, removing keys")])
@@ -660,7 +661,7 @@ class SettingsPages:
                    'Terminal.) Then reload this page.</p>')
         if day:
             row = _row("Connected from Chrome", f"Since {e(ui.day(day).removesuffix(' 00:00'))}. Used only when you ask, on a blocked post.",
-                       self._form("/hub/login/disconnect", {"next": "/settings/phones"}, "Disconnect", "btn sm danger",
+                       self._form("/hub/login/disconnect", {"next": "/settings/ai#instagram"}, "Disconnect", "btn sm danger",
                                   confirm="Delete Magpiary's copy of your Instagram login?"),
                        lead=ui.icon("check"), more=_more(command, "Copy it again"))
         else:
@@ -685,14 +686,12 @@ class SettingsPages:
                 f'everything else until it is back.</p></div></details>')
 
     def _home_group(self) -> str:
-        """The "Send when I get home" automation (an advanced step that used to be in the first-run guide)."""
+        """"Send when I get home": a closed fold under the phones (an optional step done once in the Shortcuts app)."""
         steps = ("<ol class=\"small\"><li>In Shortcuts open <b>Automation</b>, then <b>+</b>, then <b>Wi-Fi</b>.</li>"
                  "<li>Choose your home network and tick <b>Is Joined</b> only.</li><li>Pick <b>Run Immediately</b>.</li>"
                  "<li>Add the action <b>Run Shortcut</b>, then <b>Magpiary</b>.</li><li>Switch <b>Notify When Run</b> off.</li></ol>"
                  "<p class=\"hint\">iPhones don't let a program create this part, so it's done by hand once.</p>")
-        row = _row("Send when I get home", "Shares made away from home then arrive by themselves when your iPhone joins your home Wi-Fi.",
-                   lead=ui.icon("wifi"), cls="phone2", more=steps)
-        return _group("Send when I get home", row, gid="home", desc="Optional. Set it up once in the Shortcuts app on your iPhone.")
+        return _fold("Send when I get home", "optional: shares made away from home arrive by themselves", steps, gid="home")
 
     def _chrome_group(self, q: dict) -> str:
         """The Chrome extension, apart from the phones: one browser only. Unpaired: a Pair button. Paired: one row, a green
@@ -702,7 +701,7 @@ class SettingsPages:
         browser = next((p for p in self.store.list_phones() if not p["revoked_at"] and p.get("kind") == "browser"), None)
         code = q.get("chromecode", "")
         code = code if len(code) == 14 and all(ch.isalnum() or ch == "-" for ch in code) else ""
-        back = {"next": "/settings/phones"}
+        back = {"next": "/settings/storage"}
         rows = ""
         if code:
             rows += _row("Paste this code into the extension", "It works once, for 15 minutes. Open the Magpiary extension in Chrome "
@@ -787,15 +786,12 @@ class SettingsPages:
                f'Show the QR code</button><button class="btn" type="button" data-closedetails>Cancel</button></div></form></details></div>') if self.setup else (
                '<p class="gnote">Pairing runs with the background service.</p>')
         qr = self._qr_block(q.get("qr", ""), q.get("phone", "")) if q.get("qr") and self.setup else ""
-        out = [_group("Your phones", "".join(rows) + add, gid="phones", lock="phones", cls="hero lilac",
-                      desc=f"Last delivery {e(ui.day(last))}." if last else "Each phone has its own pairing key.",
-                      more=_more('<p>A phone sends links on any Wi-Fi your Mac is on (or only on a home Wi-Fi, if you gave one), and deletes them once this Mac '
-                                 'confirms. <a class="link" href="/welcome/phone">Open the setup guide</a> for the Shortcut, '
-                                 'the “allow” prompts and the Wi-Fi automation, step by step.</p>')),
-               self._home_group(),
+        out = [_group("Send posts from your iPhone", "".join(rows) + add + (self._home_group() if phones else ""), gid="phones", lock="phones", cls="hero lilac",
+                      desc=(f"Share a post to Magpiary on your iPhone and it arrives here. Last delivery {e(ui.day(last))}." if last
+                            else "Share a post to Magpiary on your iPhone and it arrives here."),
+                      more=_more('<p>Each phone has its own key and sends on any Wi-Fi your Mac is on. '
+                                 '<a class="link" href="/welcome/phone">Open the setup guide</a> for the Shortcut, step by step.</p>')),
                self.access_group(q),
-               self._chrome_group(q),
-               self._instagram_group(),
                qr]
         return "".join(out)
 
@@ -866,7 +862,7 @@ class SettingsPages:
         if path not in ("/hub/phones/add", "/hub/phones/new-code", "/hub/phones/remove", "/hub/browsers/add"):
             return None
         back = form.get("next", "/settings/phones")
-        back = back if back in ("/settings/phones", "/welcome/phone") else "/settings/phones"
+        back = back if back in ("/settings/phones", "/settings/storage", "/welcome/phone") else "/settings/phones"
         if not self.setup:
             return Response(303, b"", headers={"Location": back + "?error=" + quote("Pairing runs with the background service.")})
         name = form.get("name", "").strip()
@@ -1000,6 +996,7 @@ class SettingsPages:
         return (_group("Your library", rows + backup + restore, gid="library",
                        desc="Everything is in folders you own: a database, the archived media and a note per post.")
                 + trash_group
+                + self._chrome_group(q)
                 + _group("Keep this Mac awake",
                          _row("Keep awake while plugged in", "So shares arrive and are read overnight.",
                               self._switch("/hub/awake", awake, {"enabled": "0", "next": "/settings/storage"},

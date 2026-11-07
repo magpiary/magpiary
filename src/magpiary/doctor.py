@@ -44,7 +44,7 @@ LINKS = {
     "AI keys": ("/settings/ai", "Open AI settings"),
     "Paired phones": ("/settings/phones#phones", "Add a phone"),
     "Last delivery": ("/settings/phones#phones", "Open phone settings"),
-    "Copy of your login": ("/settings/phones#instagram", "Open login settings"),
+    "Copy of your login": ("/settings/ai#instagram", "Open login settings"),
     "Digest writer": ("/settings/ai#digest", "Open Digest settings"),
 }
 AREA_LINKS = {"Keys": ("/settings/ai", "Open AI settings")}

@@ -1,10 +1,10 @@
 """Who may do the AI work, and in what order (owner decisions 4 Nov 2026, docs/specs.md "Local engines need permission").
 
-One list in Settings > AI & digest holds the AI keys and Claude Code and Codex on this Mac, in the order the owner drags
+One list in Settings > AI & login holds the AI keys and Claude Code and Codex on this Mac, in the order the owner drags
 them into. Summaries are written by the first one in that order that can (an engine not allowed is skipped). The Digest,
 Ask and Deeper dive use the first allowed engine or paid key in that order.
 
-Claude Code and Codex on this Mac are used only once the owner allows them in Settings > AI & digest > AI keys, after a
+Claude Code and Codex on this Mac are used only once the owner allows them in Settings > AI & login > AI keys, after a
 dialog and a test run. They start off for everyone. The order of preference: the allowed local engines (the first one
 allowed first), then paid keys, then free-tier keys. With a local engine or a paid key, the three features are on by
 themselves; with only free-tier keys they are off (the Digest and Ask can be turned on anyway, with a warning; Deeper dive

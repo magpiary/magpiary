@@ -116,7 +116,7 @@ TOPICS = {
         "faqs": [
             ("What is Deeper dive?",
              "An extra, deeper reading of one post, on top of its normal summary, useful for long videos and podcasts. It runs only "
-             "when you choose Deeper dive… in the post's menu. It needs Claude Code or Codex allowed in Settings → AI & digest, "
+             "when you choose Deeper dive… in the post's menu. It needs Claude Code or Codex allowed in Settings → AI & login, "
              "or a paid key; never a free key."),
             ("Why is there no summary?",
              "Either you're in Private mode, no AI key is added yet, or every key has reached its daily limit (it comes "
@@ -158,10 +158,10 @@ TOPICS = {
         ],
     },
     "ai": {
-        "title": "AI & digest",
+        "title": "AI & login",
         "guides": [
             ("Get a free Gemini key", "About two minutes.", [
-                "Open Settings → AI & digest and press Add a key.",
+                "Open Settings → AI & login and press Add a key.",
                 "Pick Google Gemini and press “Open the Google Gemini page”.",
                 "Sign in, press “Create API key”, and copy the key (it starts with “AIza”).",
                 "Paste it and press Check and save. Magpiary tests it before keeping it."]),
@@ -170,7 +170,7 @@ TOPICS = {
                 "Use the ⋯ menu to move the key you prefer to the top.",
                 "When the first key reaches its daily limit, the next one takes over, and the first comes back tomorrow."]),
             ("Switch to Private", "No AI at all.", [
-                "Open Settings → AI & digest.",
+                "Open Settings → AI & login.",
                 "Choose Private and confirm.",
                 "New posts are still downloaded, transcribed, grouped and searchable, without summaries."]),
         ],
@@ -252,11 +252,11 @@ TOPICS = {
         ],
     },
     "phones": {
-        "title": "Saving posts",
+        "title": "Phone",
         "guides": [
             ("Pair an iPhone", "One QR code, then a few “Allow” taps.", [
                 "On the iPhone: Settings → Safari → Downloads → On My iPhone.",
-                "On the Mac: Settings → Saving posts → Add a phone. Type its name. (Optional: a home Wi-Fi name, exactly as in "
+                "On the Mac: Settings → Phone → Add a phone. Type its name. (Optional: a home Wi-Fi name, exactly as in "
                 "the iPhone's Settings → Wi-Fi, if it should send only there.)",
                 "Scan the QR code with the iPhone camera, then Get “Magpiary”, Download, and Add Shortcut.",
                 "Open the Shortcuts app, tap Magpiary once, and tap Allow on every prompt. Never dismiss one."]),
@@ -266,7 +266,7 @@ TOPICS = {
                 "Action: Run Shortcut → Magpiary, with no input. Turn off “Notify When Run”."]),
             ("Save from Chrome", "Pair the extension once, then one click.", [
                 "Add the Magpiary extension to Chrome and pin it from the puzzle-piece menu.",
-                "On the Mac: Settings → Saving posts → Chrome → Pair Chrome, and copy the code. It works once, for 15 minutes.",
+                "On the Mac: Settings → Library & this Mac → Chrome → Pair Chrome, and copy the code. It works once, for 15 minutes.",
                 "Click the Magpiary icon in Chrome, paste the code and press Pair.",
                 "From then on, open a page or post, click the Magpiary icon and press Save. Or right-click a page or a "
                 "link and choose Save to Magpiary."]),
@@ -302,7 +302,7 @@ TOPICS = {
              "is unsigned, changed, or more than 10 minutes old. Adding a phone is the one moment its secret travels over Wi-Fi, so "
              "add phones at home, on a Wi-Fi you trust. The links themselves still travel unencrypted on your Wi-Fi, so "
              "someone on the same network could see which links you send. A phone set up before 0.1.5 is marked in Settings → "
-             "Saving posts until you install its new Shortcut."),
+             "Phone until you install its new Shortcut."),
             ("Can I use the hub from my phone?",
              "Not yet: the hub only opens on this Mac. Opening it from your phone is planned for later."),
             ("Do I need a new code for a new phone?",
@@ -314,7 +314,7 @@ TOPICS = {
         "title": "Links and web search",
         "guides": [
             ("Add a free web search key", "Finds the sites the free directories miss.", [
-                "Open Settings → AI & digest → Finding links → Add a search key.",
+                "Open Settings → AI & login → Finding links → Add a search key.",
                 "Pick Tavily (free, no card, 1,000 searches a month) and open its page.",
                 "Sign up, copy the key, paste it and press Check and save."]),
             ("Connect your Instagram login", "Only for posts that need one.", [
@@ -334,7 +334,7 @@ TOPICS = {
              "It carries a small risk to your account, so Magpiary only uses it when you press the button on a blocked post. "
              "It is never used for normal fetching."),
             ("How do I stop using my Instagram login?",
-             "Settings → Saving posts → Instagram login → Disconnect. Magpiary deletes its copy."),
+             "Settings → AI & login → Instagram login → Disconnect. Magpiary deletes its copy."),
         ],
     },
     "digest": {
@@ -347,16 +347,16 @@ TOPICS = {
                 "From the top: the numbers, the standout, three things worth doing with why each was picked, and the themes.",
                 "You can reopen it any time with the Digest button. Only the newest digest is shown."]),
             ("Steer the picks", "Tell Magpiary what you're working toward.", [
-                "Open Settings → AI & digest → Digest.",
+                "Open Settings → AI & login → Digest.",
                 "Write a line or two under My goals and press Save.",
                 "The next digest's 'Worth doing' picks lean toward them."]),
         ],
         "faqs": [
-            ("When does a digest arrive?", "Monthly on the 1st at 9:00 by default. In Settings → AI & digest → "
+            ("When does a digest arrive?", "Monthly on the 1st at 9:00 by default. In Settings → AI & login → "
              "Digest you can choose weekly, or both. If the Mac is asleep then, it's made as soon as the Mac wakes."),
             ("Why doesn't the notification open the hub?", "macOS shows it through its Script Editor, so clicking it "
              "can't open the hub. Open the hub yourself; the Digest button's dot shows where to look."),
-            ("Who writes it?", "The first one ready in Settings → AI & digest → AI keys: Claude Code or Codex (once you allow "
+            ("Who writes it?", "The first one ready in Settings → AI & login → AI keys: Claude Code or Codex (once you allow "
              "them there) or a paid key. With only free keys the Digest is off, unless you turn it on anyway. In Private "
              "mode there's no written part, only the words, numbers and piles."),
             ("A period with no saves?", "It's kept quietly, with no dot and no notification."),
@@ -501,7 +501,7 @@ TOPICS = {
         "guides": [
             ("Turn Ask on", "Questions about your saves, answered from them.", [
                 "Open Settings → Ask Magpiary and turn on Use Ask Magpiary.",
-                "It needs an AI key, or Claude Code or Codex allowed in Settings → AI & digest → AI keys.",
+                "It needs an AI key, or Claude Code or Codex allowed in Settings → AI & login → AI keys.",
                 "Choose who answers under Who answers, and whether it may search the web."]),
             ("Ask a question", "About a post, a pile, a board or everything.", [
                 "Press Ask Magpiary at the bottom right of any page.",

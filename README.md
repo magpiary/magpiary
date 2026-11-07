@@ -14,7 +14,7 @@ Share a reel, thread, video or link from your iPhone. Your Mac downloads it, tra
 **Capture**
 - Share to Magpiary from any iPhone app. The phone queues links and hands them to your Mac when both are on the same Wi-Fi, even if the Mac was asleep.
 - Sources: Instagram, Threads, YouTube, Reddit, X, LinkedIn and ordinary web pages, fetched logged out. An optional Instagram login is used only when you retry one blocked post yourself.
-- A Chrome extension saves pages from the desktop. Get it from the Chrome Web Store, or from Magpiary: Settings, Saving posts, Chrome, **Get the extension** copies it to `~/Magpiary/chrome-extension` and opens Chrome's extensions page (turn on Developer mode, then Load unpacked). Tick **Save what I see** (extension 0.1.5 or newer; the copy in Settings is always current, the Web Store copy follows its review) to keep a page exactly as it is on your screen, signed-in pages included; it opens on a Read tab and downloads as a PDF.
+- A Chrome extension saves pages from the desktop. Get it from the Chrome Web Store, or from Magpiary: Settings, Library & this Mac, Chrome, **Get the extension** copies it to `~/Magpiary/chrome-extension` and opens Chrome's extensions page (turn on Developer mode, then Load unpacked). Tick **Save what I see** (extension 0.1.5 or newer; the copy in Settings is always current, the Web Store copy follows its review) to keep a page exactly as it is on your screen, signed-in pages included; it opens on a Read tab and downloads as a PDF.
 - Your iPhone signs each send to your Mac with a secret derived from its pairing key and never sends the key itself.
 - Tracking is stripped from every link, and a link saved twice is one save.
 
