@@ -583,3 +583,27 @@ def test_certificate_guide_lets_the_phone_say_the_install_is_done(door):
     token = door.primary.hub._pairing[0]
     page = door.primary.hub.access_guide(f"/phone-access/{token}", "192.168.1.20").body.decode()
     assert 'id="inst"' in page and "I've installed the profile" in page and "mark(3)" in page
+
+
+# ---- the phone's More menu, and the phone's hide-list for Mac-only settings ----
+
+def test_more_menu_offers_add_to_home_screen_to_a_paired_phone_only(door):
+    assert "data-homescreen" not in mac_get(door, "/").body.decode()
+    door.pair()
+    page = door.request("GET", "/")[1]
+    assert 'href="/phone/app" data-homescreen' in page and "Add to Home Screen" in page
+    assert door.request("GET", "/phone/app")[0] == 200
+
+
+def test_phone_css_hide_list_ids_still_exist_on_the_settings_pages(door):
+    import re
+    from pathlib import Path
+
+    css = (Path(__file__).parent.parent / "src/magpiary/static/phone.css").read_text()
+    hidden = set(re.findall(r"#(instagram|home|chrome)\b", css))
+    assert hidden == {"instagram", "home", "chrome"}  # the hide list still names them
+    door.store.add_phone("Work iPhone", "")  # "home" is inside the phones card once a phone is paired
+    pages = {p: mac_get(door, f"/settings/{p}").body.decode() for p in ("ai", "phones", "storage")}
+    assert 'id="instagram"' in pages["ai"] and 'id="home"' in pages["phones"]
+    src = (Path(__file__).parent.parent / "src/magpiary/hub_settings.py").read_text()
+    assert 'gid="chrome"' in src  # shown only with the pairing service, on Library & this Mac

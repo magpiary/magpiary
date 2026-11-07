@@ -627,3 +627,6 @@
   .setpane #keys .keyrow .slead { width: 32px !important; }
   .setpane #keys .keyrow > .src { margin-left: 44px !important; flex-basis: calc(100% - 44px) !important; }
 }
+
+/* the Add to Home Screen link has no use inside the Home Screen app itself */
+@media (display-mode: standalone) { [data-homescreen] { display: none !important; } }
