@@ -24,6 +24,8 @@ class AccessPages:
     # ---- the Settings block ----
 
     def access_group(self, q: dict) -> str:
+        if getattr(self._ctx, "device", None) is not None:
+            return ""  # pairing and revoking phones is done on the Mac
         on = access.enabled(self.store)
         port = access.https_port(getattr(self, "port", 0) or 0)
         status = (_stat("On", "ok") if on else _stat("Off", "off"))

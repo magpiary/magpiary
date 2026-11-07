@@ -1371,8 +1371,10 @@ adds an opt-in way to open the library from a phone on the same network.
 (8865 for the first account); `magpiary.local` is announced with macOS's own `dns-sd -P` (no new dependency; the Mac's own
 `.local` name still works if it fails); AI actions (re-run summary, Deeper dive, Digest, links again, screen again) work on the
 phone behind a confirm page. Details that follow from the decisions: the phone door serves only hub pages (never the `/v1`
-send API); a phone is allowed only what `phone_gate.py` lists (an allow-list, so Settings, AI keys, lock settings, Ask,
-Doctor and Welcome are refused by the server); each paired phone has its own lock state under the same PIN and wrong-PIN
+send API); a phone is allowed only what `phone_gate.py` lists (an allow-list). Settings pages open on the phone with the owner's 7 Nov list
+of changeable settings (profile, Wi-Fi mode, Smart/Private, digest, Deeper dive, Ask and agent switches, key permission
+switches, appearance, keep-awake); AI keys, the lock, pairing, files, relays, Ask itself, live health checks and Welcome are
+refused by the server; each paired phone has its own lock state under the same PIN and wrong-PIN
 wait (a phone unlocking never unlocks the Mac); the pairing guide the QR opens is the one plain-HTTP page, and it serves only
 the public certificate (the fingerprint check on the Mac screen is what protects it); requests from public addresses are
 refused even with a key.

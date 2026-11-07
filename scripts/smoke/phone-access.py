@@ -1,7 +1,7 @@
 """Smoke test for phone access: an isolated hub (temp folders, free ports, nothing of the real library) with the HTTPS door
 open, driven by curl the way a phone would. Run: uv run python scripts/smoke/phone-access.py
-Checks: trusted-CA connection works, unpaired and revoked phones are refused, Settings/Ask/lock are refused for a paired
-phone, an AI action needs its confirm tap, and the CA key and server key are mode 0600. Spends no AI quota."""
+Checks: trusted-CA connection works, unpaired and revoked phones are refused, Ask, keys, lock and pairing are refused for a paired
+phone (Settings pages open), an AI action needs its confirm tap, and the CA key and server key are mode 0600. Spends no AI quota."""
 
 import os
 import stat
@@ -62,10 +62,11 @@ proc = subprocess.run(["curl", "-s", "-i", "--cacert", str(ca), "--resolve", res
 cookie = next((ln.split("=", 1)[1].split(";")[0].strip() for ln in proc.splitlines() if ln.lower().startswith("set-cookie: " + access.COOKIE.lower())), "")
 check("pairing gives a key", bool(cookie))
 check("paired phone opens the library", curl("/", cookie)[0] == 200)
-for page in ("/settings", "/settings/ai", "/ask", "/doctor"):
+check("phone opens Settings pages", curl("/settings/ai", cookie)[0] == 200)
+for page in ("/ask", "/doctor.json?start=1", "/welcome"):
     check(f"phone refused {page}", curl(page, cookie)[0] == 403)
 csrf = primary.hub._csrf
-for path in ("/hub/keys/add", "/hub/lock/off", "/hub/settings/mode", "/hub/ask/send"):
+for path in ("/hub/keys/add", "/hub/lock/off", "/hub/phones/add", "/hub/ask/send"):
     check(f"phone refused POST {path}", curl(path, cookie, f"csrf={csrf}")[0] == 403)
 code, body = curl("/hub/again", cookie, f"csrf={csrf}&id=1")
 check("AI action asks for the confirm tap", code == 200 and "Use your AI?" in body)

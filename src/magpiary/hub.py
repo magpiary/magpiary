@@ -213,9 +213,11 @@ class Hub(
         """`device` is set only by the secure door (receiver.SecureHandler) after it checked the phone's key."""
         self._ctx.device = device
         try:
-            if device is not None and not phone_gate.get_allowed(path):
+            if device is not None and not phone_gate.get_allowed(path, query):
                 self.devices.log("refused", device["id"], f"GET {path[:80]} (not for phones)")
                 return self._phone_refused(phone_gate.why_refused(path))
+            if device is not None:
+                query = {k: v for k, v in query.items() if k != "qr"}  # a Shortcut pairing code is shown on the Mac only
             return self._get(path, query, client_ip, host, range_header, user_agent)
         finally:
             self._ctx.device = None

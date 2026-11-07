@@ -7,8 +7,9 @@ can do everything except Settings, AI keys and the lock settings; Ask Magpiary i
 
 # pages and data a phone may read
 GET_PAGES = {"/", "/add", "/help", "/profile/photo.jpg", "/boards.json", "/digest", "/nest", "/activity.json", "/queue",
-             "/map", "/graph.json", "/search.json", "/checklist/panel", "/panel.json", "/lock", "/lock.json"}
-GET_PREFIXES = ("/stats/", "/board/", "/join/", "/item/", "/media/", "/pile/", "/static/", "/digest/", "/icon/")
+             "/map", "/graph.json", "/search.json", "/checklist/panel", "/panel.json", "/lock", "/lock.json",
+             "/settings", "/doctor"}  # Settings pages open (owner's list, 7 Nov); what they may change is POST_PATHS below
+GET_PREFIXES = ("/stats/", "/board/", "/join/", "/item/", "/media/", "/pile/", "/static/", "/digest/", "/icon/", "/settings/")
 
 # actions a phone may post
 POST_PATHS = {
@@ -22,6 +23,12 @@ POST_PATHS = {
     "/hub/boards/invite", "/hub/boards/invite-friend", "/hub/boards/join", "/hub/boards/leave", "/hub/boards/new-code",
     "/hub/boards/remove-card", "/hub/boards/remove-member", "/hub/boards/dismiss", "/hub/boards/restore",
     "/hub/boards/offer", "/hub/boards/to-library", "/hub/boards/vote", "/hub/boards/sync",
+    # settings the phone may change (the owner's list, 7 Nov): profile, Wi-Fi mode per phone, Smart/Private, digest, Deeper dive,
+    # Ask and agent switches, key permission switches, appearance, keep-awake. Never: keys, the lock, pairing, files, relays.
+    "/hub/profile", "/hub/profile/about", "/hub/profile/links", "/hub/profile/photo", "/hub/profile/photo/remove",
+    "/hub/profile/topic", "/hub/phones/wifi", "/hub/settings/mode", "/hub/settings/long-video", "/hub/digest/on",
+    "/hub/digest/when", "/hub/digest/engine", "/hub/digest/goals", "/hub/digest/pick", "/hub/deep/on", "/hub/deep/engine",
+    "/hub/askset", "/hub/engine/allow", "/hub/agents/on", "/hub/agents/perm", "/hub/ui", "/hub/awake",
     # the lock: enter the PIN, lock this phone; nothing that changes the lock
     "/hub/lock/pin", "/hub/lock/now",
 }
@@ -36,7 +43,9 @@ def is_ai_action(path: str, form: dict) -> bool:
     return path in AI_PATHS or (path == "/hub/bulk" and form.get("action") in _AI_BULK)
 
 
-def get_allowed(path: str) -> bool:
+def get_allowed(path: str, query: dict | None = None) -> bool:
+    if path == "/doctor.json":  # the health check's result may be read; starting a live check is for the Mac
+        return not any(k in (query or {}) for k in ("start", "live"))
     return path in GET_PAGES or path.startswith(GET_PREFIXES)
 
 
@@ -55,7 +64,8 @@ def post_decision(path: str, form: dict) -> str:
 def why_refused(path: str) -> str:
     if path.startswith(("/ask", "/hub/ask")):
         return "Ask Magpiary is not available on the phone yet."
-    if path.startswith(("/settings", "/hub/settings", "/hub/keys", "/hub/askset", "/hub/lock/", "/hub/phones", "/hub/access")):
-        return "Settings, AI keys and the lock can only be changed on your Mac."
+    if path.startswith(("/settings", "/hub/settings", "/hub/keys", "/hub/askset", "/hub/lock/", "/hub/phones", "/hub/access",
+                        "/hub/boards", "/hub/backup", "/hub/restore", "/hub/login", "/hub/browsers", "/hub/agents")):
+        return "AI keys, the lock, pairing, backups and similar settings can only be changed on your Mac."
     return "This isn't available from a phone."
 

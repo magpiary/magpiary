@@ -15,7 +15,7 @@ import threading
 from urllib.parse import parse_qs, urlsplit
 
 from magpiary import access, phone_guide
-from magpiary.receiver import HUB_PAGES, HUB_PREFIXES, Handler, Server, log
+from magpiary.receiver import HUB_PAGES, HUB_PREFIXES, PHOTO_FORM, Handler, Server, log
 from magpiary.web import Response, alone_page, e, phone_page
 
 COOKIE_AGE = 60 * 60 * 24 * 400
@@ -187,7 +187,7 @@ class SecureHandler(Handler):
         if not path.startswith("/hub/"):
             self.send_json(404, {"error": "not found"})
             return
-        form = self._read_form(20_000)
+        form = self._read_form(PHOTO_FORM if path == "/hub/profile/photo" else 20_000)
         if form is None:
             self.send_json(413, {"error": "request too large"})
             return

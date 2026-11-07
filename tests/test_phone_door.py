@@ -160,8 +160,8 @@ def test_plain_http_to_the_secure_port_gets_nothing(door):
 
 # ---- the limits (docs/specs.md): refused by the server, not just hidden ----
 
-SETTINGS_PAGES = ["/settings", "/settings/ai", "/settings/privacy", "/settings/phones", "/ask", "/ask/poll", "/ask/panel",
-                  "/ask/sessions", "/doctor", "/doctor.json", "/welcome", "/pair.json?qr=x"]
+SETTINGS_PAGES = ["/ask", "/ask/poll", "/ask/panel", "/ask/sessions", "/doctor.json?start=1", "/doctor.json?live=1", "/welcome",
+                  "/pair.json?qr=x"]
 
 
 @pytest.mark.parametrize("path", SETTINGS_PAGES)
@@ -172,13 +172,13 @@ def test_phone_cannot_open_settings_or_ask_pages(door, path):
 
 
 SETTINGS_POSTS = ["/hub/keys/add", "/hub/keys/remove", "/hub/keys/remove-all", "/hub/keys/order", "/hub/keys/model",
-                  "/hub/settings/mode", "/hub/settings/budget", "/hub/lock/on", "/hub/lock/off", "/hub/lock/idle",
-                  "/hub/lock/forget", "/hub/lock/register", "/hub/lock/prove", "/hub/askset", "/hub/ask/send",
-                  "/hub/ask/engine", "/hub/ask/voice", "/hub/phones/add", "/hub/phones/remove", "/hub/engine/allow",
+                  "/hub/settings/budget", "/hub/phones/new-code", "/hub/boards/b2-env", "/hub/boards/s3", "/hub/boards/via", "/hub/lock/on", "/hub/lock/off", "/hub/lock/idle",
+                  "/hub/lock/forget", "/hub/lock/register", "/hub/lock/prove", "/hub/ask/send",
+                  "/hub/ask/engine", "/hub/ask/voice", "/hub/agents/limits", "/hub/agents/hide", "/hub/agents/clearlog", "/hub/versioncheck", "/hub/extension/get", "/hub/phones/add", "/hub/phones/remove", 
                   "/hub/backup", "/hub/restore", "/hub/update", "/hub/login/disconnect", "/hub/try-login",
-                  "/hub/digest/engine", "/hub/digest/on", "/hub/deep/engine", "/hub/deep/on", "/hub/boards/b2",
-                  "/hub/profile", "/hub/reveal", "/hub/awake", "/hub/agents/on", "/hub/welcome/done",
-                  "/hub/browsers/add", "/hub/ui", "/hub/doctor", "/hub/made-up-path"]
+                  "/hub/boards/b2",
+                  "/hub/reveal",  "/hub/welcome/done",
+                  "/hub/browsers/add", "/hub/doctor", "/hub/made-up-path"]
 
 
 @pytest.mark.parametrize("path", SETTINGS_POSTS)
@@ -534,3 +534,38 @@ def test_pair_and_home_screen_pages_are_phone_sized(door):
     door.pair()
     home = door.request("GET", "/phone/app")[1]
     assert "Open as Web App" in home and "Add to Home Screen" in home
+
+
+# ---- Settings on the phone: the owner's list (7 Nov): look, switch, small choices; never keys, lock, pairing, files ----
+
+@pytest.mark.parametrize("path", ["/settings", "/settings/profile", "/settings/phones", "/settings/ai", "/settings/ask", "/settings/agents",
+                                  "/settings/boards", "/settings/appearance", "/settings/storage", "/settings/privacy", "/doctor"])
+def test_phone_can_open_the_settings_pages(door, path):
+    door.pair()
+    assert door.request("GET", path)[0] == 200, path
+
+
+def test_phone_settings_hide_pairing_and_phone_access(door):
+    mac_post(door, "/hub/access/pair")
+    door.pair()
+    page = door.request("GET", "/settings/phones?qr=http://x")[1]
+    assert "Phone access" not in page and "Pair a phone" not in page and "Fingerprint" not in page
+
+
+@pytest.mark.parametrize("path,form", [("/hub/settings/mode", {"mode": "private"}), ("/hub/awake", {"enabled": "1"}),
+                                       ("/hub/ui", {"theme": "dark"}), ("/hub/digest/on", {"enabled": "1"}),
+                                       ("/hub/deep/on", {"enabled": "1"}), ("/hub/agents/on", {"enabled": "1"}),
+                                       ("/hub/askset", {"enabled": "1"}), ("/hub/phones/wifi", {"name": "x", "mode": "any"}),
+                                       ("/hub/profile", {"name": "Maya"})])
+def test_phone_can_change_the_listed_settings(door, path, form):
+    door.pair()
+    status, body, _ = door.request("POST", path, {"csrf": door.primary.hub._csrf, **form})
+    assert status in (200, 303) and "Not on the phone" not in body, path
+
+
+def test_phone_still_cannot_touch_keys_the_lock_pairing_or_files(door):
+    door.pair()
+    csrf = door.primary.hub._csrf
+    for path in ("/hub/keys/add", "/hub/keys/remove", "/hub/lock/on", "/hub/lock/off", "/hub/phones/add", "/hub/phones/remove",
+                 "/hub/backup", "/hub/restore", "/hub/boards/b2", "/hub/login/disconnect", "/hub/reveal"):
+        assert door.request("POST", path, {"csrf": csrf})[0] == 403, path
