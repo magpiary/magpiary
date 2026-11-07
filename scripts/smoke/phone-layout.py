@@ -87,13 +87,13 @@ print("phone swipe fade / nav hold / board names smoke: ok")
 # post view: one-row toolbar, Ask hidden, video capped, tab strip fades at the edge with more tabs
 assert ".crumbbar { flex-wrap: nowrap !important;" in css, "post toolbar must be one row"
 assert ".pvask, .pvactions:has(> .pvask:only-child) { display: none !important; }" in css, "Ask chip must be hidden on the phone"
-assert "calc(75svh * var(--mar, 100))" in css, "post video must be capped at 75% of the screen"
+assert "calc(85svh * var(--mar, 100))" in css, "post video must be capped at 85% of the screen"
 assert ".tabs.pvtabs.pmoreR {" in css and "pmoreR" in js, "post tab strip needs an edge fade"
 print("phone post view smoke: ok")
 
 # post view round 2: media 90% wide (cap 75%), toolbar back/open/More, swipe + edge arrows, link buttons one line with logos,
 # tab strip sideways only, pop-ups not held invisible by the page fade, Back keeps the filter, pull to refresh on a post
-assert "calc(75svh * var(--mar, 100))" in css, "media capped at 75% tall"
+assert "calc(85svh * var(--mar, 100))" in css, "media capped at 85% tall"
 assert "html:has(.postpage) #top { display: none !important; }" in css, "no logo bar on a post"
 assert "padding: 0 12px !important; gap: 10px; align-items: center; }" in css, "link buttons centred vertically"
 assert ".crumbbar .pacts > :is([data-pagenav], .rb.off, .pgpos, [data-addboard], [data-copylink]) { display: none !important; }" in css, "toolbar icons"
@@ -114,8 +114,11 @@ print("phone post tabs sticky smoke: ok")
 assert ".pscroll > [data-pane] { min-height: calc(100svh - 300px); }" in css and "top: -500px" in css, "short tabs keep room; background reaches over the top"
 assert "function pin(wasStuck)" in js, "switching tabs while stuck must keep the bar pinned"
 print("phone post tab switch smoke: ok")
-assert "--sw: min(98vw, calc(75svh * var(--mar, 100)));" in css, "player 98% wide"
+assert "--sw: min(98vw, calc(85svh * var(--mar, 100)));" in css, "player 98% of the viewport wide (height cap 85%)"
 assert "padding: 0 !important; width: 44px; justify-content: center;" in css, "back arrow centred"
 assert ".crumbbar > .pvautozone" in css and "back.insertAdjacentElement" in js, "autoplay beside Back"
 assert 'webkitEnterFullscreen' in js and ".stage.pfs" in css and '.pvb[data-pv="fit"] { display: none; }' in css, "full screen fallback; fit button hidden"
 print("phone player round 3 smoke: ok")
+assert 'history.go(-steps)' in js and 'mag-base' in js, "Back must unwind however many entries swipes left"
+assert "if (vid && vid.paused) { const p = vid.play();" in js, "Full screen must also start the video"
+print("phone back/fullscreen round 4 smoke: ok")

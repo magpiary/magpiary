@@ -353,10 +353,27 @@ document.addEventListener("click", (ev) => {
   const read = () => { try { return JSON.parse(sessionStorage.getItem(KEY) || "null"); } catch (e) { return null; } };
   const clear = () => { try { sessionStorage.removeItem(KEY); } catch (e) { /* fine */ } };
   document.addEventListener("click", function (ev) {
-    const b = ev.target instanceof Element ? ev.target.closest(".postpage [data-pgback]") : null;
-    if (!b || innerWidth > 760) return;
+    if (innerWidth > 760 || !(ev.target instanceof Element)) return;
+    if (ev.target.closest(".postpage a[data-pagenav]")) { try { sessionStorage.setItem("mag-step", "1"); } catch (e) { /* fine */ } return; }  // stepping to a neighbour: not a new start
+    const b = ev.target.closest(".postpage [data-pgback]");
+    if (!b) return;
     try { sessionStorage.setItem(KEY, JSON.stringify({ href: b.getAttribute("href") || "/", t: Date.now() })); } catch (e) { /* fine */ }
+    // however many entries the swipes left in the history (a phone may add one per post), go back exactly to where the first post was opened
+    let base = 0; try { base = +sessionStorage.getItem("mag-base") || 0; } catch (e) { /* fine */ }
+    const steps = history.length - base + 1;
+    if (base && steps > 1 && steps <= 40) {
+      ev.preventDefault(); ev.stopImmediatePropagation();
+      try { sessionStorage.setItem("mag-slide", "right"); } catch (e) { /* fine */ }
+      history.go(-steps);
+    }
   }, true);
+  function noteBase() {  // the history length at the post that was opened from a list; swiping on to neighbours keeps it
+    if (!/^\/item\/\d+/.test(location.pathname)) return;
+    try {
+      if (sessionStorage.getItem("mag-step")) sessionStorage.removeItem("mag-step");
+      else sessionStorage.setItem("mag-base", String(history.length));
+    } catch (e) { /* fine */ }
+  }
   function check() {
     const n = read();
     if (!n) return;
@@ -365,6 +382,7 @@ document.addEventListener("click", (ev) => {
     if (Date.now() - n.t < 4000 && innerWidth <= 760 && /^\/(\?|$|pile\/|board\/)/.test(n.href)) location.replace(n.href);
   }
   addEventListener("pageshow", check);
+  noteBase();
   check();
 })();
 
@@ -436,7 +454,15 @@ document.addEventListener("click", (ev) => {
     if (stage.classList.contains("pfs")) { leave(stage); return; }
     if (document.fullscreenElement || document.webkitFullscreenElement) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
     const pseudo = () => { stage.classList.add("pfs"); root.classList.add("pfs-on"); };
-    if (!document.fullscreenEnabled && vid && vid.webkitEnterFullscreen) { try { vid.webkitEnterFullscreen(); return; } catch (e) { /* fall through */ } }
+    if (vid && vid.paused) { const p = vid.play(); if (p && p.catch) p.catch(() => {}); }  // Full screen also starts the video (a video that never played refuses full screen)
+    if (!document.fullscreenEnabled && vid && vid.webkitEnterFullscreen) {
+      const enter = () => { try { vid.webkitEnterFullscreen(); } catch (e) { pseudo(); } };
+      if (vid.readyState >= 1) { enter(); return; }
+      let done = false;
+      vid.addEventListener("loadedmetadata", () => { done = true; enter(); }, { once: true });  // it can only go full screen once it knows its size
+      setTimeout(() => { if (!done && !vid.webkitDisplayingFullscreen) pseudo(); }, 1800);
+      return;
+    }
     if (!stage.requestFullscreen) { pseudo(); return; }
     let asked;
     try { asked = stage.requestFullscreen(); } catch (e) { pseudo(); return; }

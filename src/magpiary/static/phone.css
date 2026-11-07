@@ -261,7 +261,7 @@
      the screen gets narrower, centred, so the picture itself keeps its one rounded corner (no black box, no bars). --mar is the media's
      width/height, set on the stage by the page. */
   .cardm.pagemode .vid .stage { flex: none !important; height: auto !important; min-height: 0 !important; max-height: none !important; aspect-ratio: var(--mar, 1.7778) !important;
-    --sw: min(98vw, calc(75svh * var(--mar, 100))); width: var(--sw) !important; margin-inline: calc((100% - var(--sw)) / 2); border-radius: 20px; background: transparent; }
+    --sw: min(98vw, calc(85svh * var(--mar, 100))); width: var(--sw) !important; margin-inline: calc((100% - var(--sw)) / 2); border-radius: 20px; background: transparent; }
   /* a post has no logo bar on a phone: the toolbar (back, open, More) is the first thing, and it scrolls away with the page */
   html:has(.postpage) #top { display: none !important; }
   html:has(.postpage) #view { padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important; }
