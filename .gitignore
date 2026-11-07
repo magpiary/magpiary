@@ -114,3 +114,6 @@ scratch/
 # Agent activity and optional proxy credentials (also blocked by secret_check.py).
 stats-proxy
 agent-activity.jsonl
+
+# browser-tool scratch
+.playwright-mcp/
