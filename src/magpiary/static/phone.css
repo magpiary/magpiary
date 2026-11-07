@@ -386,3 +386,14 @@
   .cardm.pagemode .stage .pvautozone .pvauto { height: 48px; padding: 0 14px 0 4px; }
   .postpage > .crumbbar .pacts > :is(a, button), .postpage > .crumbbar .pacts > details > summary { width: 46px !important; height: 46px !important; min-width: 46px !important; }
 }
+
+/* ---- round 10: every tap/hover shape is round (never a square), and the buttons sit 8px from the screen's left and right edges ---- */
+@media (max-width: 760px) {
+  .postpage > .crumbbar { left: calc((100% - 100vw) / 2) !important; right: auto !important; width: 100vw; box-sizing: border-box; padding-left: 8px !important; padding-right: 8px !important; }
+  .cardm.pagemode .stage .pvautozone { left: 62px; }
+  .postpage > .crumbbar :is(.pgback, .pgback::after, .pacts > a, .pacts > button, .pacts > details > summary),
+  .cardm.pagemode .stage .pvautozone .pvauto { border-radius: 999px !important; -webkit-tap-highlight-color: transparent; }
+  .postpage > .crumbbar .pgback::after { border-radius: 999px; }
+  .postpage > .crumbbar .pgback:is(:hover, :active, :focus-visible), .cardm.pagemode .stage .pvautozone .pvauto:is(:hover, :active, :focus-visible) { background: rgb(255 255 255 / .2) !important; outline: none; }
+  .postpage > .crumbbar .pacts > :is(a, button, summary):is(:hover, :active), .postpage > .crumbbar .pacts > details > summary:is(:hover, :active) { background: rgb(255 255 255 / .2) !important; }
+}

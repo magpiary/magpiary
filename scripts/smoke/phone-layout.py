@@ -132,3 +132,5 @@ assert "backdrop-filter: none !important; -webkit-backdrop-filter: none !importa
 print("phone post buttons round 8 smoke: ok")
 assert ".cardm.pagemode .stage .pvautozone { left: 84px;" in css and ".postpage > .crumbbar .pgback::after" in css, "Autoplay right of Back; large Back hit area"
 print("phone post buttons round 9 smoke: ok")
+assert ".cardm.pagemode .stage .pvautozone { left: 62px; }" in css and "padding-left: 8px !important; padding-right: 8px !important;" in css and ".pgback::after { border-radius: 999px; }" in css, "buttons near the edges, round tap shapes"
+print("phone post buttons round 10 smoke: ok")
