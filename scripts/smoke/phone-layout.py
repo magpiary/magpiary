@@ -116,7 +116,7 @@ assert "function pin(wasStuck)" in js, "switching tabs while stuck must keep the
 print("phone post tab switch smoke: ok")
 assert "--sw: min(100vw, calc(85svh * var(--mar, 100)));" in css, "player full viewport width (height cap 85%)"
 assert "padding: 0 !important; width: 44px; justify-content: center;" in css, "back arrow centred"
-assert ".crumbbar > .pvautozone" in css and "back.insertAdjacentElement" in js, "autoplay beside Back"
+assert ".cardm.pagemode .stage .pvautozone { position: absolute; z-index: 21;" in css and "insertAdjacentElement" not in js, "autoplay stays in the player, placed beside Back by CSS"
 assert 'webkitEnterFullscreen' in js and ".stage.pfs" in css and '.pvb[data-pv="fit"] { display: none; }' in css, "full screen fallback; fit button hidden"
 print("phone player round 3 smoke: ok")
 assert "location.replace(href)" in js and "history.go(" not in js and "mag-listpos" in js, "Back must go to the list address, not count history entries"
@@ -128,3 +128,7 @@ assert "margin-top: 0; border-radius: 20px; background: transparent; }" in css a
 print("phone post pill round 6 smoke: ok")
 assert "drop-shadow(0 1px 3px rgb(0 0 0 / .65))" in css and ".postpage > .crumbbar { background: none !important; padding-bottom: 12px !important; }" in css, "plain white buttons with a soft shadow"
 print("phone post plain buttons round 7 smoke: ok")
+assert "backdrop-filter: none !important; -webkit-backdrop-filter: none !important;" in css, "Back has no blur background"
+print("phone post buttons round 8 smoke: ok")
+assert ".cardm.pagemode .stage .pvautozone { left: 84px;" in css and ".postpage > .crumbbar .pgback::after" in css, "Autoplay right of Back; large Back hit area"
+print("phone post buttons round 9 smoke: ok")

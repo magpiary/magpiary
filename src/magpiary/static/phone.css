@@ -361,3 +361,28 @@
   .postpage > .crumbbar .pvauto { border-radius: 0 !important; padding: 0 10px 0 4px; font-weight: 600; }
   .postpage > .crumbbar .pvauto i { background: rgb(255 255 255 / .38); }
 }
+
+/* ---- post page buttons, round 8 (owner, 7 Nov): the right pair (Open original, More) is the dark rounded pill again; the left pair
+   (Back, Autoplay) has no background at all, no blur either, and Autoplay works: it stays inside the player (where the page's script
+   wired it) and is placed beside Back with CSS ---- */
+@media (max-width: 760px) {
+  .postpage > .crumbbar .pgback { background: none !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; filter: drop-shadow(0 1px 3px rgb(0 0 0 / .65)) drop-shadow(0 0 8px rgb(0 0 0 / .35)); }
+  .postpage > .crumbbar .pacts { background: rgb(12 12 14 / .62) !important; box-shadow: 0 0 0 1px rgb(255 255 255 / .14) !important; border-radius: 999px !important; padding: 2px; filter: none; margin-left: auto; }
+  .postpage > .crumbbar .pacts > :is(a, button), .postpage > .crumbbar .pacts > details > summary { border-radius: 50% !important; }
+  .cardm.pagemode .stage .pvautozone { position: absolute; z-index: 21; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50px; width: auto; height: 44px; display: flex; align-items: center; }
+  .cardm.pagemode .stage .pvautozone .pvauto { position: relative; top: auto; left: auto; height: 44px; padding: 0 10px 0 4px; font-weight: 600; color: #fff;
+    background: none !important; box-shadow: none !important; border-radius: 0 !important; backdrop-filter: none; filter: drop-shadow(0 1px 3px rgb(0 0 0 / .65)) drop-shadow(0 0 8px rgb(0 0 0 / .35)); }
+  .cardm.pagemode .stage .pvautozone .pvauto i { background: rgb(255 255 255 / .38); }
+  .cardm.pagemode .stage .pvautozone .pvauto[aria-checked="true"] i { background: var(--tc, #7fb0ea); }
+}
+
+/* ---- round 9: Back stays where it was (the column's left edge), Autoplay sits right of it with a gap, tap areas stay large, the
+   media really starts at the top edge ---- */
+@media (max-width: 760px) {
+  .cardm.pagemode .vid { padding-top: 0 !important; }
+  .postpage > .crumbbar .pgback { position: relative; width: 48px; height: 48px; }
+  .postpage > .crumbbar .pgback::after { content: ""; position: absolute; inset: -6px -4px; }  /* a larger area to hit than the icon */
+  .cardm.pagemode .stage .pvautozone { left: 84px; top: calc(env(safe-area-inset-top, 0px) + 10px); height: 48px; }
+  .cardm.pagemode .stage .pvautozone .pvauto { height: 48px; padding: 0 14px 0 4px; }
+  .postpage > .crumbbar .pacts > :is(a, button), .postpage > .crumbbar .pacts > details > summary { width: 46px !important; height: 46px !important; min-width: 46px !important; }
+}

@@ -428,16 +428,11 @@ document.addEventListener("click", (ev) => {
   }, true);
 })();
 
-/* Post player: Autoplay moves next to the Back button, and Full screen works on a phone. iPhone Safari has no full screen for a
-   page element, only for the video itself (webkitEnterFullscreen); where neither works (an embedded browser) the player fills the
-   screen instead (.pfs). A second tap on the same button leaves it. */
+/* Post player: Full screen works on a phone. iPhone Safari has no full screen for a page element, only for the video itself
+   (webkitEnterFullscreen); where neither works (an embedded browser) the player fills the screen instead (.pfs). A second tap on
+   the same button leaves it. (Autoplay stays inside the player, where the page's own script wired it; CSS places it beside Back.) */
 (function () {
   "use strict";
-  function moveAutoplay() {
-    if (innerWidth > 760) return;
-    const zone = document.querySelector(".cardm.pagemode .stage .pvautozone"), back = document.querySelector(".crumbbar .pgback");
-    if (zone && back) back.insertAdjacentElement("afterend", zone);
-  }
   const root = document.documentElement;
   const leave = (stage) => { stage.classList.remove("pfs"); root.classList.remove("pfs-on"); };
   document.addEventListener("click", function (ev) {
@@ -463,6 +458,4 @@ document.addEventListener("click", (ev) => {
     if (asked && asked.catch) asked.catch(pseudo);
     setTimeout(() => { if (!document.fullscreenElement && !document.webkitFullscreenElement) pseudo(); }, 450);  // an embedded browser may neither refuse nor allow
   }, true);
-  new MutationObserver(function () { clearTimeout(moveAutoplay.t); moveAutoplay.t = setTimeout(moveAutoplay, 60); }).observe(document.documentElement, { childList: true, subtree: true });
-  moveAutoplay();
 })();
