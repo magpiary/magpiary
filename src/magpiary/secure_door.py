@@ -35,7 +35,9 @@ class SecureHandler(Handler):
             self.server.devices.log("refused", None, f"TLS: {err.reason or 'handshake failed'}", self.client_address[0])
 
     def send_page(self, response: Response) -> None:
-        super().send_page(response)  # no HSTS on purpose: the pairing guide is plain HTTP on this same name
+        # max-age=0 wipes an HSTS rule an older version set for magpiary.local (the pairing guide is plain HTTP on this name)
+        response.headers = {**response.headers, "Strict-Transport-Security": "max-age=0"}
+        super().send_page(response)
 
     # ---- the checks every request passes ----
 

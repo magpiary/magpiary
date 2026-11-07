@@ -509,9 +509,27 @@ def test_certificate_reset_is_served_to_new_connections(door):
     assert door.request("GET", "/")[0] == 200
 
 
-def test_no_hsts_on_the_phone_door(door):
+def test_the_phone_door_clears_any_old_hsts_rule(door):
     door.pair()
-    assert "Strict-Transport-Security" not in door.request("GET", "/")[2]
+    assert door.request("GET", "/")[2]["Strict-Transport-Security"] == "max-age=0"
+    assert door.request("GET", "/", key="")[2]["Strict-Transport-Security"] == "max-age=0"  # even a refusal wipes it
+
+
+def test_the_pairing_qr_uses_the_network_address_not_the_name(door, monkeypatch):
+    import re
+
+    from magpiary import secure_door
+
+    monkeypatch.setattr(secure_door, "lan_ip", lambda: "192.168.9.9")
+    mac_post(door, "/hub/access/pair")
+    page = mac_get(door, "/settings/phones").body.decode()
+    assert "data-access" in page  # the card is drawn; its QR encodes http://192.168.9.9:<port>/phone-access/<code>
+    import segno
+
+    token = door.primary.hub._pairing[0]
+    want = segno.make(f"http://192.168.9.9:{door.primary.server_port}/phone-access/{token}", error="m").svg_inline(
+        border=2, omitsize=True, dark="#000", light="#fff")
+    assert want in page
 
 
 # ---- the phone setup pages ----

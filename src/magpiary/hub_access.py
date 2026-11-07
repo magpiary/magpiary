@@ -92,7 +92,11 @@ class AccessPages:
         import segno
 
         token = self._pairing[0]
-        url = f"http://{access.NAME}:{self.port}/phone-access/{token}"
+        from magpiary.secure_door import lan_ip
+
+        # the Mac's network address, not magpiary.local: a phone that once got an HSTS rule for that name from an older version
+        # would turn this plain-HTTP link into HTTPS and fail; an address has no such rule
+        url = f"http://{lan_ip() or access.NAME}:{self.port}/phone-access/{token}"
         qr = segno.make(url, error="m").svg_inline(border=2, omitsize=True, dark="#000", light="#fff")
         left = self.devices.progress(token)["left"]
         steps = "".join(f'<li data-stage="{st}"><span class="pa-mk"></span><div><b>{t}</b><p>{d}</p></div></li>'
