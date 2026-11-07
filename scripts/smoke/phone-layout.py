@@ -93,7 +93,9 @@ print("phone post view smoke: ok")
 
 # post view round 2: media 90% wide (cap 75%), toolbar back/open/More, swipe + edge arrows, link buttons one line with logos,
 # tab strip sideways only, pop-ups not held invisible by the page fade, Back keeps the filter, pull to refresh on a post
-assert ".cardm.pagemode .stage { width: 90vw !important;" in css and "max-height: 75svh !important;" in css, "media 90% wide, capped"
+assert "width: min(100%, calc(75svh * var(--mar, 100))) !important;" in css, "media column wide, capped at 75% tall"
+assert "html:has(.postpage) #top { display: none !important; }" in css, "no logo bar on a post"
+assert "padding: 0 12px !important; gap: 10px; align-items: center; }" in css, "link buttons centred vertically"
 assert ".crumbbar .pacts > :is([data-pagenav], .rb.off, .pgpos, [data-addboard], [data-copylink]) { display: none !important; }" in css, "toolbar icons"
 assert ".crumbbar::before { display: none !important; }" in css, "no fade behind the toolbar"
 assert 'class="mi pmi" data-copylink=' in (src / "hub_card.py").read_text(), "Copy link must be in the More menu"
@@ -105,3 +107,5 @@ assert "body > :is(#top, #view) { animation: pfadein" in css, "page fade must no
 assert 'trail = [("Library", frm if frm.startswith("/?") else "/")]' in (src / "hub_card.py").read_text(), "Back must keep the filter"
 assert r'/^\/item\/\d+/.test(location.pathname)' in js, "pull to refresh on a post"
 print("phone post view round 2 smoke: ok")
+assert 'const KEY = "mag-backing"' in js and "location.replace(n.href)" in js, "Back must leave the post in one tap"
+print("phone post back smoke: ok")

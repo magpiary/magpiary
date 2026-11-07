@@ -246,8 +246,6 @@
   .crumbbar .pacts { flex: 0 1 auto; min-width: 0; margin-left: auto !important; }
   .pvask, .pvactions:has(> .pvask:only-child) { display: none !important; }
   /* the video is capped to 62% of the screen height (black bars at the sides), so the page below and the player controls stay visible */
-  .cardm.pagemode .stage { max-height: min(62svh, 520px) !important; background: #000; }
-  .cardm.pagemode .stage video { object-fit: contain; }
   /* the tab strip fades at the edge that still has more tabs (phone.js toggles the classes) */
   .tabs.pvtabs.pmoreR { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
   .tabs.pvtabs.pmoreL { -webkit-mask-image: linear-gradient(270deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(270deg, #000 calc(100% - 36px), transparent); }
@@ -259,8 +257,16 @@
 .pmi { display: none; }
 @media (max-width: 760px) {
   .pmi { display: flex; }
-  /* media: 90% of the screen width, height from the media's own shape, at most 75% of the screen tall (black bars at the sides if taller) */
-  .cardm.pagemode .stage { width: 90vw !important; margin-inline: calc((100% - 90vw) / 2); max-height: 75svh !important; }
+  /* media: as wide as the column below (left edges line up) and as tall as its own shape makes it; only a media taller than 75% of
+     the screen gets narrower, centred, so the picture itself keeps its one rounded corner (no black box, no bars). --mar is the media's
+     width/height, set on the stage by the page. */
+  .cardm.pagemode .vid .stage { flex: none !important; height: auto !important; min-height: 0 !important; max-height: none !important; aspect-ratio: var(--mar, 1.7778) !important;
+    width: min(100%, calc(75svh * var(--mar, 100))) !important; margin-inline: auto; border-radius: 20px; background: transparent; }
+  .cardm.pagemode .stage video { object-fit: cover; }
+  /* a post has no logo bar on a phone: the toolbar (back, open, More) is the first thing, and it scrolls away with the page */
+  html:has(.postpage) #top { display: none !important; }
+  html:has(.postpage) #view { padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important; }
+  .postpage .crumbbar { position: static !important; top: auto !important; }
   /* toolbar: only back, open the original, More; the fade behind it is gone */
   .crumbbar::before { display: none !important; }
   .crumbbar .pacts > :is([data-pagenav], .rb.off, .pgpos, [data-addboard], [data-copylink]) { display: none !important; }
@@ -275,7 +281,7 @@
   .chooser .plist { max-height: 40svh; }
   /* link buttons under the summary: two equal columns, one line each, a logo always */
   .pvactions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .pvactions .pvprimary { flex: none; width: auto; min-width: 0; height: 56px; padding: 0 12px; gap: 10px; align-items: center; }
+  .pvactions .pvprimary { flex: none; width: auto; min-width: 0; height: 56px; padding: 0 12px !important; gap: 10px; align-items: center; }
   .pvactions .pvprimary > span:not(.fav) { display: block; min-width: 0; overflow: hidden; }
   .pvactions .pvprimary b, .pvactions .pvprimary small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
   .pvactions .pvprimary > .fav { flex: none; display: grid; place-items: center; width: 22px; height: 22px; }

@@ -342,3 +342,28 @@ document.addEventListener("click", (ev) => {
   new MutationObserver(function () { clearTimeout(edges.t); edges.t = setTimeout(edges, 80); }).observe(document.documentElement, { childList: true, subtree: true });
   edges();
 })();
+
+/* Post view Back: one tap must leave the post. Back normally uses the browser's history (same scroll, same filters), but when the
+   entry before this one is another copy of a post page (a reload, a deep link, posts stepped through), the first tap only lands on
+   a post again and a second tap is needed. So a tap on Back leaves a short note; a post page that opens while the note is fresh
+   goes on to the list the Back button points at. List pages clear the note. */
+(function () {
+  "use strict";
+  const KEY = "mag-backing";
+  const read = () => { try { return JSON.parse(sessionStorage.getItem(KEY) || "null"); } catch (e) { return null; } };
+  const clear = () => { try { sessionStorage.removeItem(KEY); } catch (e) { /* fine */ } };
+  document.addEventListener("click", function (ev) {
+    const b = ev.target instanceof Element ? ev.target.closest(".postpage [data-pgback]") : null;
+    if (!b || innerWidth > 760) return;
+    try { sessionStorage.setItem(KEY, JSON.stringify({ href: b.getAttribute("href") || "/", t: Date.now() })); } catch (e) { /* fine */ }
+  }, true);
+  function check() {
+    const n = read();
+    if (!n) return;
+    if (!/^\/item\/\d+/.test(location.pathname)) { clear(); return; }
+    clear();
+    if (Date.now() - n.t < 4000 && innerWidth <= 760 && /^\/(\?|$|pile\/|board\/)/.test(n.href)) location.replace(n.href);
+  }
+  addEventListener("pageshow", check);
+  check();
+})();
