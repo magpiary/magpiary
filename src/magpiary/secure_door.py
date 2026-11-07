@@ -18,7 +18,6 @@ from magpiary import access
 from magpiary.receiver import HUB_PAGES, HUB_PREFIXES, Handler, Server, log
 from magpiary.web import Response, alone_page, e, phone_page
 
-HSTS = "max-age=31536000"
 COOKIE_AGE = 60 * 60 * 24 * 400
 PAIR_PATH = "/phone/pair/"
 APP_PATH = "/phone/app"
@@ -36,8 +35,7 @@ class SecureHandler(Handler):
             self.server.devices.log("refused", None, f"TLS: {err.reason or 'handshake failed'}", self.client_address[0])
 
     def send_page(self, response: Response) -> None:
-        response.headers = {**response.headers, "Strict-Transport-Security": HSTS}
-        super().send_page(response)
+        super().send_page(response)  # no HSTS on purpose: the pairing guide is plain HTTP on this same name
 
     # ---- the checks every request passes ----
 
@@ -221,6 +219,20 @@ class SecureServer(Server):
         self._ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         self._ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         self._ctx.load_cert_chain(cert, key)
+        self._chain = (cert, key, self._stamp(cert))
+
+    @staticmethod
+    def _stamp(cert) -> tuple:
+        st = __import__("os").stat(cert)
+        return st.st_mtime_ns, st.st_size
+
+    def reload_certificate(self, cert: str, key: str) -> bool:
+        """Serve a new certificate chain to new connections (after a renewal or a certificate reset)."""
+        if self._stamp(cert) == self._chain[2]:
+            return False
+        self._ctx.load_cert_chain(cert, key)
+        self._chain = (cert, key, self._stamp(cert))
+        return True
 
     def get_request(self):
         sock, address = super().get_request()
@@ -291,6 +303,8 @@ class Door:
             self._close()
         if self.server is not None:
             self.bonjour.sync(lan_ip())
+            cert, key = access.server_files([access.NAME, self.mac_name()])  # renews near its end, remakes after a reset
+            self.server.reload_certificate(str(cert), str(key))
 
     def _open(self) -> None:
         names = [access.NAME, self.mac_name()]

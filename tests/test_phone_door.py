@@ -290,7 +290,7 @@ def test_pairing_guide_serves_only_the_public_certificate_with_a_good_code(door)
     token = door.primary.hub._pairing[0]
     hub = door.primary.hub
     guide = hub.access_guide(f"/phone-access/{token}", "192.168.1.20")
-    assert guide.status == 200 and access.ca_fingerprint().encode() in guide.body
+    assert guide.status == 200 and access.ca_fingerprint().encode() not in guide.body and b"SHA-256" in guide.body  # the fingerprint is NOT on the plain-HTTP page
     crt = hub.access_guide(f"/phone-access/{token}/ca.crt", "192.168.1.20")
     assert crt.status == 200 and b"BEGIN CERTIFICATE" in crt.body and b"PRIVATE" not in crt.body
     assert hub.access_guide("/phone-access/wrong/ca.crt", "192.168.1.20").status == 410
@@ -440,3 +440,75 @@ def test_home_screen_manifest_opens_full_screen_and_starts_at_the_one_time_link(
     m = j.loads(text)
     assert status == 200 and m["display"] == "standalone" and m["start_url"] == f"/phone/app/{token}" and m["name"] == "Magpiary"
     assert door.request("GET", "/phone/app/not-a-token/manifest.webmanifest", key="")[0] == 404
+
+
+# ---- fixes from the first Codex review (7 Nov) ----
+
+def test_control_cannot_set_the_proxy_and_resume_needs_a_confirm(door):
+    door.pair()
+    csrf = door.primary.hub._csrf
+    status, _, _ = door.request("POST", "/hub/control", {"csrf": csrf, "part": "statsproxy", "action": "save", "address": "http://10.0.0.9:8080"})
+    assert status == 403
+    status, body, _ = door.request("POST", "/hub/control", {"csrf": csrf, "part": "summary", "action": "resume"})
+    assert "Use your AI?" in body
+    assert door.request("POST", "/hub/control", {"csrf": csrf, "part": "summary", "action": "pause"})[0] in (200, 303)
+    assert door.request("POST", "/hub/control", {"csrf": csrf, "part": "bogus", "action": "pause"})[0] == 403
+
+
+def test_refusals_and_confirm_leak_nothing_while_the_phone_is_locked(door):
+    lock = door.primary.hub._main_lock
+    lock.turn_on("135790", "135790")
+    door.pair()
+    for path, form in (("/settings", None), ("/hub/again", {"csrf": door.primary.hub._csrf, "id": "1"})):
+        status, body, headers = door.request("GET" if form is None else "POST", path, form)
+        assert "id=\"ticker\"" not in body and "data-count" not in body and "phone_confirm" not in body
+    wrong_csrf = door.request("POST", "/hub/again", {"csrf": "nope", "id": "1"})
+    assert "phone_confirm" not in wrong_csrf[1] and wrong_csrf[0] == 403
+    other_site = door.request("POST", "/hub/again", {"csrf": door.primary.hub._csrf, "id": "1"}, headers={"Origin": "https://evil.example"})
+    assert other_site[0] == 403
+
+
+def test_mac_screen_lock_locks_every_phone_and_turning_the_lock_on_does_too(door):
+    hub = door.primary.hub
+    hub._main_lock.turn_on("135790", "135790")
+    door.pair()
+    door.request("POST", "/hub/lock/pin", {"csrf": hub._csrf, "pin": "135790", "json": "1"})
+    assert door.request("GET", "/")[0] == 200
+    hub.lock_phones_if_screen_locked(screen=lambda: True)
+    assert door.request("GET", "/")[0] == 303
+
+
+def test_two_phones_guessing_at_once_share_one_wait(door):
+    hub = door.primary.hub
+    hub._main_lock.turn_on("135790", "135790")
+    from magpiary.lock import Lock
+
+    locks = [Lock(door.store) for _ in range(2)]
+    results = []
+
+    def guess(lock):
+        for i in range(8):
+            results.append(lock.check_pin(f"00000{i}"))
+
+    threads = [threading.Thread(target=guess, args=(lk,)) for lk in locks]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert results.count("wrong") == 5 and results.count("wait") == 11  # five tries in all, however many phones
+
+
+def test_certificate_reset_is_served_to_new_connections(door):
+    from magpiary import access as acc
+
+    names = [HOST, "test-mac.local"]
+    acc.forget_authority()
+    cert, key = acc.server_files(names)
+    assert door.secure.reload_certificate(str(cert), str(key)) is True
+    ctx = ssl.create_default_context(cadata=acc.ca_pem().decode())  # a phone that now trusts only the NEW authority
+    door.ctx = ctx
+    door.pair()
+    assert door.request("GET", "/")[0] == 200
+
+
+def test_no_hsts_on_the_phone_door(door):
+    door.pair()
+    assert "Strict-Transport-Security" not in door.request("GET", "/")[2]

@@ -62,7 +62,7 @@ class AccessPages:
         steps = ("Scan this code with the iPhone camera and tap the banner.",
                  "Tap <b>Download certificate</b>, then <b>Allow</b>. In Settings tap <b>Profile Downloaded</b> and <b>Install</b>.",
                  "Settings → General → About → <b>Certificate Trust Settings</b>: switch on <b>Magpiary local network CA</b>.",
-                 "Check that the fingerprint below matches the one on the phone, then tap <b>Continue</b> on the phone.")
+                 "Open the certificate on the phone (Settings → Profile Downloaded → More Details) and check its SHA-256 fingerprint matches the one below, then tap <b>Continue</b> on the phone.")
         lis = "".join(f"<li>{s}</li>" for s in steps)
         return (f'<div class="srow"><div class="srl"><b>Pair a phone</b><p>This code works once, for about {left // 60 + 1} minutes.</p>'
                 f'<div class="acode" style="width:200px;background:#fff;padding:6px;border-radius:12px;margin:10px 0">{qr}</div><ol class="hint">{lis}</ol>'
@@ -139,12 +139,12 @@ class AccessPages:
                             headers={"Content-Disposition": 'attachment; filename="magpiary-local-network-ca.crt"',
                                      "Cache-Control": "no-store"})
         port = access.https_port(self.port)
-        fp = access.ca_fingerprint()
         body = ('<main class="alone"><h1>Set up this phone</h1>'
                 f'<p><a class="btn" href="/phone-access/{quote(token)}/ca.crt">Download certificate</a></p>'
                 "<ol><li>Tap <b>Allow</b>, then open <b>Settings</b> and tap <b>Profile Downloaded</b>, then <b>Install</b>.</li>"
                 "<li>Settings → General → About → <b>Certificate Trust Settings</b>: switch on <b>Magpiary local network CA</b>.</li>"
-                f"<li>Compare this fingerprint with the one on your Mac: <code style=\"word-break:break-all\">{e(fp)}</code></li></ol>"
+                "<li>Before you trust it, open the certificate's <b>More Details</b> on the phone and check that its <b>SHA-256</b> "
+                "fingerprint is the one shown on your Mac. This page cannot show it to you: anything on this network could change it.</li></ol>"
                 f'<p><a class="btn" href="https://{access.NAME}:{port}/phone/pair/{quote(token)}">Continue</a></p>'
                 "<p>If the Continue button says it cannot connect securely, step 2 is not done yet.</p></main>")
         return phone_page("Set up this phone", body)

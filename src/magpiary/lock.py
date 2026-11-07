@@ -34,6 +34,7 @@ CHALLENGE_FOR = 120
 RP_ID = "localhost"
 SLEEP_GAP = 20  # seconds the wall clock may run ahead of the monotonic clock before we call it a sleep
 CREDS_MAX = 6
+PIN_MU = threading.Lock()  # serializes every PIN check across the Mac's lock and each phone's lock
 
 
 def b64e(raw: bytes) -> str:
@@ -164,7 +165,7 @@ class Lock:
 
     def check_pin(self, pin: str) -> str:
         """'ok', 'wrong' or 'wait'. Five wrong tries earn a wait that doubles each time it is earned again."""
-        with self._mu:
+        with PIN_MU:  # one for the Mac and every phone: wrong tries share counters in the database
             return self._check_pin(pin)
 
     def _check_pin(self, pin: str) -> str:

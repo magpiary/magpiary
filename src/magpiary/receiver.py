@@ -723,6 +723,7 @@ def door_loop(server: Server) -> None:
     while True:
         try:
             door.poll()
+            server.hub.lock_phones_if_screen_locked()
         except Exception as err:  # never let the door loop die; log the type only
             log(f"phone door check failed: {type(err).__name__}")
         time.sleep(3)

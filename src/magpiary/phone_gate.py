@@ -42,6 +42,11 @@ def get_allowed(path: str) -> bool:
 
 def post_decision(path: str, form: dict) -> str:
     """'ok', 'confirm' (an AI action without its confirm tap) or 'refuse'."""
+    if path == "/hub/control":  # the Nest's pause/resume buttons only: never the proxy; resuming starts AI or network work
+        if form.get("part") not in ("transcribe", "summary", "links", "stats", "statsauto") or form.get("action") not in ("pause", "resume"):
+            return "refuse"
+        if form.get("action") == "resume":
+            return "ok" if form.get(CONFIRM) == "1" else "confirm"
     if is_ai_action(path, form):
         return "ok" if form.get(CONFIRM) == "1" else "confirm"
     return "ok" if path in POST_PATHS else "refuse"

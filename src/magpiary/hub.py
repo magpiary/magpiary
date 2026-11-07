@@ -174,6 +174,14 @@ class Hub(
     def lock(self, value) -> None:
         self._main_lock = value
 
+    def lock_phones_if_screen_locked(self, screen=None) -> None:
+        """The Mac's screen lock locks every phone too (each phone's own idle and sleep rules run on its requests)."""
+        from magpiary.lock import screen_locked
+
+        if self._main_lock.enabled and (screen or screen_locked)():
+            for lock in list(self._device_locks.values()):
+                lock.lock_now()
+
     def _door(self, client_ip: str, host: str) -> Response | None:
         """Who may be here: this Mac itself, or a paired phone that the secure door already checked (device set)."""
         if getattr(self._ctx, "device", None) is not None:
@@ -181,17 +189,22 @@ class Hub(
         return local_only(client_ip, host)
 
     def _phone_refused(self, message: str, status: int = 403) -> Response:
-        return self.shell("Not on the phone", f'<p class="empty">{e(message)}</p>'
-                          '<p><a class="link" href="/">Back to the library</a></p>', "missing", status)
+        from magpiary.web import alone_page
+
+        # no library data on this page: a locked phone must learn nothing from it
+        return alone_page("Not on the phone", "var(--indigo)", "mac", "Not on the phone", e(message),
+                          '<p><a class="btn" href="/">Back to the library</a></p>', status)
 
     def _phone_confirm(self, path: str, form: dict) -> Response:
         """An AI action from a phone needs its own tap: this page repeats the request with the confirm field."""
+        from magpiary.web import phone_page
+
         keep = {k: v for k, v in form.items() if k != "csrf"}
         hidden = ui.hidden(self._csrf, **keep, **{phone_gate.CONFIRM: "1"})
-        return self.shell("Use your AI?", '<main class="alone"><h1>Use your AI?</h1>'
+        return phone_page("Use your AI?", '<main class="alone"><h1>Use your AI?</h1>'
                           "<p>This asks the AI you set up on your Mac, and counts against its allowance. Go ahead?</p>"
                           f'<form method="post" action="{e(path)}">{hidden}<button class="btn" type="submit">Yes, do it</button> '
-                          '<a class="link" href="/">Cancel</a></form></main>', "missing", 200)
+                          '<a class="link" href="/">Cancel</a></form></main>')
 
     # ---- routing ------------------------------------------------------------------------
 
@@ -216,7 +229,14 @@ class Hub(
                 if decision == "refuse":
                     self.devices.log("refused", device["id"], f"POST {path[:80]} (not for phones)")
                     return self._phone_refused(phone_gate.why_refused(path))
-                if decision == "confirm":
+                if decision == "confirm":  # the same checks as the real request come first, so this page leaks nothing
+                    own_host = urlsplit("//" + host).hostname
+                    if origin and urlsplit(origin).hostname != own_host:
+                        return self._phone_refused("This request came from another website.")
+                    if not hmac.compare_digest(form.get("csrf", "").encode(), self._csrf.encode()):
+                        return self._phone_refused("This page has expired. Reload the library.")
+                    if held := self.locked_post(path):
+                        return held
                     return self._phone_confirm(path, form)
             done = self._post(path, form, client_ip, host, origin)
             if device is None and path in ("/hub/lock/on", "/hub/lock/off"):
