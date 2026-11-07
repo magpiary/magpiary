@@ -1361,10 +1361,18 @@ is the default when both are), then paid keys. Free-tier keys are last.
 **Deeper dive button.** In its own tab, and in the post's More actions (⋯) menu. "Suggested" is shown as coloured text,
 not a pill.
 
-## Phone access to the library on the local network (owner decisions, 6 Nov 2026; built 7 Nov on branch phone-secure-access, Mac-tested only)
+## Phone access to the library on the local network (owner decisions, 6 Nov 2026; built 6-8 Nov, in main, installed 8 Nov, not released)
 
 Today the hub refuses every request that is not from the Mac itself (`local_only` in `web.py`, 403 "This Mac only"). This
 adds an opt-in way to open the library from a phone on the same network.
+
+**Status, 8 Nov 2026.** Built and merged into `main` (local; not pushed, version still 0.1.5, so it ships with 0.1.6).
+The owner tested the full pairing flow and the phone layout on his iPhone (bottom bar and its shrinking, pull to refresh,
+top bar, Settings on the phone, video playing and converting). Codex reviewed it three times (pairing twice, then the video
+conversion and phone layout); the findings were fixed except one the owner chose to skip (keyboard focus in the More menu).
+Not covered: Android; the long-video path on a real phone (conversion in the background and the "getting this ready"
+message); the strict conversion check was tried only on two small real clips; no Codex pass after the last fixes; Ask
+Magpiary on the phone (decided later); a job to convert every saved video at once (not built).
 
 **Built 7 Nov 2026** (modules `access.py`, `secure_door.py`, `phone_gate.py`, `hub_access.py`; tests `test_access_certs.py`,
 `test_phone_door.py`; smoke `scripts/smoke/phone-access.py`). Choices made with the owner: HTTPS port is the hub port + 100
@@ -1393,13 +1401,12 @@ refused even with a key.
   About > Certificate Trust Settings) and shows a fingerprint to compare. No tap-through fallback.
 - Revoke shows how to remove the certificate from the phone.
 - iPhone Safari first; Android later.
-- Needs: `magpiary.local` announced over Bonjour (small dependency) and a port in the URL (for example 8766).
+- As built: `magpiary.local` is announced with macOS's own `dns-sd` (no dependency) and the HTTPS port is the hub port + 100.
 
 **What the phone can do**
 - Everything except Settings, AI keys and the lock.
 - **Ask Magpiary is off on the phone for now**; search stays. Revisit once phone use is known.
-- Other AI actions (re-run summary, Deeper dive, Digest) work behind a confirm tap. Open point: owner may prefer these
-  off as well until Ask returns.
+- Other AI actions (re-run summary, Deeper dive, Digest, links again, screen again) work behind a confirm page (decided).
 
 **Mac side**
 - Subtle phone icon with a green glowing dot in the nav bar while access is on.
@@ -1408,8 +1415,26 @@ refused even with a key.
 
 **Phone experience**
 - Installable web app (Add to Home Screen): icon, full-screen.
-- **Build order:** mobile layout first, tested on the Mac at phone size (about 375 px); pairing, HTTPS and the toggle second.
+- **Build order (followed):** mobile layout first, tested on the Mac at phone size (about 375 px); pairing, HTTPS and the toggle second.
   Read `workbench/notes/codex-review-lessons.md` before touching the hub server, keys, files or UI built from a prototype.
+
+### Phone layout and video (built 6-8 Nov 2026)
+- **Layout:** all phone rules live in `static/phone.css` and `static/phone.js`, loaded last and active only at phone widths
+  (max-width 760px); the Mac layout is unchanged. No sideways scroll, 16 px inputs (no iOS zoom), finger-sized targets.
+- **Bottom bar:** five icons without labels (Library, Search, Add, Nest, More), a floating dark pill in Instagram's style with a
+  lighter oval that slides to the place you are, a red dot on Nest when it needs you, shrinking while you scroll down and
+  growing back on scroll up. More holds Archive, Trash, Help and (for paired phones) Add to Home Screen. The Ask and Help
+  pills are hidden on the phone. The top bar shows the logo, with Digest and Settings; the big headline and magpie show only for
+  an empty library. Settings on the phone is two layers (a list of sections, then each section) with Mac-only items hidden.
+- **Pull to refresh** on the library page (a full page reload).
+- **Video:** iPhones often cannot play VP9 or AV1 in an .mp4. New downloads prefer H.264 (`VIDEO_FORMAT` in `tools.py`). When an
+  iPhone asks for an older video that is not H.264, `phone_video.py` re-encodes it (720p at most, AAC) and REPLACES the
+  original, so there is never a second copy (owner's rule). The new file must pass strict checks first: H.264, the video and
+  audio stream lengths each within a tight tolerance (0.1 s and 0.3 s), a clean ffmpeg run; otherwise the original is kept.
+  Conversions run in at most two background workers, one job per file, retried with a growing wait after a failure; a request
+  waits up to 20 s and is then told to try again, and the player shows "Getting this video ready for your iPhone" and
+  retries. Media answers come from one open file with an ETag and honour If-Range. Leftover hidden conversion files from a
+  stopped hub are deleted at start. The conversion is lossy and cannot be undone, so it happens only when a phone asks.
 
 ## Work kept outside this repository
 
