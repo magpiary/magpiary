@@ -17,6 +17,7 @@ import shutil
 import socket
 import sys
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -709,6 +710,21 @@ def board_loop(server: Server) -> None:
             log(f"board sync pass failed: {type(err).__name__}")
 
 
+def door_loop(server: Server) -> None:
+    """Opens and closes the HTTPS phone door to follow the Settings switch (secure_door.py)."""
+    from magpiary.digest import notify
+    from magpiary.secure_door import Door
+
+    door = Door(server, local_name, announce=lambda name: notify("Magpiary", f"{name} just opened your library."))
+    server.door = door
+    while True:
+        try:
+            door.poll()
+        except Exception as err:  # never let the door loop die; log the type only
+            log(f"phone door check failed: {type(err).__name__}")
+        time.sleep(3)
+
+
 def serve(store: Store, host: str, port: int) -> None:
     setup = Setup(store, host_name=local_name(), signer=sign, keep_awake=KeepAwake(),
                   wifi_suggestion=current_wifi_name)
@@ -725,6 +741,7 @@ def serve(store: Store, host: str, port: int) -> None:
     server.boards_wanted.set()  # a first sync right after starting
     threading.Thread(target=board_loop, args=(server,), daemon=True).start()
     threading.Thread(target=stats_loop, args=(server,), daemon=True).start()
+    threading.Thread(target=door_loop, args=(server,), daemon=True).start()
     log(f"Magpiary receiver listening on {host}:{port}")
     log(f"Set up a phone: http://localhost:{server.server_port}/settings/phones")
     try:

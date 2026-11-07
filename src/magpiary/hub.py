@@ -22,7 +22,7 @@ from pathlib import Path
 from urllib.parse import quote, urlencode, urlsplit
 
 from magpiary import keys as keyring
-from magpiary import login, modes, ui
+from magpiary import login, modes, phone_gate, ui
 from magpiary.activity import Activity
 from magpiary.brain import Call, http_call
 from magpiary.cleaner import UnsupportedLink
@@ -138,7 +138,12 @@ class Hub(
         self.activity = activity or Activity(store)
         from magpiary.lock import Lock
 
-        self.lock = Lock(store)  # the service starts its watcher (lock.watch()); without one it still checks on each request
+        self._main_lock = Lock(store)  # the service starts its watcher (lock.watch()); without one it still checks on each request
+        self._ctx = threading.local()  # the paired phone behind the request being served (None: this Mac)
+        self._device_locks: dict[int, Lock] = {}  # each paired phone has its own lock state, same PIN and rules
+        from magpiary import access
+
+        self.devices = access.Devices(store)
         self._csrf = secrets.token_urlsafe(24)
         self.setup = None  # the pairing side (setup.Setup), when the service runs one
         from magpiary import boards, boardsync
@@ -151,10 +156,70 @@ class Hub(
         # after an update the service exits and launchd starts the new copy (KeepAlive)
         self.restart = lambda: threading.Timer(2.0, os._exit, (0,)).start()
 
+    @property
+    def lock(self):
+        """The lock for the request being served: this phone's own when a paired phone asks, the Mac's otherwise."""
+        device = getattr(self._ctx, "device", None)
+        if device is None:
+            return self._main_lock
+        from magpiary.lock import Lock
+
+        return self._device_locks.setdefault(device["id"], Lock(self.store))
+
+    @lock.setter
+    def lock(self, value) -> None:
+        self._main_lock = value
+
+    def _door(self, client_ip: str, host: str) -> Response | None:
+        """Who may be here: this Mac itself, or a paired phone that the secure door already checked (device set)."""
+        if getattr(self._ctx, "device", None) is not None:
+            return None
+        return local_only(client_ip, host)
+
+    def _phone_refused(self, message: str, status: int = 403) -> Response:
+        return self.shell("Not on the phone", f'<p class="empty">{e(message)}</p>'
+                          '<p><a class="link" href="/">Back to the library</a></p>', "missing", status)
+
+    def _phone_confirm(self, path: str, form: dict) -> Response:
+        """An AI action from a phone needs its own tap: this page repeats the request with the confirm field."""
+        keep = {k: v for k, v in form.items() if k != "csrf"}
+        hidden = ui.hidden(self._csrf, **keep, **{phone_gate.CONFIRM: "1"})
+        return self.shell("Use your AI?", '<main class="alone"><h1>Use your AI?</h1>'
+                          "<p>This asks the AI you set up on your Mac, and counts against its allowance. Go ahead?</p>"
+                          f'<form method="post" action="{e(path)}">{hidden}<button class="btn" type="submit">Yes, do it</button> '
+                          '<a class="link" href="/">Cancel</a></form></main>', "missing", 200)
+
     # ---- routing ------------------------------------------------------------------------
 
-    def get(self, path: str, query: dict, client_ip: str, host: str, range_header: str = "", user_agent: str = "") -> Response:
-        refused = local_only(client_ip, host)
+    def get(self, path: str, query: dict, client_ip: str, host: str, range_header: str = "", user_agent: str = "",
+            device: dict | None = None) -> Response:
+        """`device` is set only by the secure door (receiver.SecureHandler) after it checked the phone's key."""
+        self._ctx.device = device
+        try:
+            if device is not None and not phone_gate.get_allowed(path):
+                self.devices.log("refused", device["id"], f"GET {path[:80]} (not for phones)")
+                return self._phone_refused(phone_gate.why_refused(path))
+            return self._get(path, query, client_ip, host, range_header, user_agent)
+        finally:
+            self._ctx.device = None
+
+    def post(self, path: str, form: dict, client_ip: str, host: str, origin: str | None,
+             device: dict | None = None) -> Response:
+        self._ctx.device = device
+        try:
+            if device is not None:
+                decision = phone_gate.post_decision(path, form)
+                if decision == "refuse":
+                    self.devices.log("refused", device["id"], f"POST {path[:80]} (not for phones)")
+                    return self._phone_refused(phone_gate.why_refused(path))
+                if decision == "confirm":
+                    return self._phone_confirm(path, form)
+            return self._post(path, form, client_ip, host, origin)
+        finally:
+            self._ctx.device = None
+
+    def _get(self, path: str, query: dict, client_ip: str, host: str, range_header: str = "", user_agent: str = "") -> Response:
+        refused = self._door(client_ip, host)
         if refused:
             return refused
         if path.startswith("/static/"):
@@ -264,11 +329,13 @@ class Hub(
         return self.shell("Not found", '<p class="empty">Nothing here. <a class="link" href="/">Back to the library</a></p>',
                           "missing", 404)
 
-    def post(self, path: str, form: dict, client_ip: str, host: str, origin: str | None) -> Response:
-        refused = local_only(client_ip, host)
+    def _post(self, path: str, form: dict, client_ip: str, host: str, origin: str | None) -> Response:
+        refused = self._door(client_ip, host)
         if refused:
             return refused
-        if origin and urlsplit(origin).hostname not in ("localhost", "127.0.0.1", "::1"):
+        device = getattr(self._ctx, "device", None)
+        own_host = urlsplit("//" + host).hostname if device is not None else None
+        if origin and urlsplit(origin).hostname not in (("localhost", "127.0.0.1", "::1") if device is None else (own_host,)):
             return self.shell("Refused", "<p>This request came from another website.</p>", "missing", 403)
         if not hmac.compare_digest(form.get("csrf", "").encode(), self._csrf.encode()):
             return self.shell("Refused", '<p>This page has expired. <a class="link" href="/">Reload the library</a>.</p>',
