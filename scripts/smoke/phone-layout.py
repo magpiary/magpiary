@@ -114,7 +114,7 @@ print("phone post tabs sticky smoke: ok")
 assert ".pscroll > [data-pane] { min-height: calc(100svh - 300px); }" in css and "top: -500px" in css, "short tabs keep room; background reaches over the top"
 assert "function pin(wasStuck)" in js, "switching tabs while stuck must keep the bar pinned"
 print("phone post tab switch smoke: ok")
-assert "--sw: min(98vw, calc(85svh * var(--mar, 100)));" in css, "player 98% of the viewport wide (height cap 85%)"
+assert "--sw: min(100vw, calc(85svh * var(--mar, 100)));" in css, "player full viewport width (height cap 85%)"
 assert "padding: 0 !important; width: 44px; justify-content: center;" in css, "back arrow centred"
 assert ".crumbbar > .pvautozone" in css and "back.insertAdjacentElement" in js, "autoplay beside Back"
 assert 'webkitEnterFullscreen' in js and ".stage.pfs" in css and '.pvb[data-pv="fit"] { display: none; }' in css, "full screen fallback; fit button hidden"
@@ -122,3 +122,5 @@ print("phone player round 3 smoke: ok")
 assert "location.replace(href)" in js and "history.go(" not in js and "mag-listpos" in js, "Back must go to the list address, not count history entries"
 assert "if (vid && vid.paused) { const p = vid.play();" in js, "Full screen must also start the video"
 print("phone back/fullscreen round 4 smoke: ok")
+assert ".postpage > .crumbbar { position: absolute !important; top: 0;" in css and "html:has(.cardm .stage.pvplaying) .postpage > .crumbbar { opacity: 0; }" in css, "buttons over the media at the top, hidden while playing"
+print("phone post overlay round 5 smoke: ok")
