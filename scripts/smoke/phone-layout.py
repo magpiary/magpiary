@@ -87,7 +87,7 @@ print("phone swipe fade / nav hold / board names smoke: ok")
 # post view: one-row toolbar, Ask hidden, video capped, tab strip fades at the edge with more tabs
 assert ".crumbbar { flex-wrap: nowrap !important;" in css, "post toolbar must be one row"
 assert ".pvask, .pvactions:has(> .pvask:only-child) { display: none !important; }" in css, "Ask chip must be hidden on the phone"
-assert ".cardm.pagemode .stage { max-height: min(62svh, 520px) !important;" in css, "post video must be capped"
+assert "calc(75svh * var(--mar, 100))" in css, "post video must be capped at 75% of the screen"
 assert ".tabs.pvtabs.pmoreR {" in css and "pmoreR" in js, "post tab strip needs an edge fade"
 print("phone post view smoke: ok")
 
