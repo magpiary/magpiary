@@ -256,3 +256,67 @@ def test_phone_cannot_turn_the_lock_off(door):
     csrf = door.primary.hub._csrf
     assert door.request("POST", "/hub/lock/off", {"csrf": csrf})[0] == 403
     assert lock.enabled
+
+
+# ---- the Mac's Settings block and the pairing guide ----
+
+def mac_post(door, path, **form):
+    return door.primary.hub.post(path, {"csrf": door.primary.hub._csrf, **form}, "127.0.0.1", "localhost:8765", None)
+
+
+def mac_get(door, path):
+    return door.primary.hub.get(path, {}, "127.0.0.1", "localhost:8765")
+
+
+def test_switch_is_off_by_default_and_toggles_from_the_mac(tmp_path):
+    d = Door(tmp_path)
+    try:
+        assert not access.enabled(d.store)
+        page = mac_get(d, "/settings/phones").body.decode()
+        assert "Open the library on a phone" in page and "Pair a phone" not in page
+        mac_post(d, "/hub/access/toggle", enabled="1")
+        assert access.enabled(d.store)
+        assert "Pair a phone" in mac_get(d, "/settings/phones").body.decode()
+        mac_post(d, "/hub/access/toggle", enabled="0")
+        assert not access.enabled(d.store)
+    finally:
+        d.stop()
+
+
+def test_pairing_guide_serves_only_the_public_certificate_with_a_good_code(door):
+    mac_post(door, "/hub/access/pair")
+    page = mac_get(door, "/settings/phones").body.decode()
+    assert "Fingerprint" in page and access.ca_fingerprint() in page
+    token = door.primary.hub._pairing[0]
+    hub = door.primary.hub
+    guide = hub.access_guide(f"/phone-access/{token}", "192.168.1.20")
+    assert guide.status == 200 and access.ca_fingerprint().encode() in guide.body
+    crt = hub.access_guide(f"/phone-access/{token}/ca.crt", "192.168.1.20")
+    assert crt.status == 200 and b"BEGIN CERTIFICATE" in crt.body and b"PRIVATE" not in crt.body
+    assert hub.access_guide("/phone-access/wrong/ca.crt", "192.168.1.20").status == 410
+    assert hub.access_guide(f"/phone-access/{token}/ca.crt", "8.8.8.8").status == 410  # not a home-network address
+    door.store.set_setting(access.SETTING, "")
+    assert hub.access_guide(f"/phone-access/{token}/ca.crt", "192.168.1.20").status == 410
+
+
+def test_revoke_and_reset_from_the_mac_close_the_door_on_phones(door):
+    door.pair()
+    did = door.devices.active()[0]["id"]
+    mac_post(door, "/hub/access/revoke", id=str(did))
+    assert door.request("GET", "/")[0] == 401
+    door.pair("Second")
+    mac_post(door, "/hub/access/reset")
+    assert door.devices.active() == []
+
+
+def test_a_phone_cannot_use_the_access_settings(door):
+    door.pair()
+    csrf = door.primary.hub._csrf
+    for path in ("/hub/access/toggle", "/hub/access/pair", "/hub/access/revoke", "/hub/access/reset"):
+        assert door.request("POST", path, {"csrf": csrf, "id": "1", "enabled": "0"})[0] == 403
+    assert access.enabled(door.store) and len(door.devices.active()) == 1
+
+
+def test_mac_hub_still_refuses_other_addresses(door):
+    refused = door.primary.hub.get("/", {}, "192.168.1.20", "magpiary.local")
+    assert refused.status == 403

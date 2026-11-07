@@ -793,6 +793,7 @@ class SettingsPages:
                                  'confirms. <a class="link" href="/welcome/phone">Open the setup guide</a> for the Shortcut, '
                                  'the “allow” prompts and the Wi-Fi automation, step by step.</p>')),
                self._home_group(),
+               self.access_group(q),
                self._chrome_group(q),
                self._instagram_group(),
                qr]

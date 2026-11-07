@@ -26,6 +26,7 @@ from magpiary import login, modes, phone_gate, ui
 from magpiary.activity import Activity
 from magpiary.brain import Call, http_call
 from magpiary.cleaner import UnsupportedLink
+from magpiary.hub_access import AccessPages
 from magpiary.hub_ask import AskPages
 from magpiary.hub_askset import AskSettings
 from magpiary.hub_card import CardPages
@@ -125,7 +126,10 @@ class Hub(
     ChecklistPages,
     ActivityPages,
     MediaPages,
+    AccessPages,
 ):
+    port = 0  # the plain-HTTP port this hub is served on (set by the server)
+
     def __init__(
         self,
         store: Store,
@@ -367,6 +371,7 @@ class Hub(
         if self.pile_post(path, form) or self.welcome_post(path, form) or self.settings_post(path, form) or self.help_post(path, form):
             return Response(303, b"", headers={"Location": back})
         if (handled := self.phones_post(path, form)) is not None or (handled := self.settings_redirects(path, form)) is not None \
+                or (handled := self.access_post(path, form)) is not None \
                 or (handled := self.digest_post(path, form)) is not None or (handled := self.boards_post(path, form)) is not None:
             return handled
         if path == "/hub/bulk":

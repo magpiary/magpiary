@@ -130,6 +130,7 @@ class Server(ThreadingHTTPServer):
         self.activity = Activity(store)
         self.library: Path | None = None  # set by serve(); tests leave fetching off
         self.hub = Hub(store, wake=self.wake, activity=self.activity)
+        self.hub.port = self.server_port
         self.hub.setup = setup
         self.hub.sync_boards = self.boards_wanted.set
         self.hub.stats_wanted = self.stats_wanted
@@ -263,6 +264,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.send_json(200, {"ack": ACK, "boards": boards.phone_list(self.server.store),
                                  "wifi": self.server.store.wifi_mode_of(phone.id)})
+        elif parts.path.startswith("/phone-access/"):  # the pairing guide a phone opens from the QR (public certificate only)
+            self.send_page(self.server.hub.access_guide(parts.path, self.client_address[0]))
         elif parts.path in HUB_PAGES or parts.path.startswith(HUB_PREFIXES):
             self.send_page(self.server.hub.get(parts.path, parse_qs(parts.query), self.client_address[0],
                                                self.headers.get("Host", ""), self.headers.get("Range", ""),
