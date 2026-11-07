@@ -614,7 +614,7 @@ class SettingsPages:
                         "would run out.", '<a class="btn sm" href="/settings/ai#keys">Allow Claude Code or Codex</a>',
                         lead=ui.icon("sparkle"), sid="deepdive")
             return _group("Deeper dive", rows, gid="deep", desc="Off: no engine that can carry it.")
-        rows = _row("Deeper dive", what,
+        rows = _row("Use Deeper dive", what,
                     self._switch("/hub/deep/on", on, {"enabled": "0", "next": back}, {"enabled": "1", "next": back}, "Deeper dive"),
                     lead=ui.icon("sparkle"), sid="deepdive",
                     info="It runs only when you press Deeper dive on a post, once per post. "
@@ -633,9 +633,8 @@ class SettingsPages:
                        + (pick("effort", "Effort", efforts.items(), chosen["effort"]) if efforts else
                           '<span class="deeppick"><span>Effort</span><em>Set by the model</em></span>')
                        + "</form>")
-            rows += _row("Engine", "Which AI reads it. Frames and text go to that AI; the video never leaves this Mac. "
-                         "A stronger model and higher effort read more closely and use more of your plan or quota.",
-                         control, lead=ui.icon("sliders"), sid="deepengine", cls="rstack")
+            # no row title: the three labelled pickers (Engine, Model, Effort) say it, so the word is not written twice
+            rows += (f'<div class="srow rstack deeprow" id="deepengine"><div class="src">{control}</div></div>')
             minutes = self.store.get_setting(deepdive.LONG, str(deepdive.LONG_DEFAULT)) or str(deepdive.LONG_DEFAULT)
             waiting = len(deepdive.suggested_urls(self.store))
             rows += _row("Suggest it for videos longer than",

@@ -4379,3 +4379,14 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .pa > .pa-fold:last-child { padding-bottom: 4px; }
 @media (max-width: 760px) { .pa-card { grid-template-columns: 1fr; } .pa-qr { order: -1; } }
 @media (prefers-reduced-motion: reduce) { .pa-fold summary svg { transition: none; } }
+
+/* Alignment (8 Nov 2026): lines that stand between the rows of a group (a note, a fold, a "More options") start on the same left
+   edge as the rows' own content, which is the 20px padding of a row. */
+.sgroup .srows > .gnote { padding-left: 20px; padding-right: 20px; }
+.sgroup .srows > .advmini { margin-left: 0; margin-right: 0; padding-left: 20px; padding-right: 20px; }
+.sgroup .srow > .srmore > .advmini, .sgroup .srow > .srmore > .xmore { margin-left: 0; padding-left: 0; }
+.sgroup .srow.addrow .advmini { margin-left: 0; }
+.sgroup .srows .advmini > summary { padding-left: 0; }
+.srow:has(> .slead):not(.phone2) > .srmore > .xmore { margin-left: 51px; width: auto; }
+.srow.deeprow { padding-left: 68px; }
+.srow:has(> .slead) > .srmore > a.link { display: inline-block; margin-left: 42px; }
