@@ -516,3 +516,22 @@ document.addEventListener("click", function (ev) {
     if (hit) { hit.classList.toggle("open"); ev.preventDefault(); }
   }, true);
 })();
+
+// Settings: explanations are clamped to two lines (phone.css); a tap on a clamped one opens the whole text
+(function () {
+  if (!window.matchMedia || !matchMedia("(max-width: 760px)").matches) return;
+  var SEL = ".setpane .srl > p, .setpane .sgh > p, .setpane .gnote, .setpane .pnote, .setpane .sgh + p";
+  function mark() {
+    document.querySelectorAll(SEL).forEach(function (p) {
+      if (p.classList.contains("xp")) return;
+      p.classList.toggle("clp", p.scrollHeight > p.clientHeight + 2);
+    });
+  }
+  document.addEventListener("click", function (ev) {
+    var p = ev.target.closest && ev.target.closest(SEL);
+    if (!p || ev.target.closest("a, button, input, select")) return;
+    if (p.classList.contains("clp") || p.classList.contains("xp")) p.classList.toggle("xp");
+  });
+  new MutationObserver(function () { setTimeout(mark, 50); }).observe(document.body, { childList: true, subtree: true });
+  addEventListener("load", mark); setTimeout(mark, 400); setTimeout(mark, 1500);
+})();

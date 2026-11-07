@@ -178,3 +178,6 @@ print("phone settings last-row/privacy smoke: ok")
 assert ".setpane .srow:not(.addrow, .pfull, .rstack) { display: flex !important;" in css and ".setpane .engctl { display: flex !important;" in css, "settings sections: flat flex rows, controls under the text"
 assert ".setpane .segbar { display: flex !important; flex-wrap: nowrap !important;" in css and ".setpane .deepengine { display: grid !important;" in css, "settings segmented controls and engine pickers fit the screen"
 print("phone settings flat-rows smoke: ok")
+assert ".setpane .srow .sw { position: absolute !important; right: 0; top: 14px;" in css and "details.menu > .pop { position: fixed !important; left: 16px !important;" in css, "settings: switch always top right, menus on screen"
+assert "line-clamp: 2" in css and "Settings: explanations are clamped" in js, "settings: explanations clamped to two lines, tap opens"
+print("phone settings column/menu/clamp smoke: ok")
