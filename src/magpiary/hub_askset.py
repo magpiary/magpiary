@@ -123,19 +123,19 @@ class AskSettings:
             logo = ENGINE_LOGO[eid]
             if job["state"] == "working":
                 self._claude_cache = None
-                return _row(title, setup_note, ctl(f'<span class="sstat"><i></i>{e(job["text"])}</span><span data-askwait hidden></span>'), lead=logo)
+                return _row(title, setup_note, ctl(f'<span class="sstat"><i></i>{e(job["text"])}</span><span data-askwait hidden></span>'), lead=logo, cls="keep")
             if job["state"] == "error":
                 again = self._askset_form({"setup": eid}, "Try again")
-                return _row(title, e(job["text"]), ctl(remove=again), lead=logo)
+                return _row(title, e(job["text"]), ctl(remove=again), lead=logo, cls="keep")
             if not ready:
-                return _row(title, setup_note, ctl(switch=self._engine_switch(False, f"Set up {title}", {"setup": eid}, {}, confirm)), lead=logo)
+                return _row(title, setup_note, ctl(switch=self._engine_switch(False, f"Set up {title}", {"setup": eid}, {}, confirm)), lead=logo, cls="keep")
             if not engines.is_allowed(self.store, "claude_code" if eid == "claude" else "codex"):
                 return _row(title, "On this Mac, but not allowed. Magpiary never uses it until you allow it in AI keys.",
-                            ctl(remove='<a class="btn sm" href="/settings/ai#keys">Allow it</a>'), lead=logo)
+                            ctl(remove='<a class="btn sm" href="/settings/ai#keys">Allow it</a>'), lead=logo, cls="keep")
             on = active == eid
             controls = ctl(green if on else "", self._askset_form({"remove": eid}, "Remove", "btn sm ghost"),
                            self._engine_switch(on, f"Use {title}", {"engine": eid}, {"deactivate": eid}))
-            return _row(title, ready_note, controls, lead=logo)
+            return _row(title, ready_note, controls, lead=logo, cls="keep")
 
         from magpiary import engines
 

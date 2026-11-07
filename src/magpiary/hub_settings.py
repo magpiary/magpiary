@@ -4,10 +4,12 @@ the opt-in Instagram login), Ask Magpiary, AI agents, Shared
 boards, Appearance, Library & this Mac (folders, backup, Trash, keep awake, the health check), and Privacy (what leaves the Mac,
 where data lives, deleting it)."""
 
+import html
 import json
 import re
 import sqlite3
 import subprocess
+import threading
 import time
 from datetime import date, datetime
 from pathlib import Path
@@ -147,6 +149,12 @@ def _info(text: str) -> str:
             f'<span class="ttip">{e(text)}</span></span>')
 
 
+def _tip(desc: str, info: str = "") -> str:
+    """A dropped explaining line, as plain text for the (i) hover, joined to the row's own tip."""
+    text = html.unescape(re.sub(r"<[^>]+>", "", desc)).strip()
+    return (text + (" " + info if info else ""))[:600]
+
+
 def _more(body: str, label: str = "More about this") -> str:
     """A longer extra, folded until asked for. The plain "More about this" explanations are gone (8 Nov 2026, one line per row):
     only an extra with its own label, which carries steps or a command, is kept."""
@@ -170,10 +178,18 @@ def _handle(name: str, on: bool = True) -> str:
             f'title="Drag to change the order">{ui.icon("grip")}</button>')
 
 
+# A row's explaining line is dropped (8 Nov 2026, owner: too much text; he asks when he wants more). It stays only where it
+# states something live (a phone's date, a key's state, folder sizes) or is the row's content: classes below, or the Privacy page.
+KEEP_DESC = {"small", "phone2", "emptyrow", "askuse-row", "keyrow", "offrow", "keep"}
+_page = threading.local()
+
+
 def _row(label: str, desc: str = "", control: str = "", *, info: str = "", more: str = "", lead: str = "",
          cls: str = "", sid: str = "") -> str:
-    """One setting: what it is on the left (title, one muted line), its control on the right. The longer extras fold
-    on a line of their own below, so the control never moves when they open."""
+    """One setting: what it is on the left (title, one muted line when it has live state), its control on the right. The longer
+    extras fold on a line of their own below, so the control never moves when they open."""
+    if desc and not getattr(_page, "keep_all", False) and not KEEP_DESC & set(cls.split()):
+        info, desc = _tip(desc, info), ""  # the line moves behind the (i) hover instead of being shown
     return (f'<div class="srow{" " + cls if cls else ""}"' + (f' id="{sid}"' if sid else "") + ">"
             + (f'<span class="slead">{lead}</span>' if lead else "")
             + f'<div class="srl"><b>{label}{_info(info) if info else ""}</b>' + (f"<p>{desc}</p>" if desc else "") + "</div>"
@@ -182,6 +198,8 @@ def _row(label: str, desc: str = "", control: str = "", *, info: str = "", more:
 
 def _group(title: str, rows: str, *, gid: str = "", desc: str = "", info: str = "", more: str = "", lock: str = "",
            tag: str = "", cls: str = "", status: str = "", action: str = "") -> str:
+    if desc and title and not getattr(_page, "keep_all", False):
+        info, desc = _tip(desc, info), ""  # a group's line is a hover too (8 Nov 2026)
     return (f'<section class="sgroup{" " + cls if cls else ""}"' + (f' id="{gid}"' if gid else "") + '><header class="sgh">'
             + (f'<h3>{e(title)}' + (f"<small>{e(tag)}</small>" if tag else "") + (_info(info) if info else "") + "</h3>" if title else "")
             + (f"<p>{desc}</p>" if desc else "") + status + more + (f'<div class="sgact">{action}</div>' if action else "") + f'</header><div class="srows">{rows}'
@@ -235,6 +253,7 @@ class SettingsPages:
         if section and section not in PAGES:
             return self.shell("Not found", '<p class="empty">No such settings page. <a class="link" href="/settings">'
                               'Settings</a></p>', "missing", 404)
+        _page.keep_all = section == "privacy"  # the Privacy page is the information page: its lines stay
         root = not section  # /settings itself: on a phone this is the list of sections, not one of them
         section = section or next((k for k, (_, bad) in self._nav_status().items() if bad), "ai")
         saved = SAVED.get(q.get("saved", ""), "") or q.get("note", "")[:200]
@@ -475,7 +494,7 @@ class SettingsPages:
                                                  lead=_handle(k.name, working) + logo, sid=f"key-{k.id}",
                                                  cls="keyrow" + ("" if working else " offrow"))))
             else:
-                rows.append(("", _row(e(k.name), desc, _stat(state, tone) + _menu(f"More for {k.name}", items), lead=ui.icon("search"))))
+                rows.append(("", _row(e(k.name), desc, _stat(state, tone) + _menu(f"More for {k.name}", items), lead=ui.icon("search"), cls="keep")))
         if kind == "ai":
             return dict(rows)  # type: ignore[return-value]  (the AI keys are placed in the owner's one order by _keys_group)
         return "".join(r for _, r in rows)
@@ -640,7 +659,7 @@ class SettingsPages:
                          f'<form method="post" action="/hub/settings/search-limit" class="iform">{ui.hidden(self.csrf)}'
                          f'<input type="number" min="0" max="10000" name="limit" value="{e(limit)}" aria-label="Searches a month">'
                          f'<button class="btn sm" type="submit">Save</button></form>',
-                         info="Searches stop for the month at this number, so a paid plan never runs over.")
+                         info="Searches stop for the month at this number, so a paid plan never runs over.", cls="keep")
             on = True
         else:
             rows = (f'<div class="srow addrow"><details class="addk"><summary class="btn sm">{ui.icon("plus")}Add a search key'
@@ -788,8 +807,7 @@ class SettingsPages:
         out = [_group("Send posts from your iPhone", "".join(rows) + add + (self._home_group() if phones else ""), gid="phones", lock="phones", cls="hero lilac",
                       desc=(f"Share a post to Magpiary on your iPhone and it arrives here. Last delivery {e(ui.day(last))}." if last
                             else "Share a post to Magpiary on your iPhone and it arrives here."),
-                      more=_more('<p>Each phone has its own key and sends on any Wi-Fi your Mac is on. '
-                                 '<a class="link" href="/welcome/phone">Open the setup guide</a> for the Shortcut, step by step.</p>', "Setup guide")),
+                      more=""),
                self.access_group(q),
                qr]
         return "".join(out)
@@ -900,7 +918,7 @@ class SettingsPages:
 
         entries = downloads.catalog()
         rows = "".join(_row(e(d.name), f'{e(d.why)} From {e(d.source)} · <b class="size">{e(downloads.human_size(d.bytes))}</b>',
-                            _stat("On this Mac", "ok") if d.installed else _stat("Not here yet", "idle"), info=d.url)
+                            _stat("On this Mac", "ok") if d.installed else _stat("Not here yet", "idle"), info=d.url, cls="keep")
                        for d in entries)
         in_app = in_mac_app()
         if in_app:
@@ -939,7 +957,7 @@ class SettingsPages:
                 "models": ("Models", "The speech model, and the small model that finds related posts and piles")}
         rows = "".join(_row(name, f'{e(text)} · <b class="size">{_mb(_folder_size(folders[k]))}</b>',
                             self._finder(k, "/settings/storage"), lead=ui.icon("folder"),
-                            info=f"Folder: {folders[k]}")
+                            info=f"Folder: {folders[k]}", cls="keep")
                        for k, (name, text) in what.items())
         trash_controls = ('<a class="btn sm" href="/?shelf=trash">Open the Trash</a>'
                           + (self._form("/hub/empty-trash", {"next": "/settings/storage"}, "Empty", "btn sm danger",
@@ -971,15 +989,13 @@ class SettingsPages:
 
         port = self.setup.port if self.setup else DEFAULT_PORT
         last_backup = self.store.get_setting(BACKUP_SETTING, "")
-        backup = _row("Back up now", "Saves a copy of your database (your saves, notes and boards) in a Backups folder"
-                      + (f". Last one: {e(ui.day(last_backup))}." if last_backup else ".")
-                      + " Videos and photos are plain files in the Library folder above.",
+        backup = _row("Back up now", f"Last one: {e(ui.day(last_backup))}." if last_backup else "",
                       ui.button_form(self.csrf, "/hub/backup", {}, "Back up now", "btn sm dark", busy="Backing up…")
                       + (self._finder("backups", "/settings/storage") if folders["backups"].exists() else ""),
                       lead=ui.icon("copy"), sid="backup")
         restore = self._restore_row(folders["backups"])
         checking = self.store.get_setting(update.CHECK_SETTING, "1") != "0"
-        about = (_row("Magpiary", f"Version {e(__version__)}", lead=ui.icon("info"))
+        about = (_row("Magpiary", f"Version {e(__version__)}", lead=ui.icon("info"), cls="keep")
                  + _row("Support Magpiary", "Free, with no ads. If it helps you, a coffee covers the costs of keeping it going. Opens in your browser.",
                         f'<a class="btn sm" href="{SUPPORT_URL}" target="_blank" rel="noopener">Buy me a coffee ↗</a>',
                         lead=ui.icon("heart"), sid="support")
@@ -1038,7 +1054,7 @@ class SettingsPages:
         goals = self.store.get_setting(dg.GOALS, "")
         goals_row = _row("Your goals", (f"Its “Worth doing” picks lean toward: {e(goals[:90])}{'…' if len(goals) > 90 else ''}" if goals
                                         else "None yet, so its “Worth doing” picks are guessed from your saves."),
-                         '<a class="btn sm" href="/settings/profile#goals">Edit</a>', lead=ui.icon("sparkle"), sid="digest-goals")
+                         '<a class="btn sm" href="/settings/profile#goals">Edit</a>', lead=ui.icon("sparkle"), sid="digest-goals", cls="keep")
         from magpiary import engines
 
         private = modes.current(self.store) == "private"
@@ -1199,7 +1215,7 @@ class SettingsPages:
                      f'Synced {e(ago(b["synced_at"]))} through {via}' if b["synced_at"] else f"Not synced yet · {via}")
             rows += _row(f'<a class="link" href="/board/{b["id"]}">{e(v["name"])}</a>',
                          f'{len(v["members"])} member{"" if len(v["members"]) == 1 else "s"} · '
-                         f'{len(v["cards"])} card{"" if len(v["cards"]) == 1 else "s"} · {state}', lead=ui.icon("people"))
+                         f'{len(v["cards"])} card{"" if len(v["cards"]) == 1 else "s"} · {state}', lead=ui.icon("people"), cls="keep")
         if not found:
             return ""
         return _group("Your boards", rows, gid="boards", tag=str(len(found)),
