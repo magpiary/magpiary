@@ -148,3 +148,11 @@ assert 'nav.classList.add("pfix")' in js and ".tabs.pvtabs.pfix { position: fixe
 print("phone post pinned tabs smoke: ok")
 assert "html:has(.postpage)::before { content: \"\"; position: fixed; left: 0; right: 0; top: -500px;" in css, "solid cap behind the status bar on post pages"
 print("phone post status-bar cap smoke: ok")
+assert ".label .m .kind, .mx .kind, .bcard .kind { font-size: 12px; }" in css and ".avatar.mini > span { font-size: 10.5px; }" in css, "small text on the home screen"
+print("phone home small text smoke: ok")
+assert 'body[data-page="help"] em { font-size: 12px; }' in css, "Help small text"
+print("phone help small text smoke: ok")
+assert ".wrap > .sec > form:not(.sizes) { order: 3;" in css and ".sq .quote small { font-size: 12px; }" in css, "search results header and label"
+print("phone search results smoke: ok")
+assert '.sover .sbig kbd::after { content: "Close";' in css and '".sover .sbig kbd"' in js, "big search Close button"
+print("phone big search close smoke: ok")

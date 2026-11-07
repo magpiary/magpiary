@@ -447,3 +447,42 @@
   html:has(.postpage)::before { content: ""; position: fixed; left: 0; right: 0; top: -500px; height: 500px; background: var(--fade-0, #101015); z-index: 12; pointer-events: none; }
   .ptabsbg { display: none !important; }
 }
+
+/* ---- small text audit (owner, 7 Nov): nothing readable under 12px. The kind badge (Tool, Explainer...) was 10.5px, the filter group titles
+   11px and the "Waiting" / board-name chips 11.5px. The little initials in a round author avatar are drawing, not reading: the avatar
+   grows from 18px to 22px so its letters can be 10.5px instead of 9px. The author name link gets a bigger area to tap. ---- */
+@media (max-width: 760px) {
+  .label .m .kind, .mx .kind, .bcard .kind { font-size: 12px; }
+  .fgroup h5 { font-size: 12px; }
+  .avatar.mini { width: 22px; height: 22px; min-width: 22px; }
+  .avatar.mini > span { font-size: 10.5px; }
+  .label .who { padding-block: 8px; margin-block: -8px; }
+  .sq .src { font-size: 12px; }
+}
+
+/* Help: the "4 steps" badges were 11.5px; the chapter chips were 32px tall */
+@media (max-width: 760px) {
+  body[data-page="help"] em { font-size: 12px; }
+  body[data-page="help"] .hnl { min-height: 40px; }
+  .pile .lab small, .bpile .folder .flap small, .sq .src + span { font-size: 12px; }
+}
+
+/* ---- search results (owner asked for a sweep, 7 Nov): the heading row put "21 found", a wrapped sentence, "Save as a view" (in 3 lines)
+   and two icons on one line. Now: the count, the sentence under it, then the action row; the tile-size button is gone like everywhere on a
+   phone; the label above the matching line (Caption, Topic...) is 12px ---- */
+@media (max-width: 760px) {
+  .wrap > .sec { flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+  .wrap > .sec > h2 { flex: 1 0 100%; margin: 0; }
+  .wrap > .sec > span { flex: 1 0 100%; order: 2; min-width: 0; }
+  .wrap > .sec > form:not(.sizes) { order: 3; margin: 6px auto 0 0; }
+  .wrap > .sec > .selbtn { order: 4; margin-top: 6px; }
+  .wrap > .sec .sizes { display: none !important; }
+  .wrap > .sec .pillb { white-space: nowrap; }
+  .sq .quote small { font-size: 12px; }
+}
+
+/* the big search: "esc" is a keyboard hint that means nothing on a phone, so it is a Close button there (phone.js sends it the Escape key) */
+@media (max-width: 760px) {
+  .sover .sbig kbd { font-size: 0; line-height: 0; padding: 0 12px; height: 32px; display: inline-flex; align-items: center; border-radius: 999px; cursor: pointer; }
+  .sover .sbig kbd::after { content: "Close"; font: 600 12px var(--sans, system-ui); letter-spacing: 0; text-transform: none; color: var(--fg-2, #ccc); }
+}

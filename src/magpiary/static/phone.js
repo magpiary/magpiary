@@ -496,3 +496,13 @@ document.addEventListener("click", (ev) => {
   document.addEventListener("loadedmetadata", queue, true);
   align();
 })();
+
+/* the big search's Close button (the "esc" hint) closes it by sending the Escape key the page already listens for */
+document.addEventListener("click", function (ev) {
+  if (innerWidth > 760 || !(ev.target instanceof Element)) return;
+  const k = ev.target.closest(".sover .sbig kbd");
+  if (!k) return;
+  const opts = { key: "Escape", code: "Escape", keyCode: 27, which: 27, bubbles: true, cancelable: true };
+  const input = k.parentElement.querySelector("input");
+  (input || document).dispatchEvent(new KeyboardEvent("keydown", opts));
+});
