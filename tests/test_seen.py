@@ -63,6 +63,19 @@ def test_seen_says_when_the_saved_copy_kept_only_part_of_a_carousel(env, tmp_pat
     assert ask(env, key, "/v1/seen", {"urls": [url]})[1]["results"][url]["partial"] is True
     (folder / "meta.json").write_text(json.dumps({"media": ["media-01.jpg"]}))  # a full copy has no such note
     assert ask(env, key, "/v1/seen", {"urls": [url]})[1]["results"][url]["partial"] is False
+    (folder / "meta.json").write_text(json.dumps({"captured": True, "media": ["media-01.webp"]}))  # a page reading that did not reach the last slide
+    assert ask(env, key, "/v1/seen", {"urls": [url]})[1]["results"][url]["partial"] is True
+    (folder / "meta.json").write_text(json.dumps({"captured": True, "slides_complete": True, "media": ["media-01.webp"]}))
+    assert ask(env, key, "/v1/seen", {"urls": [url]})[1]["results"][url]["partial"] is False
+
+
+def test_seen_never_calls_a_threads_or_other_copy_partial(env, tmp_path):
+    key = paired(env)
+    save(env, key, THREAD_1)
+    row = env.mac.store.items()[0]
+    (tmp_path / "meta.json").write_text(json.dumps({"captured": True}))
+    env.mac.store._db.execute("UPDATE items SET archive_dir=? WHERE id=?", (str(tmp_path), row["id"]))
+    assert ask(env, key, "/v1/seen", {"urls": [THREAD_1]})[1]["results"][THREAD_1]["partial"] is False
 
 
 def board(env, name):

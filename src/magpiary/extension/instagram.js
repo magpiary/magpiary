@@ -46,10 +46,10 @@
   for (let i = 0; i < MAX_SLIDES * 2 && back(); i++) { back().click(); await sleep(STEP * 2); }   // the owner may have left the post on a later slide: start from the first
   await sleep(STEP * 2);
   note();
-  let clicks = 0, stalled = 0;
+  let clicks = 0, stalled = 0, complete = false;
   while (slides.length < MAX_SLIDES && clicks < MAX_SLIDES * 2) {
     const go = next();
-    if (!go) break;                              // the last slide has no Next
+    if (!go) { complete = true; break; }         // the last slide has no Next: every slide has been seen
     go.click();
     clicks += 1;
     let found = 0;
@@ -58,7 +58,7 @@
       found = note();
     }
     if (found) { stalled = 0; continue; }
-    if (!next()) break;
+    if (!next()) { complete = true; break; }     // no new picture and no Next: that was the last slide
     if (++stalled >= 2) break;                   // Instagram stopped giving new pictures: keep what there is
   }
   for (let i = 0; i < MAX_SLIDES * 2 && back(); i++) { back().click(); await sleep(60); }   // leave the post on its first slide
@@ -66,5 +66,5 @@
   const text = meta('meta[property="og:description"]');
   const blocks = slides.map((s) => ({ t: "img", src: s.src, also: [], alt: s.alt }));
   if (blocks.length && text) blocks.push({ t: "p", text });
-  return { ...empty, title: meta('meta[property="og:title"]') || document.title, lang: (document.documentElement.lang || "").slice(0, 20), blocks };
+  return { ...empty, title: meta('meta[property="og:title"]') || document.title, lang: (document.documentElement.lang || "").slice(0, 20), slides_complete: complete, blocks };
 })();

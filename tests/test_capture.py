@@ -296,3 +296,15 @@ def test_rows_and_pictures_side_by_side_are_kept_and_drawn_together(tmp_path):
     assert html.count('<div class="rdgal" style="--n:2">') == 1
     assert html.index("/m/media-02.jpg") < html.index("</div>") < html.index("/m/media-03.jpg")   # the lone picture sits below
     assert capture.Capture(tmp_path, page).text().startswith("Paper · Craft · <b>Slow</b>")
+
+
+def test_a_page_reading_that_reached_the_last_slide_is_marked_complete_and_others_are_not(tmp_path):
+    from magpiary.capture import Capture, clean_page
+
+    page = {"title": "t", "blocks": [{"t": "img", "src": "https://cdn.example/a.jpg"}]}
+    assert "slides_complete" not in clean_page(page)
+    assert "slides_complete" not in clean_page({**page, "slides_complete": "yes"})  # only a real true counts
+    kept = clean_page({**page, "slides_complete": True})
+    assert kept["slides_complete"] is True
+    assert Capture(tmp_path, kept).fetched().meta["slides_complete"] is True
+    assert "slides_complete" not in Capture(tmp_path, clean_page(page)).fetched().meta

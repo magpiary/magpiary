@@ -34,15 +34,19 @@ def _variants(url: str) -> list[str]:
 
 
 def _partial(row: dict) -> bool:
-    """Whether the saved copy kept only part of a carousel (its meta.json says so): the extension then offers to read the
+    """Whether an Instagram copy may have only part of a carousel: its meta.json says so, or it came from a page reading
+    that did not reach the last slide (the Chrome extension marks one that did). The extension then offers to read the
     page as the owner sees it. A missing or unreadable file means no."""
     folder = row.get("archive_dir")
-    if not folder:
+    if not folder or row.get("source") != "instagram":
         return False
     try:
-        return bool(json.loads((Path(folder) / "meta.json").read_text()).get("partial_slides"))
-    except (OSError, ValueError, AttributeError):
+        meta = json.loads((Path(folder) / "meta.json").read_text())
+    except (OSError, ValueError):
         return False
+    if not isinstance(meta, dict):
+        return False
+    return bool(meta.get("partial_slides")) or (bool(meta.get("captured")) and not meta.get("slides_complete"))
 
 
 def seen(store, urls: list) -> dict:

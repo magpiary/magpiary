@@ -93,7 +93,8 @@ def clean_page(page) -> dict:
         raise BadCapture("too much text")
     return {"title": _text(page.get("title"), 500).strip(), "byline": _text(page.get("byline"), 300).strip(),
             "published": _text(page.get("published"), 40).strip(), "site": _text(page.get("site"), 200).strip(),
-            "lang": _text(page.get("lang"), 20).strip(), "blocks": blocks}
+            "lang": _text(page.get("lang"), 20).strip(), "blocks": blocks,
+            **({"slides_complete": True} if page.get("slides_complete") is True else {})}  # the Instagram reader got to the last slide
 
 
 def _b64(value, prefix: str = "") -> bytes:
@@ -194,7 +195,7 @@ class Capture:
     def fetched(self) -> Fetched:
         p = self.page
         meta = {"title": p["title"], "text": self.text(), "published_at": p["published"], "author": p["byline"],
-                "site_name": p["site"], "captured": True}
+                "site_name": p["site"], "captured": True, **({"slides_complete": True} if p.get("slides_complete") else {})}
         posters = [b["poster"] for b in p["blocks"] if b["t"] == "video" and b["poster"] and not b["src"]]
         return Fetched(meta, images=list(dict.fromkeys(self.pictures() + posters))[:MAX_PICTURES],
                        videos=self.videos(), fetched_with="the page as you saw it (Chrome extension)")

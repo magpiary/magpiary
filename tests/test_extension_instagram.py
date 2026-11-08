@@ -61,7 +61,7 @@ def test_the_reader_collects_every_slide_in_order_and_leaves_the_post_on_its_fir
     page, position = run(12)
     pictures = [b["src"].split("?")[0] for b in page["blocks"] if b["t"] == "img"]
     assert pictures == [f"https://ig.test/s{n}.jpg" for n in range(1, 13)]
-    assert position == 0
+    assert position == 0 and page["slides_complete"] is True
     assert [b["text"] for b in page["blocks"] if b["t"] == "p"] == ["9 likes - tessexample: A fictional caption"]
     assert page["title"] == "Tess Example on Instagram" and page["site"] == "Instagram"
 
@@ -82,6 +82,7 @@ def test_the_reader_leaves_out_avatars_and_the_other_posts_grid():
 def test_the_reader_stops_at_twenty_slides():
     page, _ = run(30)
     assert len([b for b in page["blocks"] if b["t"] == "img"]) == 20
+    assert page["slides_complete"] is False  # the last slide was not reached, so the copy stays offered for another read
 
 
 def test_a_page_with_no_slide_list_reads_nothing_so_the_link_is_saved():
