@@ -440,6 +440,21 @@ def test_an_instagram_photo_carousel_keeps_every_photo_and_the_details(tmp_path)
     assert json.loads((folder / "meta.json").read_text())["media"] == ["media-01.webp", "media-02.jpg"]
 
 
+def test_an_instagram_carousel_with_a_refused_embed_keeps_the_first_slide_and_the_caption(tmp_path):
+    post = "https://www.instagram.com/p/Carousel2/"
+    info = {"_type": "playlist", "entries": [None, None, None]}
+    page = (b'<meta property="og:title" content="Tess Example on Instagram">'
+            b'<meta property="og:description" content="9 likes - tessexample: A fictional caption">'
+            b'<meta property="og:image" content="https://cdn.example/v/first.jpg">')
+    get = pages({post: page, post + "embed/captioned/": b"<html>The link may be broken</html>",
+                 "https://cdn.example/v/first.jpg": JPEG})
+    got = describe("instagram", post, get, FakeYtDlp(infos={post: info}))
+    assert got.images == ["https://cdn.example/v/first.jpg"] and not got.video
+    assert "fictional caption" in got.meta["text"] and got.meta["parts"] == 3
+    folder = fetch_item(item(post, "instagram"), tmp_path, get, FakeYtDlp(infos={post: info}))
+    assert json.loads((folder / "meta.json").read_text())["media"] == ["media-01.jpg"]
+
+
 def test_a_timeout_on_one_post_does_not_hold_up_the_posts_after_it(store, tmp_path):
     """Review 4 Nov 2026: a yt-dlp timeout escaped and stopped the pass on the same oldest post every time."""
     slow = "https://www.instagram.com/reel/Slow1/"

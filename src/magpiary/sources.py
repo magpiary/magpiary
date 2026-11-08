@@ -166,6 +166,21 @@ def photo_slides(entries: list, pictures: list[str]) -> list[str]:
     return pictures
 
 
+def _carousel_from_page(url: str, get: Get, info: dict) -> Fetched:
+    """A photo carousel whose embed page Instagram refuses: yt-dlp reads no slide and has no caption, so keep what the
+    post page itself shows (the first slide and the caption) rather than saving nothing."""
+    meta = _from_info(info)
+    try:
+        tags = page_tags(_page(get, url))
+    except FetchFailed:
+        tags = {}
+    for key, value in _from_tags(tags).items():
+        if value and not meta.get(key):
+            meta[key] = value
+    meta["partial_slides"] = "only the first slide could be saved"
+    return Fetched(meta, images=[tags["og:image"]] if tags.get("og:image") else [], fetched_with="page")
+
+
 def video_site(url: str, get: Get, ytdlp: YtDlp) -> Fetched:
     """Instagram and YouTube: yt-dlp reads the post. Instagram photos come from the embed page."""
     try:
@@ -179,7 +194,10 @@ def video_site(url: str, get: Get, ytdlp: YtDlp) -> Fetched:
                        fetched_with="page")
     entries = info.get("entries")
     if entries is not None and None in entries:  # a carousel with photos yt-dlp could not read
-        return Fetched(_from_info(info), video=any(entries), images=photo_slides(entries, instagram_photos(url, get)),
+        pictures = instagram_photos(url, get)
+        if not pictures and not any(entries) and "instagram.com" in url:
+            return _carousel_from_page(url, get, info)
+        return Fetched(_from_info(info), video=any(entries), images=photo_slides(entries, pictures),
                        fetched_with="yt-dlp + embed page")
     return Fetched(_from_info(info), video=True, fetched_with="yt-dlp")
 
