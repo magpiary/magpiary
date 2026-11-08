@@ -199,6 +199,8 @@ def threads(url: str, get: Get, ytdlp: YtDlp) -> Fetched:
     meta.update(embed["meta"])
     if embed["videos"]:  # the page's picture is then the video's cover
         return Fetched(meta, videos=embed["videos"], poster=image[0] if image else "", fetched_with="page + embed page")
+    if len(embed["images"]) > 1:  # a carousel: the post page names only its first slide, the embed lists them all
+        image = embed["images"]
     return Fetched(meta, images=image, fetched_with="page + embed page" if embed["meta"] else "page")
 
 
@@ -218,14 +220,15 @@ def _short_number(text: str) -> int | None:
 
 
 def threads_embed(url: str, get: Get) -> dict:
-    """What Threads' own embed page (logged out) adds to the post page: the video files, the four counts (likes,
+    """What Threads' own embed page (logged out) adds to the post page: the video files, every slide of a photo carousel, the four counts (likes,
     comments, reposts, shares) and the day it was posted. The post page itself only has the cover. {} when it has none."""
-    empty = {"videos": [], "meta": {}}
+    empty = {"videos": [], "images": [], "meta": {}}
     try:
         body = _page(get, url.rstrip("/") + "/embed").decode("utf-8", "replace")
     except FetchFailed:
         return empty
     videos = [html.unescape(src) for src in re.findall(r'<video[^>]*>\s*<source[^>]*\bsrc="(https://[^"]+)"', body)]
+    images = [html.unescape(src) for src in re.findall(r'class="MediaScrollImageContainer"[^>]*>\s*<img[^>]*\bsrc="(https://[^"]+)"', body)]
     meta: dict = {}
     bar = body.partition('class="ActionBarContainer"')[2].partition("</div>")[0]
     slots = bar.split('class="ActionBarIcon"')[1:]  # one per icon; Threads leaves the number out when it is 0
@@ -238,7 +241,7 @@ def threads_embed(url: str, get: Get) -> dict:
             meta["published_at"] = datetime.strptime(posted.group(1), "%b %d, %Y").date().isoformat()
         except ValueError:
             pass
-    return {"videos": list(dict.fromkeys(videos))[:20], "meta": meta}
+    return {"videos": list(dict.fromkeys(videos))[:20], "images": list(dict.fromkeys(images))[:20], "meta": meta}
 
 
 # ---- Reddit: the post's RSS feed (post first, then comments) -----------------------------

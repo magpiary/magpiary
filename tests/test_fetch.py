@@ -34,6 +34,10 @@ THREADS_EMBED_HTML = b"""<html><body><div class="SoloMediaContainer" id="u_0_2_h
 <span class="ActionBarIcon"><svg></svg><span class="ActionBarCount">1</span></span>
 <span class="ActionBarIcon"><svg></svg><span class="ActionBarCount">5</span></span>
 <span class="ActionBarIcon"><svg></svg><span class="ActionBarCount">1.2K</span></span></div></body></html>"""
+THREADS_CAROUSEL_EMBED_HTML = b"""<html><body><img class="img" src="https://cdn.example/avatar.jpg">
+<div class="MediaScrollContainer"><div class="MediaContainer"><div class="MediaScrollImageContainer"><img class="img" src="https://cdn.example/s1.jpg?a=1&amp;b=2"></div>
+<div class="MediaScrollImageContainer"><img class="img" src="https://cdn.example/s2.jpg"></div>
+<div class="MediaScrollImageContainer"><img class="img" src="https://cdn.example/s3.jpg"></div></div></div></body></html>"""
 MP4 = b"\x00\x00\x00\x18ftypmp42" + b"0" * 100
 
 REDDIT_RSS = b"""<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
@@ -124,6 +128,12 @@ def test_threads_counts_and_day_come_from_the_embed_page_in_the_action_bars_orde
     got = describe("threads", url, pages({url: THREADS_HTML, url.rstrip("/") + "/embed": THREADS_EMBED_HTML}), FakeYtDlp())
     assert (got.meta["like_count"], got.meta["comment_count"], got.meta["repost_count"], got.meta["share_count"]) == (51, 1, 5, 1200)
     assert got.meta["published_at"] == "2026-11-02"
+
+
+def test_threads_carousel_keeps_every_slide_from_the_embed_page_and_not_the_avatar():
+    url = "https://www.threads.com/@alex.example/post/Example1/"
+    got = describe("threads", url, pages({url: THREADS_HTML, url.rstrip("/") + "/embed": THREADS_CAROUSEL_EMBED_HTML}), FakeYtDlp())
+    assert got.images == ["https://cdn.example/s1.jpg?a=1&b=2", "https://cdn.example/s2.jpg", "https://cdn.example/s3.jpg"]
 
 
 def test_threads_post_without_a_video_still_gets_its_counts():
