@@ -308,3 +308,13 @@ def test_a_page_reading_that_reached_the_last_slide_is_marked_complete_and_other
     assert kept["slides_complete"] is True
     assert Capture(tmp_path, kept).fetched().meta["slides_complete"] is True
     assert "slides_complete" not in Capture(tmp_path, clean_page(page)).fetched().meta
+
+
+def test_an_instagram_capture_has_no_reader_view_so_no_picture_is_shown_twice(tmp_path):
+    ig = "https://www.instagram.com/p/Carousel9/"
+    page = {"title": "t", "blocks": [{"t": "img", "src": PIC1}, {"t": "img", "src": PIC2}, {"t": "p", "text": "9 likes"}]}
+    capture.save(ig, "c-ig", page)
+    folder = fetch_item({"canonical_url": ig, "source": "instagram", "kind": "post"}, tmp_path / "library",
+                        lambda url: (200, JPEG), capture=capture.latest(ig))
+    assert not (folder / "article.json").exists()
+    assert json.loads((folder / "meta.json").read_text())["media"] == ["media-01.jpg", "media-02.jpg"]

@@ -179,7 +179,8 @@ def fetch_item(item: dict, library: Path, get: Get = http_get, ytdlp: YtDlp | No
         if capture:
             pictures = _save_captured(capture, fetched.images, work, get, len(media) + 1)
             media += list(pictures.values())
-            _write_article(capture, work, pictures, video_names)
+            if source != "instagram":  # an Instagram carousel is its pictures: the gallery shows them, a reader view would repeat every one
+                _write_article(capture, work, pictures, video_names)
         else:
             media += _save_images(fetched.images, work, lambda u: get_image(get, u), len(media) + 1)
         if not media and not fetched.meta.get("text"):
