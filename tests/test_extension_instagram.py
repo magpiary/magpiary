@@ -25,7 +25,7 @@ PAGE = """<!doctype html><html lang="en"><head><title>Tess Example on Instagram<
 <ul id="comments"><li><img class="ava" src="https://ig.test/avatar1.jpg"></li><li><img class="ava" src="https://ig.test/avatar2.jpg"></li></ul>
 <div><a href="/p/OTHER1/"><img class="more" src="https://ig.test/more1.jpg"></a><a href="/p/OTHER2/"><img class="more" src="https://ig.test/more2.jpg"></a></div></main>
 <script>
-const N = %d; let at = 0;
+const N = %d; let at = %d;
 function draw() {
   const ul = document.getElementById("slides"); ul.innerHTML = "";
   for (let i = Math.max(0, at - 1); i <= Math.min(N - 1, at + 1); i++) {
@@ -40,14 +40,14 @@ draw();
 </script></body></html>"""
 
 
-def run(slides: int):
+def run(slides: int, start: int = 0):
     script = (EXT / "instagram.js").read_text().strip().rstrip(";")
     with pw.sync_playwright() as p:
         browser = p.chromium.launch(executable_path=CHROME, headless=True)
         page = browser.new_page()
         page.route("https://ig.test/**", lambda route: route.fulfill(
             status=200, content_type="text/html" if route.request.url.endswith("/post") else "image/png",
-            body=(PAGE % slides).encode() if route.request.url.endswith("/post") else PNG))
+            body=(PAGE % (slides, start)).encode() if route.request.url.endswith("/post") else PNG))
         page.goto("https://ig.test/post")
         page.wait_for_selector("#slides img")
         page.wait_for_timeout(200)
@@ -64,6 +64,13 @@ def test_the_reader_collects_every_slide_in_order_and_leaves_the_post_on_its_fir
     assert position == 0
     assert [b["text"] for b in page["blocks"] if b["t"] == "p"] == ["9 likes - tessexample: A fictional caption"]
     assert page["title"] == "Tess Example on Instagram" and page["site"] == "Instagram"
+
+
+def test_the_reader_starts_from_the_first_slide_when_the_post_was_left_on_a_later_one():
+    page, position = run(12, start=7)
+    pictures = [b["src"].split("?")[0] for b in page["blocks"] if b["t"] == "img"]
+    assert pictures == [f"https://ig.test/s{n}.jpg" for n in range(1, 13)]
+    assert position == 0
 
 
 def test_the_reader_leaves_out_avatars_and_the_other_posts_grid():

@@ -1,7 +1,7 @@
 /* "Save what I see" for an Instagram carousel: runs in the open Instagram post only when the owner ticks the box and saves.
  * Instagram keeps just the slide on screen and its neighbours in the page, so a plain reading finds two or three of a dozen.
  * This steps through the post with its own Next button, notes each new slide picture as it appears, then steps back to
- * the first slide. It reads only the post's picture list (never the comments, avatars or the "more posts" grid), makes no
+ * the first slide (it also starts from the first slide, wherever the post was left). It reads only the post's picture list (never the comments, avatars or the "more posts" grid), makes no
  * request, and reads no cookies or storage. The last value is a promise of the page in the same shape capture.js hands over;
  * with nothing found it has no blocks, and the extension saves the link as before. */
 (async () => {
@@ -43,6 +43,8 @@
     return added;
   }
 
+  for (let i = 0; i < MAX_SLIDES * 2 && back(); i++) { back().click(); await sleep(STEP * 2); }   // the owner may have left the post on a later slide: start from the first
+  await sleep(STEP * 2);
   note();
   let clicks = 0, stalled = 0;
   while (slides.length < MAX_SLIDES && clicks < MAX_SLIDES * 2) {
