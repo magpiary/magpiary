@@ -141,7 +141,7 @@ class CardPages:
         item = self.store.item_by_id(item_id)
         folder = Path(item["archive_dir"]) if item and item.get("archive_dir") else None
         article = _read_json(folder / "article.json") if folder else None
-        return (article, folder, item["canonical_url"]) if isinstance(article, dict) and article.get("blocks") else None
+        return (article, folder, item["canonical_url"]) if isinstance(article, dict) and article.get("blocks") and item["source"] != "instagram" else None
 
     def pdf_page(self, item_id: int) -> Response:
         """GET: the saved page ready for the browser's Save as PDF. Cheap on purpose: any page can make a browser ask for an
@@ -702,7 +702,7 @@ class CardPages:
                 ("det", "Details", "", self._details_pane(item, record, folder, meta))]
         tabs = tabs[:1] + self._extra_tabs(item, record, context) + tabs[1:]  # Ask Magpiary is the second tab, after Summary
         article = _read_json(folder / "article.json") if folder else None
-        if isinstance(article, dict) and article.get("blocks"):  # a page saved as the owner saw it: read it first
+        if isinstance(article, dict) and article.get("blocks") and item["source"] != "instagram":  # a page saved as the owner saw it: read it first (an Instagram carousel is only pictures, the gallery shows them)
             tabs.insert(0, ("read", "Read", "", self._reader_pane(item, article, folder)))
             tab = tab or "read"
         off = self._transcript_off(folder)  # no speech or no transcript: the tab stays, greyed, with the reason on hover

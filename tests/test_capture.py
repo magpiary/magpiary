@@ -210,6 +210,17 @@ def test_a_captured_page_opens_on_its_reader_view_with_everything_escaped(mac, t
     assert request(mac, "GET", f"/media/{item_id}/article.json")[0] == 404   # only pictures and videos are served
 
 
+def test_an_instagram_item_has_no_read_tab_even_if_an_older_save_left_a_reader_view(mac, tmp_path):
+    from test_hub import archive, page
+
+    ig = "https://www.instagram.com/p/Carousel8/"
+    article = {"title": "t", "blocks": [{"t": "img", "src": PIC1, "file": "media-01.jpg"}, {"t": "p", "text": "9 likes"}]}
+    item_id, _ = archive(mac, tmp_path, ig, "instagram", {"title": "t", "media": ["media-01.jpg"]},
+                         {"media-01.jpg": JPEG, "article.json": json.dumps(article).encode()})
+    status, _, html = page(mac, f"/item/{item_id}")
+    assert status == 200 and 'data-tab="read"' not in html and 'class="reader"' not in html
+
+
 def captured_post(mac, tmp_path):
     from test_hub import archive
 
