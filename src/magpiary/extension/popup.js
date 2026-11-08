@@ -101,7 +101,7 @@ async function init() {
     $("pill").style.setProperty("--c", color);
     $("pill").lastElementChild.textContent = cleaned.source === "other" ? name : `${name} ${cleaned.kind || "post"}`;
     $("link").textContent = cleaned.url.replace(/^https?:\/\/(www\.)?/, "") + (cleaned.needsExpansion ? " · your Mac will expand this short link" : "");
-    $("seenbox").hidden = cleaned.source !== "other";   // posts on the six feed sites are read by the Mac itself
+    $("seenbox").hidden = cleaned.source !== "other";   // posts on the six feed sites are read by the Mac itself (an Instagram post it could only partly read is offered below)
     $("savego").onclick = () => doSave(cleaned, tab);
     $("addnote").onclick = () => { $("addnote").hidden = true; $("notebox").hidden = false; $("note").focus(); };
     $("note").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("savego").click(); });
@@ -116,6 +116,7 @@ async function init() {
       $("seentitle").textContent = `Saved ${ago(info.last)}${info.count > 1 ? ` · ${info.count} times` : ""}`.replace("Saved  ", "Saved ");
       $("seenopen").href = `http://localhost:${hubPort}/item/${info.id}`;
       $("savego").firstChild.textContent = "Save again ";
+      if (info.partial && cleaned.source === "instagram") $("seenbox").hidden = false;   // the Mac kept only part of this carousel: offer to read it from the page
     });
     send({ type: "suggest", url: cleaned.url }).then((sg) => {   // the board that fits, from what you've just been saving
       if (!sg) return;

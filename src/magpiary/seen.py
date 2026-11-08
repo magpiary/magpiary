@@ -1,7 +1,9 @@
 """What the Chrome extension may ask the hub: is this link already saved, and which board fits it. Both answer only about the
 links asked, never a list of the library, and both need a paired browser's key."""
 
+import json
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from magpiary import boards, identity
@@ -31,8 +33,20 @@ def _variants(url: str) -> list[str]:
     return list(dict.fromkeys(out))
 
 
+def _partial(row: dict) -> bool:
+    """Whether the saved copy kept only part of a carousel (its meta.json says so): the extension then offers to read the
+    page as the owner sees it. A missing or unreadable file means no."""
+    folder = row.get("archive_dir")
+    if not folder:
+        return False
+    try:
+        return bool(json.loads((Path(folder) / "meta.json").read_text()).get("partial_slides"))
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
 def seen(store, urls: list) -> dict:
-    """{asked address: {saved, id, count, last}} for each address asked (at most MAX_URLS). Trash does not count as saved."""
+    """{asked address: {saved, id, count, last, partial}} for each address asked (at most MAX_URLS). Trash does not count as saved."""
     out = {}
     for asked in [u for u in urls if isinstance(u, str)][:MAX_URLS]:
         found = None
@@ -41,7 +55,8 @@ def seen(store, urls: list) -> dict:
             if row and row.get("shelf") != "trash":
                 found = row
                 break
-        out[asked] = ({"saved": True, "id": found["id"], "count": found["saved_count"], "last": found["last_shared_at"]}
+        out[asked] = ({"saved": True, "id": found["id"], "count": found["saved_count"], "last": found["last_shared_at"],
+                       "partial": _partial(found)}
                       if found else {"saved": False})
     return out
 

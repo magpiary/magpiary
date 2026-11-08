@@ -50,6 +50,21 @@ def test_seen_counts_repeat_saves_trash_and_the_instagram_twin(env):
     assert ask(env, key, "/v1/seen", {"urls": ["https://www.instagram.com/p/ZZZ111/"]})[1]["results"].popitem()[1] == {"saved": False}
 
 
+def test_seen_says_when_the_saved_copy_kept_only_part_of_a_carousel(env, tmp_path):
+    key = paired(env)
+    url = "https://www.instagram.com/p/PART111/"
+    save(env, key, url)
+    row = env.mac.store.items()[0]
+    folder = tmp_path / "instagram-PART111"
+    folder.mkdir()
+    env.mac.store._db.execute("UPDATE items SET archive_dir=? WHERE id=?", (str(folder), row["id"]))
+    assert ask(env, key, "/v1/seen", {"urls": [url]})[1]["results"][url]["partial"] is False  # no meta.json yet
+    (folder / "meta.json").write_text(json.dumps({"partial_slides": "only the first slide could be saved"}))
+    assert ask(env, key, "/v1/seen", {"urls": [url]})[1]["results"][url]["partial"] is True
+    (folder / "meta.json").write_text(json.dumps({"media": ["media-01.jpg"]}))  # a full copy has no such note
+    assert ask(env, key, "/v1/seen", {"urls": [url]})[1]["results"][url]["partial"] is False
+
+
 def board(env, name):
     return boards.create(env.mac.store, name)
 

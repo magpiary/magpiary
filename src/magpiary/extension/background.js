@@ -149,10 +149,14 @@ async function base64(blob) {
 }
 
 /** Read the open tab as the owner sees it. Chrome lets us because the owner opened the panel on this tab and pressed Save. */
+const INSTAGRAM_POST = /^https:\/\/www\.instagram\.com\/(?:[^/]+\/)?(?:p|reels?|tv)\//;
+
 async function readTab(tab) {
-  const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["capture.js"] });
+  const instagram = INSTAGRAM_POST.test(tab.url || "");   // a carousel is read slide by slide; no screenshot or page copy of a logged-in page is sent
+  const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: [instagram ? "instagram.js" : "capture.js"] });
   const page = result && result.result;
   if (!page || !Array.isArray(page.blocks) || !page.blocks.length) return null;
+  if (instagram) return { page, screen: "", mhtml: "" };
   let screen = "", mhtml = "";
   try { screen = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "jpeg", quality: 72 }); } catch (_) { /* a page Chrome won't picture */ }
   try {
