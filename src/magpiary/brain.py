@@ -427,8 +427,9 @@ def local_asker(provider: str, model: str, effort: str = "low", used: dict | Non
     from magpiary import askconfig
 
     used = used if used is not None else {}
-    used.update(model=model, effort=effort, fell_back=False)
     def ask(parts: list[dict], history: list[tuple[str, str]]) -> str:
+        used.clear()  # each attempt (a validation retry too) reports what it really ran on
+        used.update(model=model, effort=effort, fell_back=False)
         import shutil
         import tempfile
 

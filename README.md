@@ -73,7 +73,7 @@ The app then downloads about 720 MB of tools and models and opens the setup page
 <details>
 <summary><b>Other ways to install</b></summary>
 
-**The disk image.** Download `Magpiary-0.1.7.dmg` from the [latest release](https://github.com/magpiary/magpiary/releases/latest), open it and drag Magpiary to Applications. The app is not signed with a paid Apple account, so macOS blocks the first open. Open Magpiary once, then go to System Settings > Privacy & Security, scroll down, click **Open Anyway** and enter your password.
+**The disk image.** Download `Magpiary-0.1.8.dmg` from the [latest release](https://github.com/magpiary/magpiary/releases/latest), open it and drag Magpiary to Applications. The app is not signed with a paid Apple account, so macOS blocks the first open. Open Magpiary once, then go to System Settings > Privacy & Security, scroll down, click **Open Anyway** and enter your password.
 
 **From Terminal.** The script installs for your user only (no password), downloads about 720 MB of tools and models, starts the background service and opens the setup page at `http://localhost:8765/`:
 

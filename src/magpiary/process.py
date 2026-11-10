@@ -134,6 +134,7 @@ def process_item(item: dict, key, notes_dir: Path, call: Call = http_call,
                         "brain": f"{key.provider}:{key.model}", "key": key.name, "problem": problem or None}
     if used:
         record["engine"].update(model=used["model"], effort=used["effort"], fell_back=used["fell_back"])
+        record["engine"]["brain"] = f"{key.provider}:{used['model']}"  # the model that really wrote it, not the one asked for
         if used["fell_back"]:
             record["engine"]["fallback_reason"] = used.get("why", "")
     record["processed_at"] = datetime.now().astimezone().isoformat(timespec="seconds")

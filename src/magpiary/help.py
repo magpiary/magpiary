@@ -572,6 +572,11 @@ PAGE_TOPIC = {"wall": "library", "search": "library", "shelf": "library", "add":
 
 # What's new, shown once after an update (newest first). Plain words; one line each.
 CHANGES = [
+    ("0.1.8", ["Install Magpiary as an app: Settings → Appearance → Install as app (Chrome, Edge or Brave) gives it its own window and Dock icon. Nothing from your library is stored in the browser, and the Dock icon opens the app.",
+               "Settings → AI & login: choose the Claude model and effort that write your summaries. New default is Sonnet at low effort; if the model isn't available, Haiku at low effort is used and the post says so.",
+               "Your library is empty no longer shows while your first post is still being processed.",
+               "Every button is readable now, in light and dark: one dark main button, one quiet secondary button (Cancel and the like).",
+               "A post's top bar and tab row no longer let the text underneath show through while you scroll."]),
     ("0.1.7", ["The Mac app tells you to move it to Applications before it starts, and shows the real reason when its background service can't start.",
                "Settings → AI & login: Connect Instagram is one button now, with Open Terminal for me if macOS refuses.",
                "Welcome: Show my code for the Chrome extension shows the code right there.",

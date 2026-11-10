@@ -6,7 +6,7 @@
 class Magpiary < Formula
   desc "Turns posts shared from your iPhone into a searchable library on your Mac"
   homepage "https://github.com/magpiary/magpiary"
-  url "https://github.com/magpiary/magpiary/archive/refs/tags/v0.1.7.tar.gz"
+  url "https://github.com/magpiary/magpiary/archive/refs/tags/v0.1.8.tar.gz"
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"
 

@@ -2,6 +2,14 @@
 
 Newest first. Plain words; the same notes are on each GitHub release.
 
+## 0.1.8 (10 November 2026)
+
+- **Install Magpiary as an app.** Settings, Appearance has Install as app: in Chrome, Edge or Brave, Magpiary opens in its own window with its own Dock icon, no tabs or address bar (Safari: File > Add to Dock). It works on the first Mac account's address (localhost:8765) only. The installed app stores nothing of your library; if the Magpiary service is off, it shows a short "isn't running" page with a Start Magpiary button, and the Mac app's Dock icon opens the installed app when you made one.
+- **Choose the Claude model and effort for summaries.** If Claude Code writes your summaries, Settings, AI & login now lets you pick Haiku, Sonnet or Opus and Low, Medium or High effort. The default is Sonnet at low effort (it was Haiku). If the chosen model isn't available on your plan, Magpiary tries Haiku at low effort once, and the post's details say which model really wrote it.
+- **"Your library is empty" goes away at the right time.** It no longer stays on the home page while your first post is being processed.
+- **Readable buttons everywhere.** Cancel, Update, the Ask model picker, edit pencils, switches and a few pink buttons were dark text on dark glass or too faint. There is now one main button (dark) and one quiet secondary button, and a check that fails if any button is unreadable.
+- **A post's top bar and tab row are solid.** Scrolling a long post no longer shows its text through the bar with Back to Library or through the tab row.
+
 ## 0.1.7 (10 November 2026)
 
 - **First open of the Mac app is clearer.** If Magpiary is opened from the disk image, the Desktop or Downloads, the window now says to move it to Applications first (with a way to carry on anyway), and the disk image says so too. When the background service can't be installed, the window shows the real reason instead of a generic message. Reopening the app after setup opens your library by itself.

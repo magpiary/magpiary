@@ -378,7 +378,11 @@ final class Shell: NSObject, NSApplicationDelegate {
     func open(_ path: String) {
         guard setupDone, canConnect() else { showInstaller(); return }
         if path == "/", let installed = installedWebApp() {   // the library itself opens in the installed web app window
-            NSWorkspace.shared.openApplication(at: installed, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+            let address = URL(string: "http://localhost:\(port)/")!
+            NSWorkspace.shared.openApplication(at: installed, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+                // A leftover or damaged web app copy must never leave the user with nothing: open the browser instead.
+                if error != nil { DispatchQueue.main.async { NSWorkspace.shared.open(address) } }
+            }
             return
         }
         NSWorkspace.shared.open(URL(string: "http://localhost:\(port)\(path)")!)
@@ -395,7 +399,7 @@ final class Shell: NSObject, NSApplicationDelegate {
             let app = home.appendingPathComponent(folder).appendingPathComponent("Magpiary.app")
             guard let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist")),
                   let address = info["CrAppModeShortcutURL"] as? String,
-                  let url = URL(string: address), url.host == "localhost", url.port == port else { continue }
+                  let url = URL(string: address), ["localhost", "127.0.0.1"].contains(url.host), url.port == port else { continue }
             return app
         }
         return nil

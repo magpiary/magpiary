@@ -82,3 +82,21 @@ def test_settings_shows_the_pick_only_when_allowed_and_saves_it(mac, monkeypatch
     assert (askconfig.summary_model(mac.store), askconfig.summary_effort(mac.store)) == ("opus", "medium")
     post(mac, "/hub/summary-pick", model="bogus", effort="max")
     assert (askconfig.summary_model(mac.store), askconfig.summary_effort(mac.store)) == ("opus", "medium")
+
+
+def test_a_retry_after_a_fallback_reports_the_model_that_wrote_the_final_answer(monkeypatch):
+    used, calls = {}, []
+
+    def fake(model, effort):
+        def ask(*a):
+            calls.append(model)
+            if model == "opus" and calls.count("opus") == 1:
+                raise BrainFailed("unknown", "overloaded")
+            return RECORD if model == "opus" else "not json"  # haiku answers badly, so the summary retries on opus
+        return ask
+    monkeypatch.setattr(deepdive, "claude_code_asker", fake)
+    asker = brain.local_asker("claude_code", "opus", "high", used)
+    asker([{"text": "x"}], [])
+    assert used["fell_back"] and used["model"] == "haiku"
+    asker([{"text": "x"}], [])
+    assert not used["fell_back"] and used["model"] == "opus" and "why" not in used
