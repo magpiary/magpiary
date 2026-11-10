@@ -104,7 +104,7 @@ def test_the_doctor_checks_offline_and_live_without_secrets(store):
 
 def test_the_hub_has_the_login_panel_the_item_button_and_the_doctor_page(mac):
     body = page(mac, "/settings/ai")[2] + page(mac, "/settings/storage")[2]
-    assert "Instagram login" in body and "magpiary login connect" in body and "/doctor" in body
+    assert "Instagram login" in body and "data-login-connect" in body and "Connect Instagram" in body and "login connect" in body and "/doctor" in body
     url = "https://www.instagram.com/reel/AGE2/"
     mac.store.add_link(url)
     mac.store.fetch_failed(url, "login_wall", "x", retry=False)
@@ -156,8 +156,54 @@ def test_the_retry_with_my_login_button_is_offered_on_any_site_that_refuses(mac,
     mac.store.fetch_failed(url, "login_wall", "HTTP 403", retry=False)
     item_id = mac.store.id_for(url)
     body = page(mac, f"/item/{item_id}")[2]
-    assert "Retry with my login" in body and "login connect behance.net" in body and "behance.net refused a visit without a login" in body
+    assert "Retry with my login" in body and "data-login-connect" in body and "login connect behance.net" in body and "behance.net refused a visit without a login" in body
     assert "Instagram" not in body.split("Couldn")[1].split("</div></div>")[0]  # nothing Instagram-specific on a Behance post
     monkeypatch.setattr(login, "connected", lambda s, d=login.DEFAULT: "2026-11-02")
     body = page(mac, f"/item/{item_id}")[2]
     assert 'action="/hub/try-login"' in body and "Retry with my login" in body and "login connect behance.net" not in body
+
+
+def test_terminal_command_names_the_bundled_program_by_full_path(monkeypatch):
+    monkeypatch.setenv("MAGPIARY_PROGRAM", "/Applications/Magpiary.app/Contents/Resources/python/bin/magpiary")
+    assert login.terminal_command() == "/Applications/Magpiary.app/Contents/Resources/python/bin/magpiary login connect"
+    assert login.terminal_command("behance.net").endswith("login connect behance.net")
+    monkeypatch.setenv("MAGPIARY_PROGRAM", "/Apps/x y/Magpiary.app/magpiary")  # a space in the path must stay one word
+    assert login.terminal_command().startswith("'/Apps/x y/Magpiary.app/magpiary' login connect")
+
+
+def test_connect_button_route_copies_the_login_and_never_returns_cookies(mac, monkeypatch):
+    run, _ = fake_ytdlp()
+    monkeypatch.setattr(login, "find", lambda name: "/bin/yt-dlp")
+    real = login.connect
+    monkeypatch.setattr(login, "connect", lambda store, domain="instagram.com": real(store, run=run, domain=domain))
+    status, _, data = post(mac, "/hub/login/connect")
+    assert status == 200 and b"SECRET" not in data
+    import json
+    assert json.loads(data) == {"ok": True, "error": "", "terminal": False}
+    assert login.connected(mac.store)
+
+
+def test_connect_button_route_offers_terminal_when_macos_refuses(mac, monkeypatch):
+    monkeypatch.setattr(login, "connect", lambda store, domain="instagram.com": "macOS did not allow Magpiary to read Chrome's data. Press “Open Terminal for me”.")
+    import json
+    body = json.loads(post(mac, "/hub/login/connect")[2])
+    assert body["ok"] is False and body["terminal"] is True and "Open Terminal" in body["error"]
+    assert json.loads(post(mac, "/hub/login/connect", site="not a site")[2])["ok"] is False
+
+
+def test_open_in_terminal_writes_a_command_script_with_no_secrets(store, tmp_path, monkeypatch):
+    monkeypatch.setenv("MAGPIARY_PROGRAM", "/Applications/Magpiary.app/Contents/Resources/python/bin/magpiary")
+    opened = []
+    err = login.open_in_terminal(run=lambda c, t: opened.append(c) or subprocess.CompletedProcess(c, 0, "", ""))
+    assert err is None and opened[0][:3] == ["/usr/bin/open", "-a", "Terminal"]
+    script = Path(opened[0][3])
+    assert script.read_text().count("login connect") >= 1 and stat.S_IMODE(script.stat().st_mode) == 0o700
+    assert login.open_in_terminal(run=lambda c, t: subprocess.CompletedProcess(c, 1, "", "")) == "Could not open Terminal."
+
+
+def test_terminal_script_keeps_custom_folders(store, monkeypatch, tmp_path):
+    monkeypatch.setenv("MAGPIARY_HOME", "/tmp/my lib")
+    ran = []
+    monkeypatch.setattr(login, "config_dir", lambda: tmp_path)
+    assert login.open_in_terminal(run=lambda a, t=0: ran.append(a) or subprocess.CompletedProcess(a, 0, "", "")) is None
+    assert "export MAGPIARY_HOME='/tmp/my lib'" in (tmp_path / "connect-login.command").read_text()

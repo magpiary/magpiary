@@ -55,6 +55,7 @@ if LOGO.exists():
     img.paste(mark, (30 * S, 24 * S), mark)
 text((W - 34, 41), "Step 1", font(12.5, "demi"), PINK, "rm")
 text((W / 2, 94), "Drag Magpiary to Applications", font(30, "bold"), INK, "mm")
+text((W / 2, 126), "Do this before you open it. Opened from this disk, Magpiary can't start.", font(13, "medium"), MUTED, "mm")
 
 # the arrow between the two icon slots (icons sit at x = 215 and x = 545, y = 195)
 shaft = Image.new("RGB", ((458 - 300) * S, 6 * S))

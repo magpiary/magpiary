@@ -498,6 +498,9 @@ class CardPages:
 
     def _state(self, item: dict, record: dict | None, here: str) -> str:
         """Why this post is not finished yet, in plain words, with what to do about it."""
+        friend = self._friend_card_state(item, here) if item["status"] != "archived" else ""
+        if friend:
+            return friend
         if item["status"] == "needs_attention" and item.get("login_only") != 2:
             retry = f" Next try {e(when(item['next_retry_at']))}." if item.get("next_retry_at") else " Retries have run out."
             return (f'<div class="pstate bad"><b>Couldn\'t open this post</b><p>'
@@ -538,6 +541,84 @@ class CardPages:
             return '<div class="pstate"><b>Waiting for its turn</b><p>The summary shows up here when it is ready.</p></div>'
         return ""
 
+    def _friend_card_state(self, item: dict, here: str) -> str:
+        """A friend's post that this Mac could not download (a login wall, a block): what the friend's card carries, read-only,
+        the page text if they chose to share it, and what each of you can do. "" when this is not a friend's post."""
+        from magpiary import boardpage, boards, identity
+
+        if item.get("shelf") != "board" and not item.get("via_board"):
+            return ""
+        found = boards.card_for(self.store, item["canonical_url"], item.get("via_board") or "")
+        if not found:
+            return ""
+        card, view = found
+        names = [view["members"][w].get("name") or "Someone" for w in card["adders"] if w in view["members"] and w != identity.public_key()]
+        who = names[0] if names else "your friend"
+        site = login.site_of(item["canonical_url"]) or "This site"
+        snapshot = boardpage.decode(card.get("page"))
+        if snapshot and card.get("page_by") in view["members"] and card["page_by"] != identity.public_key():
+            who = view["members"][card["page_by"]].get("name") or "Someone"  # the text is its sender's, whoever added the card first
+        failed = item["status"] == "needs_attention"
+        if failed:
+            head = f"Can't download this post on this Mac, but {e(who)} shared it"
+            why = (f'{e(site)} does not show this page to a visit without a login, so this Mac cannot make its own copy. '
+                   if item.get("reason") == "login_wall" else
+                   f'{e(REASONS.get(item.get("reason") or "unknown", "This Mac could not download it"))}. ')
+        else:
+            head = f"Downloading… {e(who)} shared this post"
+            why = "This Mac is trying to download it. Until then you see what was shared with the board. "
+        if snapshot:
+            body = (f'<p class="small muted">{ui.icon("lock")} {why}Below is the page text {e(who)} chose to share with this board. '
+                    'The pictures stayed on their Mac.</p>' + self._snapshot_html(snapshot, who))
+        else:
+            body = (f'<p>{why}{e(who)} did not share the page text, only the card (title, summary, small picture and links) you see above.</p>'
+                    f'<p class="small muted">{e(who)} can open this post on their Mac, choose Add to board… and tick “Also share the page text I saved”; '
+                    'it then shows up here. Or open the original in your browser'
+                    + (' and save it yourself with the Chrome extension’s “Save what I see”' if failed else "") + '.</p>')
+        row = (f'<a class="btn sm dark" href="{e(item["canonical_url"])}" target="_blank" rel="noopener noreferrer">Open the original ↗</a>'
+               + (self._form("/hub/retry", {"id": item["id"], "next": here}, "Try downloading again", "btn sm") if failed else "")
+               + (self._login_button(item) if failed else ""))
+        return f'<div class="pstate friendstate"><b>{head}</b>{body}<div class="row">{row}</div></div>'
+
+    @staticmethod
+    def _snapshot_html(snapshot: dict, who: str) -> str:
+        """A shared page's blocks, every word escaped; a picture shows only its words."""
+        out, items, ordered = [], [], False
+
+        def flush():
+            nonlocal items
+            if items:
+                tag = "ol" if ordered else "ul"
+                out.append(f"<{tag}>{''.join(items)}</{tag}>")
+                items = []
+        for b in snapshot["blocks"]:
+            if b["t"] != "li":
+                flush()
+            if b["t"] == "h":
+                level = min(max(int(b.get("level") or 2), 2), 4) + 1
+                out.append(f'<h{level}>{e(b["text"])}</h{level}>')
+            elif b["t"] == "li":
+                if items and ordered != bool(b.get("ordered")):
+                    flush()
+                ordered = bool(b.get("ordered"))
+                items.append(f'<li>{e(b["text"])}</li>')
+            elif b["t"] == "quote":
+                out.append(f'<blockquote>{e(b["text"])}</blockquote>')
+            elif b["t"] == "code":
+                out.append(f'<pre>{e(b["text"])}</pre>')
+            elif b["t"] == "row":
+                out.append(f'<p>{e(" · ".join(b["items"]))}</p>')
+            elif b["t"] == "img":
+                out.append(f'<p class="small muted">[Picture{": " + e(b["text"]) if b.get("text") else ""}]</p>')
+            else:
+                out.append(f'<p>{e(b["text"])}</p>')
+        flush()
+        head = f'<h4>{e(snapshot["title"])}</h4>' if snapshot.get("title") else ""
+        by = " · ".join(x for x in (snapshot.get("byline"), snapshot.get("site")) if x)
+        tail = (f'<p class="small muted">The rest of the page ({snapshot["cut"]} more parts) did not fit and stays on {e(who)}’s Mac.</p>'
+                if snapshot.get("cut") else "")
+        return f'<article class="reader">{head}<p class="rdby">{e(by)}</p>{"".join(out)}{tail}</article>'
+
     @staticmethod
     def _wall_words(item: dict) -> str:
         site = login.site_of(item["canonical_url"])
@@ -557,15 +638,14 @@ class CardPages:
                               "btn sm")
         if site == login.DEFAULT:
             return '<a class="btn sm" href="/settings/ai#instagram">Connect Instagram to try with your login</a>'
-        from magpiary.tools import in_mac_app
-
-        program = "/Applications/Magpiary.app/Contents/Resources/python/bin/magpiary" if in_mac_app() else "magpiary"
-        return ('<details class="fold loginhow"><summary class="btn sm">Retry with my login</summary><div class="small">'
-                f'<p>First log in to <b>{e(site)}</b> in Chrome. Then open the <b>Terminal</b> app and run:</p>'
-                f'<pre class="cmd">{e(program)} login connect {e(site)}</pre>'
-                '<p>macOS asks twice: to let Terminal use data from other apps, and to use “Chrome Safe Storage”. Choose Allow both '
-                'times. Then reload this page and press <b>Retry with my login</b>. Your login stays on this Mac and is used only for '
-                'this site, only when you press that button.</p></div></details>')
+        return ('<div class="loginhow small">'
+                f'<p>Log in to <b>{e(site)}</b> in Chrome first, then:</p>'
+                f'<button class="btn sm primary" type="button" data-login-connect data-site="{e(site)}"><span>Connect {e(site)}</span></button> '
+                f'<button class="btn sm" type="button" data-login-terminal data-site="{e(site)}" hidden><span>Open Terminal for me</span></button>'
+                '<p class="lgstat" data-login-status role="status" aria-live="polite" hidden></p>'
+                '<details class="fold"><summary>Advanced: do it in Terminal</summary>'
+                f'<pre class="cmd">{e(login.terminal_command(site))}</pre></details>'
+                '<p>Your login stays on this Mac and is used only for this site, only when you then press <b>Retry with my login</b>.</p></div>')
 
     # ---- the tabs ---------------------------------------------------------------------------
 

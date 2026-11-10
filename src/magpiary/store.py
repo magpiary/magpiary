@@ -1717,7 +1717,7 @@ class Store(ChatStore, StatsStore):
             retry_at = None if delay is None else (self._now() + timedelta(seconds=delay)).isoformat(timespec="seconds")
             self._db.execute(
                 "UPDATE items SET ai_status='needs_attention', ai_reason=?, ai_detail=?, ai_attempts=?, ai_next_at=?, "
-                "ai_force=0 WHERE canonical_url=?", (reason, detail[:200], attempts, retry_at, url))
+                "ai_force=0 WHERE canonical_url=?", (reason, detail[:400], attempts, retry_at, url))
 
     def deep_candidates(self) -> list[tuple[str, str]]:
         """(url, folder) of saved videos with no deeper dive yet (the caller checks their length)."""

@@ -109,7 +109,27 @@ def _failure(service: str, status: int, answer: dict) -> BrainFailed:
         return BrainFailed("rate_limited", f"{service}: limit reached (HTTP {status}); trying again later")
     if status >= 500:
         return BrainFailed("busy", f"{service} is busy right now (HTTP {status})")
-    return BrainFailed("unknown", f"{service} request failed (HTTP {status})")
+    # the service's own words only for "your request is invalid" answers, which describe the request's shape, not
+    # anyone's content; other statuses keep to the code (tests/test_error_privacy.py)
+    why = _reason(answer) if status in (400, 422) else ""
+    return BrainFailed("unknown", f"{service} request failed (HTTP {status})" + (f": {why}" if why else ""))
+
+
+def _reason(answer: dict, secret: str = "") -> str:
+    """The service's own words for a refusal (error.message plus the upstream provider's text in
+    error.metadata.raw), with anything key-shaped removed, so a failed item says why."""
+    error = answer.get("error") if isinstance(answer.get("error"), dict) else {}
+    meta = error.get("metadata") if isinstance(error.get("metadata"), dict) else {}
+    raw = meta.get("raw")
+    pieces = [error.get("message") or answer.get("message") or "",
+              raw if isinstance(raw, str) else json.dumps(raw) if raw else ""]
+    text = " ".join(str(p) for p in pieces if p and p not in ("Provider returned error",)).strip()
+    if secret:
+        text = text.replace(secret, "[key]")
+    text = re.sub(r"\b(?:sk-|AIza|ghp_)[\w-]{8,}|Bearer\s+\S+", "[key]", text)
+    # a refusal may quote the request back: anything in quotes is dropped, so the post's own words are not kept
+    text = re.sub(r"\"[^\"]*\"|“[^”]*”|'[^']*'|`[^`]*`", "…", text)
+    return re.sub(r"\s+", " ", text)[:120]
 
 
 # ---- OpenRouter and OpenAI (the same chat format) ---------------------------------------------
@@ -135,10 +155,14 @@ def ask_chat(provider: str, parts: list[dict], history: list[tuple[str, str]], s
                for kind, v in _images(parts)]
     messages = [{"role": "system", "content": system}, {"role": "user", "content": content},
                 *({"role": "assistant" if r == "model" else "user", "content": t} for r, t in history)]
+    # a model (or the provider behind it) that cannot follow a schema may still promise JSON, or just obey the
+    # prompt, which already asks for JSON: each is tried when the one before is rejected as invalid (400 or 422)
     formats = [{"type": "json_schema", "json_schema": {"name": "record", "strict": False, "schema": json_schema(schema)}},
-               {"type": "json_object"}]  # a model without schema support may still promise JSON
+               {"type": "json_object"}, None]
     for n, response_format in enumerate(formats):
-        body = {"model": model, "messages": messages, "response_format": response_format}
+        body = {"model": model, "messages": messages}
+        if response_format:
+            body["response_format"] = response_format
         try:
             status, answer = request("POST", f"{_chat_base(provider)}/chat/completions",
                                      _chat_headers(provider, secret), body, 300)
@@ -146,11 +170,14 @@ def ask_chat(provider: str, parts: list[dict], history: list[tuple[str, str]], s
             raise BrainFailed("busy", f"{service} did not answer within 5 minutes") from err
         except OSError as err:
             raise BrainFailed("unknown", f"network error: {type(err).__name__}") from err
-        if status == 400 and n == 0 and re.search(r"response_format|json_schema|structured", json.dumps(answer), re.I):
-            continue  # this model cannot follow a schema: ask for plain JSON instead
+        if status in (400, 422) and n < len(formats) - 1:
+            continue  # the request shape was rejected (a schema this model cannot follow, or an unsupported field)
         if status != 200 or answer.get("error"):
             code = (answer.get("error") or {}).get("code") if isinstance(answer.get("error"), dict) else None
-            raise _failure(service, status if status != 200 else (code if isinstance(code, int) else 500), answer)
+            failure = _failure(service, status if status != 200 else (code if isinstance(code, int) else 500), answer)
+            if failure.reason == "unknown" and status in (400, 422) and _reason(answer, secret) != _reason(answer):
+                failure = BrainFailed("unknown", f"{service} request failed (HTTP {status}): {_reason(answer, secret)}")
+            raise failure
         choice = (answer.get("choices") or [{}])[0]
         if choice.get("finish_reason") == "content_filter":
             raise BrainFailed("blocked", f"{service} declined to answer")

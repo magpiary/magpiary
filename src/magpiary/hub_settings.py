@@ -672,18 +672,24 @@ class SettingsPages:
 
     def _instagram_group(self) -> str:
         day = login.connected(self.store)
-        command = ('<p>Open the <b>Terminal</b> app and run:</p><pre class="cmd">magpiary login connect</pre>'
-                   '<p>macOS asks twice: to let Terminal use data from other apps, and to use “Chrome Safe Storage”. Choose '
-                   'Allow both times. (macOS does not let a background service read Chrome, so this one step happens in '
-                   'Terminal.) Then reload this page.</p>')
+        # One button does the work; the feedback line and the "Open Terminal for me" fallback live in static/hub.js (data-login-*).
+        button = (f'<button class="btn sm primary" type="button" data-login-connect>{ui.icon("check")}<span>'
+                  f'{"Connect again" if day else "Connect Instagram"}</span></button>')
+        status = ('<p class="lgstat" data-login-status role="status" aria-live="polite" hidden></p>'
+                  f'<button class="btn sm" type="button" data-login-terminal hidden>{ui.icon("terminal")}'
+                  '<span>Open Terminal for me</span></button>')
+        manual = _more(f'<p>Only if the button cannot do it: open the <b>Terminal</b> app and run</p>'
+                       f'<pre class="cmd">{e(login.terminal_command())}</pre>'
+                       '<p>macOS asks to let Terminal use data from other apps and to use “Chrome Safe Storage”. Choose Allow '
+                       'both times, then reload this page.</p>', "Advanced: do it in Terminal")
         if day:
             row = _row("Connected from Chrome", f"Since {e(ui.day(day).removesuffix(' 00:00'))}. Used only when you ask, on a blocked post.",
-                       self._form("/hub/login/disconnect", {"next": "/settings/ai#instagram"}, "Disconnect", "btn sm danger",
-                                  confirm="Delete Magpiary's copy of your Instagram login?"),
-                       lead=ui.icon("check"), more=_more(command, "Copy it again"))
+                       button + self._form("/hub/login/disconnect", {"next": "/settings/ai#instagram"}, "Disconnect", "btn sm danger",
+                                           confirm="Delete Magpiary's copy of your Instagram login?"),
+                       lead=ui.icon("check"), more=status + manual)
         else:
-            row = _row("Not connected", "Only needed for posts that are age-limited or for followers only. Your login stays on this Mac.",
-                       lead=ui.icon("phone"), more=_more(command, "How to connect"))
+            row = _row("Not connected", "Only needed for posts that are age-limited or for followers only. Log in to Instagram in Chrome first. "
+                       "Your login stays on this Mac.", button, lead=ui.icon("phone"), more=status + manual)
         return _group("Instagram login", row, gid="instagram", lock="instagram",
                       more=_more("<p>Some posts only show to logged-in people. If you connect, Magpiary copies just your "
                                  "Instagram login from Chrome and uses it only when you press “Try with my Instagram "
@@ -878,7 +884,7 @@ class SettingsPages:
         if path not in ("/hub/phones/add", "/hub/phones/new-code", "/hub/phones/remove", "/hub/browsers/add"):
             return None
         back = form.get("next", "/settings/phones")
-        back = back if back in ("/settings/phones", "/settings/storage", "/welcome/phone") else "/settings/phones"
+        back = back if back in ("/settings/phones", "/settings/storage", "/welcome/phone", "/welcome/browser") else "/settings/phones"
         if not self.setup:
             return Response(303, b"", headers={"Location": back + "?error=" + quote("Pairing runs with the background service.")})
         name = form.get("name", "").strip()

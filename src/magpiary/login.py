@@ -1,6 +1,6 @@
 """The owner's login to a site, borrowed from Chrome only when they ask (opt-in fallback, non-negotiable 5).
 
-`magpiary login connect [site]`, run by the owner in Terminal, copies just that site's cookies out of Chrome once,
+`magpiary login connect [site]` (the hub's Connect button runs it, and "Open Terminal for me" opens it in Terminal when macOS refuses the background service), copies just that site's cookies out of Chrome once,
 into a private file (Instagram: ~/.config/magpiary/instagram-login.txt; any other site: logins/<site>.txt; mode 0600).
 It must run from Terminal: macOS guards other apps' data and lets the owner allow Terminal, but not the background
 service (found 24 Oct, macOS 27). macOS asks at that moment, while the owner is there; the background never opens the
@@ -10,7 +10,10 @@ post's own site. The copy's contents are never shown, logged or printed.
 
 import os
 import re
+import shlex
+import shutil
 import subprocess
+import sys
 import time
 from datetime import date
 from pathlib import Path
@@ -65,6 +68,43 @@ def _ours(line: str, domain: str = DEFAULT) -> bool:
     return host == domain or host.endswith("." + domain)
 
 
+def program() -> str:
+    """The `magpiary` program to run in Terminal. The Mac app has none on the PATH (its copy sits inside Magpiary.app), so
+    its full path is used; a uv or Homebrew install uses the bare name, or the path it was started from when that is not on the PATH."""
+    named = os.environ.get("MAGPIARY_PROGRAM", "")
+    if named:
+        return named
+    if shutil.which("magpiary"):
+        return "magpiary"
+    return sys.argv[0] if Path(sys.argv[0]).name == "magpiary" and Path(sys.argv[0]).is_absolute() else "magpiary"
+
+
+def terminal_command(domain: str = DEFAULT) -> str:
+    """The exact Terminal line that connects a site, quoted so it also works when the app's path has spaces."""
+    domain = _valid(domain)
+    return f"{shlex.quote(program())} login connect" + ("" if domain == DEFAULT else f" {domain}")
+
+
+def open_in_terminal(domain: str = DEFAULT, run: Run = default_run) -> str | None:
+    """Open Terminal already running the connect command, so the owner never types it (the one step macOS lets Terminal do
+    and not the background service). The script holds only the command; it deletes itself when it ends. Returns an error or None."""
+    script = config_dir() / "connect-login.command"
+    keep = "".join(f"export {k}={shlex.quote(os.environ[k])}\n" for k in ("MAGPIARY_HOME", "MAGPIARY_CONFIG") if os.environ.get(k))
+    text = ("#!/bin/sh\nclear\n" + keep +  # a Terminal that is already open lacks the hub's custom folders
+            f"{terminal_command(domain)}\n"
+            'status=$?\nrm -f -- "$0"\n'
+            'echo; [ "$status" = 0 ] && echo "Done. You can close this window and go back to Magpiary." '
+            '|| echo "That did not work. Read the line above, fix it, and press Connect in Magpiary again."\n'
+            "echo; read -r -p \"Press Return to close. \" _\n")
+    try:
+        _private(script, text)
+        script.chmod(0o700)
+        result = run(["/usr/bin/open", "-a", "Terminal", str(script)], 20)
+    except (OSError, subprocess.SubprocessError):
+        return "Could not open Terminal."
+    return None if result.returncode == 0 else "Could not open Terminal."
+
+
 def connect(store, run: Run = default_run, browser: str = BROWSER, domain: str = DEFAULT) -> str | None:
     """Copy the login to one site out of the browser. Returns an error to show, or None."""
     try:
@@ -87,10 +127,10 @@ def connect(store, run: Run = default_run, browser: str = BROWSER, domain: str =
         scratch.unlink(missing_ok=True)  # it held every site's cookies: never keep it
     if not lines or (domain == DEFAULT and not any("\tsessionid\t" in ln for ln in lines)):
         if result.returncode != 0 and "operation not permitted" in (result.stderr or "").lower():
-            return ("macOS did not allow reading Chrome's data. Run this in the Terminal app and choose Allow when "
-                    "asked, or turn Terminal on in System Settings → Privacy & Security → App Management.")
+            return ("macOS did not allow Magpiary to read Chrome's data from the background. Press “Open Terminal for me”: "
+                    "Terminal can ask you, and you choose Allow.")
         if result.returncode != 0 and "keychain" in (result.stderr or "").lower():
-            return "macOS did not allow access to Chrome's saved logins. Try again and choose Allow."
+            return "macOS did not allow access to Chrome's saved logins. Press “Open Terminal for me”, then choose Allow when macOS asks."
         return f"No {domain} login found in Chrome. Log in to {domain} in Chrome first, then try again."
     _private(login_path(domain), HEADER + "\n".join(lines) + "\n")
     store.set_setting(_setting(domain), date.today().isoformat())

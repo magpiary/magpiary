@@ -22,9 +22,12 @@
   const PROBLEMS = {
     offline: ["No ", "connection."], disk: ["Not enough ", "room."], disk_full: ["Not enough ", "room."],
     macos: ["Not on this ", "Mac yet.", false], chip: ["Not on this ", "Mac yet.", false],
+    misplaced: ["Move Magpiary to ", "Applications."],
     checksum: ["A download ", "didn't check out."], server: ["Magpiary didn't ", "start."], permission: ["Magpiary can't ", "write here."],
   };
   const START_FAILED = "Everything downloaded fine, but Magpiary didn't start. Try again; if it keeps happening, open Health check from the menu bar.";
+
+  const MISPLACED = "Drag Magpiary into your Applications folder first, then open it from there. From here, macOS may stop it running in the background and it won't start. Quit, move it, then open it again.";
 
   const T0 = Date.now();
   const S = { phase: "checking", steps: [], total: 0, bytes: 0, err: null, message: "", retryUntil: 0, f: 0, hold: false, sheet: false, samples: [] };
@@ -53,9 +56,10 @@
       case "retry": S.retryUntil = Date.now() + e.wait * 1000; break;
       case "precheck": S.err = e.problems[0].kind; S.message = e.problems[0].message; S.sheet = false; break;
       case "step_error": S.err = e.kind; S.message = e.message; S.retryUntil = 0; S.sheet = false; break;
+      case "misplaced": S.err = "misplaced"; S.message = MISPLACED; break;
       case "starting": S.phase = "starting"; S.err = null; break;
       case "ready": S.phase = "done"; S.err = null; break;
-      case "start_failed": S.err = "server"; S.message = START_FAILED; break;
+      case "start_failed": S.err = "server"; S.message = e.reason || START_FAILED; break;
       default: return;
     }
     draw();
@@ -104,6 +108,7 @@
   const wordsInner = (w) => `<h1 class="w-h">${w.a}<em>${w.b}</em></h1><p class="w-p">${w.p}</p>`;
   const head = (w) => `<div id="words" class="words">${wordsInner(w)}</div>`;
   function actions() {
+    if (S.err === "misplaced") return '<div class="w-cta"><button class="btn dark" data-a="quit">Quit</button><button class="btn" data-a="proceed">Carry on from here anyway</button></div>';
     if (S.err) return `<div class="w-cta">${(PROBLEMS[S.err] || [])[2] === false ? "" : '<button class="btn dark" data-a="again">Try again</button>'}<button class="btn" data-a="quit">Quit</button></div>`;
     return '<div class="w-cta"><span class="onbutton"><img src="/static/art/land-c.webp" alt=""><button class="btn dark" data-a="continue">Continue in your browser →</button></span></div>';
   }
@@ -189,6 +194,7 @@
 
   const ACTIONS = {
     again: () => { S.err = null; S.message = ""; S.phase = "checking"; draw(); send("retry"); },
+    proceed: () => { S.err = null; S.message = ""; S.phase = "checking"; draw(); send("proceed"); },
     quit: () => send("quit"), continue: () => send("continue"),
     list: () => { S.sheet = true; draw(); }, close: () => { S.sheet = false; draw(); },
   };

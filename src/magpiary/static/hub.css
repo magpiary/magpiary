@@ -4397,3 +4397,9 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 :root[data-theme] .top .bar .ubtn.phacc:hover, .ubtn.phacc:hover { background: var(--chip); }
 .phacc svg { display: block; margin: 0; }
 .phacc .phdot { top: 11px; right: 11px; }
+
+/* Settings → Connect Instagram: the in-place progress/result line (no spinner stays once it answers) */
+.lgstat { margin: 6px 0 8px; font-size: 13.5px; font-weight: 600; color: var(--fg-2); }
+.lgstat[data-tone="ok"] { color: var(--ok); }
+.lgstat[data-tone="bad"] { color: var(--bad); }
+.lgstat[hidden], [data-login-terminal][hidden] { display: none; }

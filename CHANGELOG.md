@@ -2,6 +2,14 @@
 
 Newest first. Plain words; the same notes are on each GitHub release.
 
+## 0.1.7 (10 November 2026)
+
+- **First open of the Mac app is clearer.** If Magpiary is opened from the disk image, the Desktop or Downloads, the window now says to move it to Applications first (with a way to carry on anyway), and the disk image says so too. When the background service can't be installed, the window shows the real reason instead of a generic message. Reopening the app after setup opens your library by itself.
+- **Connect Instagram is one button.** Settings, AI & login has a Connect Instagram button that copies your login from Chrome and says how it went in place. If macOS refuses the background service, Open Terminal for me runs the step for you. No Terminal command to type.
+- **Chrome extension setup, Welcome screen.** Show my code now shows the pairing code on the Welcome screen instead of sending you into Settings.
+- **Shared boards: pages saved with Save what I see.** When you add such a page to a board you can tick Also share the page text I saved. Your friend then reads the text on their Mac even when the site (Behance, for example) won't let their Mac download it. Pictures stay on your Mac. Without the tick, they see a clear message saying what to ask for.
+- **OpenRouter errors say why.** A request a model rejects (HTTP 400 or 422) is retried in plainer forms, then another key is tried, and a failed post shows the service's reason.
+
 ## 0.1.6 (10 November 2026)
 
 - **Settings are simpler.** Six pages instead of a long list. "Saving posts" is now **Phone**, and "AI & digest" is now **AI & login** (Instagram login moved there). Chrome moved to Library & this Mac, and Shared boards joined Profile & boards. Ask Magpiary and AI agents keep their own pages. Explaining text sits behind an (i) hover, and old Settings links still work.

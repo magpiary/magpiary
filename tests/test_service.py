@@ -73,6 +73,15 @@ def test_a_program_in_a_protected_folder_is_refused_with_the_fix(home, folder):
     assert launchd.calls == [] and not service.plist_path().exists()
 
 
+def test_the_refusal_keeps_the_words_the_app_looks_for(home):
+    """packaging/app/main.swift shows the move-to-Applications advice when this sentence appears on stderr."""
+    inside = home / "Desktop" / "Magpiary.app" / "Contents" / "Resources" / "python" / "bin" / "magpiary"
+    inside.parent.mkdir(parents=True)
+    inside.write_text("x")
+    with pytest.raises(service.ServiceError, match="macOS does not let background services"):
+        service.install(inside, 8765, FakeLaunchd(), env={})
+
+
 def test_a_missing_program_is_refused(home):
     with pytest.raises(service.ServiceError, match="not found"):
         service.install(home / "nowhere" / "magpiary", 8765, FakeLaunchd(), env={})

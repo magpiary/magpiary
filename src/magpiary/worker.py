@@ -197,7 +197,7 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
             continue
         if not forced and (store.paused("summary") or not modes.summarisers(store, key_source) or not store.take_summary_turn()):
             continue  # nobody can write it now (Private, no key, all at their limit): the "next N" allowance is kept
-        record, busy, repicked, last_busy = None, set(), set(), None
+        record, busy, repicked, last_busy, skipped = None, set(), set(), None, []
         while record is None:
             # Smart: the keys and the allowed Claude Code or Codex, in the owner's order; Private: nobody. One that was busy or
             # failed for this item is skipped for it, not for the next one.
@@ -239,7 +239,15 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
                     if len(usable) > 1:
                         log(f"key '{key.name}' is busy; trying the next key")
                     continue
-                store.brain_failed(url, err.reason, err.detail, retry=err.reason in BRAIN_RETRYABLE)
+                if len(usable) > 1 and getattr(key, "tier", "") != "local":
+                    # a request this service rejected (for example HTTP 422) must not block the item while another key
+                    # could write it: try the next key now and keep what happened for the item's note
+                    busy.add(key.id)
+                    skipped.append(f"{key.name}: {err.detail}")
+                    log(f"key '{key.name}' failed ({err.reason}); trying the next key")
+                    continue
+                store.brain_failed(url, err.reason, "; ".join([*skipped, f"{key.name}: {err.detail}"] if skipped else [err.detail])[:400],
+                                   retry=err.reason in BRAIN_RETRYABLE)
                 break
             except Exception as err:
                 store.brain_failed(url, "unknown", type(err).__name__, retry=True)

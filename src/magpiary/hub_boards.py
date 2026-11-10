@@ -545,8 +545,18 @@ class BoardPages:
                 f'<form method="post" action="/hub/bulk" class="addpicks" data-addpicks>'
                 f'{ui.hidden(self.csrf, action="board", board=board_id, ids="", next=back)}'
                 f'<div class="alist" data-addlist>{self.add_rows(board_id, query)}</div>'
+                + self._share_page_box() +
                 f'<div class="afoot"><span data-addcount>Tick the posts to add</span>'
                 f'<button class="btn dark" data-addgo disabled>Add to the board</button></div></form></div></div>')
+
+    def _share_page_box(self) -> str:
+        """In Add posts: the choice to send the text of saved pages too, only when the library has some. Off unless ticked."""
+        newest = [i for i in self.store.hub_items("kept", limit=40) if i.get("status") == "archived"]
+        if not any(boards.captured_article(i, self.library) for i in newest):
+            return ""
+        return ('<label class="small sharepage" style="display:block;margin:8px 4px"><input type="checkbox" name="page" value="1"> '
+                'Also share the page text of pages I saved with Save what I see<br><span class="muted">Board members can read '
+                'it. Pictures stay on this Mac. Off unless you tick it.</span></label>')
 
     def _welcome_dialog(self, v: dict, board_id: str, joined: bool) -> str:
         """The first visit to a board (for now after every new or joined board; later only the first): how to fill it,

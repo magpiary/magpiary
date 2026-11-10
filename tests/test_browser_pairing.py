@@ -126,3 +126,14 @@ def test_a_share_time_without_an_offset_is_read_as_local_and_the_post_page_opens
     assert datetime.fromisoformat(item["created_at"]) - datetime.fromisoformat(item["first_shared_at"]) is not None  # same kind: no TypeError
     status, _, _ = env.request("GET", f"/item/{item['id']}")
     assert status == 200
+
+
+def test_welcome_show_my_code_stays_on_welcome_and_shows_the_code(env):
+    status, headers, _ = env.post("/hub/browsers/add", next="/welcome/browser")
+    assert status == 303
+    where = headers["Location"]
+    assert where.startswith("/welcome/browser?chromecode=")  # not bounced into Settings
+    code = unquote(where.split("chromecode=")[1])
+    from test_hub import page
+    body = page(env.mac, where)[2]
+    assert code in body and "Show my code" not in body

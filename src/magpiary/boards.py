@@ -23,12 +23,12 @@ import threading
 import time
 from pathlib import Path
 
-from magpiary import boardsync, identity, stickers
+from magpiary import boardpage, boardsync, identity, stickers
 from magpiary.config import config_dir
 
 NAME_MAX = 60
 VIA = ("nostr", "bucket")
-KINDS = ("create", "join", "add", "remove", "vote", "profile", "rename", "remove_member", "rekey", "close", "reopen", "leave")
+KINDS = ("create", "join", "add", "remove", "vote", "profile", "rename", "remove_member", "rekey", "close", "reopen", "leave", "page")
 INVITE_DAYS = 7
 INVITE_PREFIX = "magpiary-board:"
 THUMB_MAX = 20_000  # bytes of a card's thumbnail; keeps an event under every relay's limit
@@ -239,6 +239,41 @@ def add_card(store, board_id: str, item: dict, library: Path | None = None, note
                  summary=item.get("summary") or "", kind=item.get("ai_type") or "", source=item.get("source") or "",
                  author=item.get("author") or "", tags=list(item.get("tags") or [])[:12], links=links,
                  note=note.strip()[:LIMITS["note"]], thumb=base64.b64encode(thumb).decode() if thumb else "")
+
+
+def captured_article(item: dict, library: Path | None = None) -> dict | None:
+    """The saved page ("Save what I see") of an item of this library, as its article.json holds it; None when the post is
+    not a captured page or its folder is outside the library."""
+    if not item.get("archive_dir") or item.get("source") == "instagram":
+        return None
+    folder = Path(item["archive_dir"])
+    if library is not None and not folder.resolve().is_relative_to(Path(library).resolve()):
+        return None
+    try:
+        article = json.loads((folder / "article.json").read_text())
+    except (OSError, ValueError):
+        return None
+    return article if isinstance(article, dict) and article.get("blocks") else None
+
+
+def add_page(store, board_id: str, item: dict, library: Path | None = None) -> int:
+    """Share the text of a captured page with the board (the owner ticked it): one more event after the card. 0 when
+    there is nothing readable to share."""
+    _open(store, board_id)
+    article = captured_article(item, library)
+    packed = boardpage.build(article) if article else ""
+    return write(store, board_id, "page", url=item["canonical_url"], page=packed) if packed else 0
+
+
+def card_for(store, url: str, board_id: str = "") -> tuple[dict, dict] | None:
+    """A friend's card for this post (the board it was opened from first, then any board) with the board's view, or None."""
+    ids = ([board_id] if board_id else []) + [b["id"] for b in store.boards() if b["id"] != board_id and not b["archived_at"]]
+    for bid in ids:
+        v = view(store, bid) if store.board(bid) else None
+        card = next((c for c in v["cards"] if c["url"] == url), None) if v else None
+        if card:
+            return card, v
+    return None
 
 
 def remove_card(store, board_id: str, url: str) -> int:
@@ -854,6 +889,8 @@ def _clean(event: dict) -> dict:
             out[k] = v
         elif k in ("thumb", "photo") and isinstance(v, str) and len(v) <= (THUMB_MAX if k == "thumb" else PHOTO_MAX) * 4 // 3 + 4:
             out[k] = v
+        elif k == "page" and isinstance(v, str) and len(v) <= boardpage.LIMIT:
+            out[k] = v
         elif k == "tags" and isinstance(v, list):
             out[k] = [str(t)[:40] for t in v[:12]]
         elif k == "invite" and isinstance(v, str) and len(v) <= 40:
@@ -889,6 +926,7 @@ def view(store, board_id: str) -> dict | None:
     adds: dict[str, dict] = {}      # url → member → (seq, at, body) of their latest add
     takes: dict[str, dict] = {}     # url → member → seq of their latest remove
     votes: dict[str, dict] = {}     # url → member → (seq, value)
+    pages: dict[str, dict] = {}     # url → member → (seq, packed page text) of their latest shared page
     events = store.board_events(board_id)
     for ev in events:  # the creator's removals first: they decide whose events count
         if ev["member"] == creator and ev["type"] == "remove_member" and ev["body"].get("who") not in (None, creator):
@@ -916,6 +954,8 @@ def view(store, board_id: str) -> dict | None:
             adds[url][who] = (seq, at, body)
         elif kind == "remove" and url:
             takes.setdefault(url, {})[who] = max(seq, takes.get(url, {}).get(who, 0))
+        elif kind == "page" and url and body.get("page") and seq > pages.setdefault(url, {}).get(who, (0,))[0]:
+            pages[url][who] = (seq, body["page"])
         elif kind == "vote" and url and seq > votes.setdefault(url, {}).get(who, (0,))[0]:
             votes[url][who] = (seq, body.get("value", 0))
     for who in removed:  # a removed member, their cards and their votes leave the board
@@ -931,6 +971,12 @@ def view(store, board_id: str) -> dict | None:
                 "first": adders[first][1], "last": max(a[1] for a in adders.values())}
         if not card.get("thumb"):
             card["thumb"] = next((a[2]["thumb"] for a in adders.values() if a[2].get("thumb")), "")
+        # only a member who has the card on the board can attach page text to it, and only text sent after their latest removal
+        sharer = next((w for w in sorted(adders, key=lambda w: (adders[w][1], w))
+                       if w in pages.get(url, {}) and pages[url][w][0] > takes.get(url, {}).get(w, 0)), None)
+        if sharer:
+            card["page"] = pages[url][sharer][1]
+            card["page_by"] = sharer
         card["votes"] = {w: v for w, (_, v) in votes.get(url, {}).items() if w in members and v}
         card["score"] = sum(card["votes"].values())
         card["shared"] = len(adders) > 1

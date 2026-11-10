@@ -33,12 +33,24 @@ final class Shell: NSObject, NSApplicationDelegate {
         switch action {
         case "retry": self.start()
         case "continue": self.installer.window.close(); self.open("/")
+        case "proceed": self.placeChecked = true; self.start()
         default: self.quit()
         }
     }
     var settingUp = false        // the window has something to show (there were downloads to do)
     var child: Process?          // the receiver, when MAGPIARY_NO_SERVICE=1
     var working = false
+    var serviceError = ""        // what `service install` printed when it failed, so the window can say why
+    var startedOnce = false      // the first start() of this launch decides whether to open the library by itself
+    var placeChecked = false     // the user chose to carry on from a folder the service can't run from
+
+    /// True when this copy sits in /Applications or ~/Applications. Anywhere else (Desktop, Downloads, the mounted disk image)
+    /// macOS may refuse to run the background service, so the window says so before anything is downloaded.
+    var inApplications: Bool {
+        let path = Bundle.main.bundleURL.resolvingSymlinksInPath().path
+        let mine = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path
+        return path.hasPrefix("/Applications/") || path.hasPrefix(mine + "/")
+    }
 
     // ---- launch -----------------------------------------------------------------------------
 
@@ -91,6 +103,7 @@ final class Shell: NSObject, NSApplicationDelegate {
 
     func start() {
         if working { return }
+        if !noService && demo.isEmpty && snapshotDir.isEmpty && !inApplications && !placeChecked { settingUp = true; installer.show(); installer.send(["event": "misplaced"]); return }
         working = true
         DispatchQueue.global().async {
             let installed = demo.isEmpty ? self.runDownloads() : self.runDemo()
@@ -100,7 +113,12 @@ final class Shell: NSObject, NSApplicationDelegate {
             self.startService()
             let up = self.waitForHub(seconds: 40)
             DispatchQueue.main.async {
-                if self.settingUp { self.installer.send(["event": up ? "ready" : "start_failed"]) }
+                let first = !self.startedOnce
+                self.startedOnce = true
+                if !up && !self.settingUp { self.settingUp = true; self.installer.show() }   // a relaunch that can't start must not stay silent
+                if self.settingUp { self.installer.send(up ? ["event": "ready"] : ["event": "start_failed", "reason": self.friendlyReason()]) }
+                // A relaunch after setup shows no window, so the library opens by itself once the hub is up.
+                if up && first && !self.settingUp && snapshotDir.isEmpty && demo.isEmpty { self.open("/") }
                 self.working = false
                 self.setProgress(nil)
                 self.refresh()
@@ -126,7 +144,8 @@ final class Shell: NSObject, NSApplicationDelegate {
             let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
             let seen = UserDefaults.standard.string(forKey: "serviceVersion")
             if force || !serviceIsCurrent() || seen != version {
-                if run(["service", "install", "--port", String(port)]) == 0 { UserDefaults.standard.set(version, forKey: "serviceVersion") }
+                serviceError = ""
+                if run(["service", "install", "--port", String(port)], capture: true) == 0 { UserDefaults.standard.set(version, forKey: "serviceVersion") }
             }
         }
     }
@@ -203,17 +222,34 @@ final class Shell: NSObject, NSApplicationDelegate {
         return args[0] == launcher && args[1] == program.path
     }
 
+    /// Runs the bundled program. With `capture`, what it prints on stderr is kept in `serviceError` (the reason a step failed).
     @discardableResult
-    func run(_ args: [String]) -> Int32 {
+    func run(_ args: [String], capture: Bool = false) -> Int32 {
         let p = Process()
         p.executableURL = program
         p.arguments = args
         p.environment = env
         p.standardOutput = FileHandle.nullDevice
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { return -1 }
+        let errors = Pipe()
+        p.standardError = capture ? errors : FileHandle.nullDevice
+        do { try p.run() } catch { if capture { serviceError = "\(error.localizedDescription)" }; return -1 }
+        var text = Data()
+        if capture { text = errors.fileHandleForReading.readDataToEndOfFile() }
         p.waitUntilExit()
+        if capture { serviceError = String(data: text, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "" }
         return p.terminationStatus
+    }
+
+    /// The plain-language reason Magpiary didn't start. A folder macOS keeps background services out of, or any copy outside
+    /// Applications, gets the move-it advice; anything else shows what the service said.
+    func friendlyReason() -> String {
+        if !inApplications || serviceError.contains("macOS does not let background services") {
+            return "Magpiary can’t keep running in the background from here. Move Magpiary to your Applications folder, then open it again."
+        }
+        if !serviceError.isEmpty {
+            return "Everything downloaded fine, but Magpiary didn’t start. It said: \(serviceError.split(separator: "\n").first.map(String.init) ?? serviceError)"
+        }
+        return ""
     }
 
     // ---- status for the menu-bar panel ------------------------------------------------------

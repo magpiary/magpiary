@@ -139,3 +139,30 @@ def test_claude_refusals_and_errors_map_to_the_shared_reasons():
     with pytest.raises(BrainFailed) as err:
         providers.ask_claude(PARTS, [], "k", "m", FakeClaude(error=overloaded))
     assert err.value.reason == "busy"
+
+
+# the 422 a friend's OpenRouter key kept returning (recorded body shape, 10 Nov 2026)
+UNPROCESSABLE = (422, {"error": {"code": 422, "message": "Provider returned error",
+                                 "metadata": {"raw": "Invalid schema for response_format 'record': Bearer sk-or-v1-abcdef123456",
+                                              "provider_name": "SomeProvider"}}})
+
+
+def test_a_422_on_the_schema_is_retried_with_plain_json_then_without_a_format():
+    fake = FakeRequest(UNPROCESSABLE, UNPROCESSABLE, chat(json.dumps(GOOD)))
+    text = providers.ask_chat("openrouter", PARTS, [], "k", "m", fake)
+    assert json.loads(text)["type"] == "recipe"
+    assert [b.get("response_format", {}).get("type") for *_, b in fake.sent] == ["json_schema", "json_object", None]
+
+
+def test_a_422_that_persists_shows_openrouters_own_words_without_keys():
+    with pytest.raises(BrainFailed) as err:
+        providers.ask_chat("openrouter", PARTS, [], "sk-or-v1-abcdef123456", "m",
+                           FakeRequest(UNPROCESSABLE, UNPROCESSABLE, UNPROCESSABLE))
+    assert err.value.reason == "unknown"
+    assert "HTTP 422" in err.value.detail and "Invalid schema for response_format" in err.value.detail
+    assert "abcdef" not in err.value.detail and "Bearer" not in err.value.detail
+
+
+def test_a_refusal_that_quotes_the_request_back_is_not_kept():
+    why = providers._reason({"error": {"message": 'Invalid input "the private transcript words" for field x'}})
+    assert "private transcript" not in why and "field x" in why

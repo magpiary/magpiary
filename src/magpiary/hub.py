@@ -328,6 +328,16 @@ class Hub(
             return self._stats_status()
         if path == "/activity.json":
             return self._activity_json(q)
+        if path == "/captured.json":  # which of these posts are saved pages whose text can be shared on a board
+            from magpiary import boardpage, boards
+
+            sizes = {}
+            for raw in q.get("ids", "").split(",")[:200]:
+                item = self.store.item_by_id(int(raw)) if raw.isdigit() else None
+                article = boards.captured_article(item, self.library) if item else None
+                if article:
+                    sizes[raw] = boardpage.size_note(article)
+            return Response(200, json.dumps(sizes).encode(), "application/json", headers={"Cache-Control": "no-store"})
         if path == "/boards.json":
             from magpiary import boards
 
@@ -460,6 +470,8 @@ class Hub(
         elif path == "/hub/try-login":
             if self.store.try_with_login(item_id):
                 self.wake()
+        elif path in ("/hub/login/connect", "/hub/login/terminal"):
+            return self.login_connect(path.endswith("terminal"), form.get("site", "") or login.DEFAULT)
         elif path == "/hub/login/disconnect":
             login.disconnect(self.store)
         elif path == "/hub/accept-tags":
@@ -499,6 +511,26 @@ class Hub(
         else:
             return self.shell("Not found", "<p>Nothing here.</p>", "missing", 404)
         return Response(303, b"", headers={"Location": back})
+
+    @staticmethod
+    def _site_ok(site: str) -> bool:
+        try:
+            login.login_path(site)
+        except ValueError:
+            return False
+        return True
+
+    def login_connect(self, terminal: bool, site: str = login.DEFAULT) -> Response:
+        """The Connect Instagram button. It answers JSON for the page to show: {ok, error, terminal} (terminal: offer "Open Terminal
+        for me", because macOS refused the background service). Nothing about the cookies is ever in the answer."""
+        if terminal:
+            error = login.open_in_terminal(site) if self._site_ok(site) else "That is not a site name."
+            body = {"ok": error is None, "error": error or "", "terminal": False, "opened": error is None}
+        else:
+            error = login.connect(self.store, domain=site)
+            refused = bool(error) and "Open Terminal" in error
+            body = {"ok": error is None, "error": error or "", "terminal": refused}
+        return Response(200, json.dumps(body).encode(), "application/json", headers={"Cache-Control": "no-store"})
 
     # ---- the menu-bar panel ---------------------------------------------------------------
 
@@ -564,10 +596,13 @@ class Hub(
             if self.store.board(board_id):
                 mine = identity.public_key()
                 already = {c["url"] for c in boards.view(self.store, board_id)["cards"] if mine in c["adders"]}
+                with_text = form.get("page") == "1"  # the owner ticked "share the page text" for these posts
                 for i in items:
                     if i["status"] == "archived" and i["canonical_url"] not in already:
                         boards.add_card(self.store, board_id, i, self.library)
                         self.store.activity_add("board")
+                    if with_text and i["status"] == "archived":  # also for a card sent earlier: this repairs it
+                        boards.add_page(self.store, board_id, i, self.library)
                 self.sync_boards()
         elif action in ("tag", "untag"):
             tag = " ".join(form.get("tag", "").lower().lstrip("#").split())[:40]

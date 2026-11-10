@@ -536,3 +536,15 @@ def test_saving_a_gemini_key_only_checks_the_key_and_tries_no_model():
     with pytest.raises(BrainFailed) as refused:
         choose_model("bad", FakeGemini((400, {"error": {"message": "API key not valid"}})), probe=False)
     assert refused.value.reason == "bad_key"
+
+
+def test_a_rejected_request_hands_the_item_to_the_next_key_and_the_note_says_why(store, tmp_path):
+    keyring.add("gemini", "free", "AIza-0", "key0", FakeGemini((200, MODELS)))
+    keyring.add("gemini", "free", "AIza-1", "key1", FakeGemini((200, MODELS)))
+
+    def process(item, key, progress):
+        if key.label == "key0":
+            raise BrainFailed("unknown", "OpenRouter request failed (HTTP 422): Invalid schema")
+        return tidy(GOOD)
+    assert brain_due(store, tmp_path / "notes", pause=lambda tier: None, process=process) == 2
+    assert store.get_item("https://www.instagram.com/reel/R0/")["ai_status"] == "done"

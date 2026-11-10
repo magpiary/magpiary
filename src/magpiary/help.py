@@ -318,9 +318,9 @@ TOPICS = {
                 "Pick Tavily (free, no card, 1,000 searches a month) and open its page.",
                 "Sign up, copy the key, paste it and press Check and save."]),
             ("Connect your Instagram login", "Only for posts that need one.", [
-                "Open the Terminal app and run: magpiary login connect",
-                "Allow both macOS prompts (Terminal using other apps' data, and “Chrome Safe Storage”).",
-                "Reload Settings. On a blocked post, press “Try with my Instagram login”."]),
+                "Log in to Instagram in Chrome. Open Settings → AI & login → Instagram login and press Connect Instagram.",
+                "Allow the macOS prompts (using Chrome's data, and “Chrome Safe Storage”). If macOS refuses, press “Open Terminal for me” and allow them there.",
+                "On a blocked post, press “Retry with my login”."]),
         ],
         "faqs": [
             ("How are links found?",
@@ -538,7 +538,7 @@ TOPICS = {
                 "send saves over Wi-Fi.",
                 "Notifications from “Script Editor”: the note that a new digest is ready. macOS names the tool Magpiary uses "
                 "to show it; turning it off only hides the note.",
-                "Terminal using other apps' data, and “Chrome Safe Storage”: only when you run magpiary login connect, to "
+                "Terminal using other apps' data, and “Chrome Safe Storage”: only when you press Connect Instagram (or run magpiary login connect), to "
                 "copy one site's login.",
                 "The prompts say Magpiary with its icon. On a Mac without Apple's command line tools they say Python 3.12 "
                 "instead; it is the same request. Change your answer any time in System Settings → Privacy & Security."]),
@@ -572,6 +572,11 @@ PAGE_TOPIC = {"wall": "library", "search": "library", "shelf": "library", "add":
 
 # What's new, shown once after an update (newest first). Plain words; one line each.
 CHANGES = [
+    ("0.1.7", ["The Mac app tells you to move it to Applications before it starts, and shows the real reason when its background service can't start.",
+               "Settings → AI & login: Connect Instagram is one button now, with Open Terminal for me if macOS refuses.",
+               "Welcome: Show my code for the Chrome extension shows the code right there.",
+               "Shared boards: tick Also share the page text I saved, so a friend can read a saved page their Mac can't download.",
+               "OpenRouter: a rejected request is retried in plainer forms, then with the next key, and a failure shows why."]),
     ("0.1.6", ["Settings are simpler: six pages, with Phone and AI & login renamed and Chrome moved to Library & this Mac.",
                "Instagram and Threads photo carousels save every slide.",
                "New downloads prefer H.264, so videos play on iPhones.",

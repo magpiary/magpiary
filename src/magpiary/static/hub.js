@@ -142,6 +142,26 @@
 
   // ---- talking to the hub -------------------------------------------------------------------------------
   const post = (action, fields) => fetch(action, { method: "POST", body: new URLSearchParams({ csrf, ...fields }), headers: FORM });
+  // Settings → Connect Instagram: the hub copies the login out of Chrome on this Mac and says how it went in place. If macOS refuses the
+  // background service, "Open Terminal for me" runs the same step in Terminal (the only app macOS lets ask). Never shows cookie contents.
+  document.addEventListener("click", async (ev) => {
+    const b = ev.target.closest("[data-login-connect], [data-login-terminal]"); if (!b || b.classList.contains("busy")) return;
+    const box = b.closest(".srow, .sgroup, .loginhow"), line = $("[data-login-status]", box), term = $("[data-login-terminal]", box);
+    const viaTerminal = b.hasAttribute("data-login-terminal"), label = $("span:not(.ld)", b), said = label?.textContent;
+    const say = (text, tone) => { line.hidden = false; line.textContent = text; line.dataset.tone = tone || ""; };
+    if (label) label.textContent = viaTerminal ? "Opening Terminal…" : "Waiting for Chrome and macOS…";
+    say(viaTerminal ? "Terminal is opening. Choose Allow when macOS asks, then come back here." : "Copying your Instagram login from Chrome. macOS may ask you to allow it: choose Allow.");
+    let d = null;
+    try {
+      const r = await working(b, fetch(viaTerminal ? "/hub/login/terminal" : "/hub/login/connect", { method: "POST", body: new URLSearchParams({ csrf, site: b.dataset.site || "" }), headers: FORM, cache: "no-store" }));
+      d = await r.json();
+    } catch (e) { d = { ok: false, error: "Magpiary did not answer. Reload the page and try again." }; }
+    if (label) label.textContent = said;
+    if (viaTerminal && d.ok) { say("Terminal is open. When it says Done, reload this page.", "ok"); term.hidden = false; return; }
+    if (d.ok) { say("Connected. Reloading…", "ok"); toast("Instagram connected"); setTimeout(() => location.reload(), 700); return; }
+    say(d.error || "That did not work. Try again.", "bad");
+    if (term) term.hidden = !(d.terminal || viaTerminal);
+  });
   async function getDoc(url) {
     const r = await fetch(url, { cache: "no-store" });
     if (!r.ok && r.status !== 404) throw new Error(String(r.status));
@@ -1828,8 +1848,14 @@
         '</div><form class="newp"><input type="text" placeholder="Or a new pile…" maxlength="60" aria-label="New pile name"><button class="btn sm" type="submit">Create</button></form>';
     } else if (kind === "board") {
       let list = [];
+      let pages = {};
       try { list = await (await fetch("/boards.json", { cache: "no-store" })).json(); } catch (e) { /* none */ }
-      box.innerHTML = '<div class="sh">Add to board</div>' + (list.length ? '<div class="plist">' + list.map((b) =>
+      try { pages = await (await fetch("/captured.json?ids=" + ids.join(","), { cache: "no-store" })).json(); } catch (e) { /* none */ }
+      const sizes = Object.values(pages);
+      const share = sizes.length ? '<label class="small" style="display:block;margin:6px 10px"><input type="checkbox" data-sharepage> Also share the page text I saved' +
+        (sizes.length === 1 && sizes[0] ? ` (${esc(sizes[0])})` : ` (${sizes.length} pages)`) +
+        '<br><span class="muted">Board members can read it. Pictures stay on this Mac. Off unless you tick it.</span></label>' : "";
+      box.innerHTML = '<div class="sh">Add to board</div>' + share + (list.length ? '<div class="plist">' + list.map((b) =>
         `<button type="button" data-b="${esc(b.id)}" data-name="${esc(b.name)}"><i style="background:var(--t-place)"></i>${esc(b.name)}<small>${b.n}</small></button>`).join("") + "</div>"
         : '<p class="small muted" style="margin:4px 10px 10px">No boards yet.</p>') + '<div class="row"><a class="btn sm" href="/?view=boards&make=new">New board…</a></div>';
     } else {
@@ -1851,7 +1877,7 @@
       const p = ev.target.closest("[data-p]");
       if (p) return send({ action: "pile", pile: p.dataset.p }, `Moved ${ids.length} to ${p.dataset.name}`);
       const b = ev.target.closest("[data-b]");
-      if (b) return send({ action: "board", board: b.dataset.b }, `Added ${ids.length} to ${b.dataset.name}`);
+      if (b) return send({ action: "board", board: b.dataset.b, ...($("[data-sharepage]", box)?.checked ? { page: "1" } : {}) }, `Added ${ids.length} to ${b.dataset.name}`);
       const t = ev.target.closest("[data-t]"); const v = $("input", box).value.trim();
       if (t && v) send({ action: t.dataset.t, tag: v }, `${t.dataset.t === "tag" ? "Tagged" : "Untagged"} #${v.replace(/^#/, "")}`);
     });
