@@ -298,7 +298,7 @@ class WelcomePages:
                 f'<input type="url" name="url" placeholder="https://example.com/a-page" required aria-label="Link to a page">'
                 f'<button class="btn dark sm" type="submit">Add</button></form><div class="w-cta">{done}{hint}</div>'
                 f'<p class="small muted" style="margin:18px 0 0">Optional, any time in Settings: <a class="link" href="/settings/privacy#lock">lock your library '
-                f'with a PIN or Touch ID</a>.</p></div><div>{arrived}</div></div>')
+                f'with a PIN or Touch ID</a>, or <a class="link" href="/settings/appearance#installapp">open Magpiary in its own app window</a>.</p></div><div>{arrived}</div></div>')
 
     def welcome_post(self, path: str, form: dict) -> bool:
         if path == "/hub/welcome/done":

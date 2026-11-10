@@ -13,6 +13,7 @@ import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from magpiary import pwa
 from magpiary.brain import TYPE_NAMES
 from magpiary.queuepage import SOURCE_NAMES
 from magpiary.web import Response, e
@@ -28,7 +29,8 @@ STATIC_FILES = {"hub.css": "text/css; charset=utf-8", "hub.js": "text/javascript
                 "vendor/Flip.min.js": "text/javascript; charset=utf-8", "icon.svg": "image/svg+xml",
                 "emoji.json": "application/json",
                 "lock.js": "text/javascript; charset=utf-8", "settings.js": "text/javascript; charset=utf-8",
-                "map.js": "text/javascript; charset=utf-8", "map.css": "text/css; charset=utf-8"}  # every emoji (Unicode names and keywords, MIT: emoji.LICENSE.txt)
+                "pwa.js": "text/javascript; charset=utf-8", "icon-192.png": "image/png", "icon-512.png": "image/png",
+                "maskable-512.png": "image/png", "map.js": "text/javascript; charset=utf-8", "map.css": "text/css; charset=utf-8"}  # every emoji (Unicode names and keywords, MIT: emoji.LICENSE.txt)
 
 SIZES = {"s": "Small tiles", "m": "Medium tiles", "l": "Large tiles"}
 # Looks the owner kept as choices in Settings → Appearance (24 Oct); the first of each is the default.
@@ -96,7 +98,7 @@ def static(path: str) -> Response:
 def csp(nonce: str) -> str:
     return (f"default-src 'none'; img-src 'self' data:; media-src 'self'; connect-src 'self'; font-src 'self'; "
             f"style-src 'self' 'unsafe-inline'; script-src 'nonce-{nonce}' 'self'; form-action 'self'; "
-            f"base-uri 'none'; frame-ancestors 'none'")
+            f"manifest-src 'self'; base-uri 'none'; frame-ancestors 'none'")
 
 
 def appearance(store) -> dict:
@@ -126,7 +128,7 @@ def document(title: str, body: str, look: dict, csrf: str, page: str, status: in
     doc = (f'<!doctype html><html lang="en" data-size="{look["size"]}" data-layout="{look["layout"]}"{theme}{picks} '
            f'style="--box:{look["box"]}px;--gs:{glass_gs(look["glass_level"]):.3g}"><head><meta charset="utf-8">'
            f'<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
-           f'<meta name="csrf" content="{e(csrf)}">'
+           f'<meta name="csrf" content="{e(csrf)}"><meta name="pwa-port" content="{pwa.install_port()}">'
            f'<script nonce="{nonce}">try{{if(sessionStorage.getItem("mag-enter"))document.documentElement.classList.add("entering");'
            f'if(sessionStorage.getItem("mag-slide"))document.documentElement.classList.add("slide-in","slidefx");'
            f'if((!sessionStorage.getItem("mag-opened")||/[?&]opening=1/.test(location.search))&&!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("opening")}}catch(e){{}}</script>'
@@ -146,7 +148,7 @@ def document(title: str, body: str, look: dict, csrf: str, page: str, status: in
            f'<script defer src="/static/phone.js?v={v}"></script><script defer src="/static/digest.js?v={v}"></script><script defer src="/static/map.js?v={v}"></script>'
            f'<script defer src="/static/hub.js?v={v}"></script>'
            f'<script defer src="/static/indigo.js?v={v}"></script>'
-           f'<script defer src="/static/lock.js?v={v}"></script><script defer src="/static/settings.js?v={v}"></script></head>'
+           f'<script defer src="/static/lock.js?v={v}"></script><script defer src="/static/settings.js?v={v}"></script><script defer src="/static/pwa.js?v={v}"></script></head>'
            f'<body data-page="{e(page)}"{f" class={chr(34)}{body_class}{chr(34)}" if body_class else ""}>{body}'
            + (f'<script nonce="{nonce}" type="application/json" id="page-data">{script}</script>' if script else "")
            + "</body></html>")

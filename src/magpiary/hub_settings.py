@@ -103,6 +103,7 @@ SEARCH_INDEX = [
     ("Glass", "glass blur dark surfaces depth", "appearance", "glass"),
     ("Glass strength", "glass blur glow edge slider percent", "appearance", "glassstrength"),
     ("Page width", "wide full boxed", "appearance", "width"),
+    ("Install as app", "web app window dock launchpad chrome edge brave safari standalone pwa", "appearance", "installapp"),
     ("Digest on or off", "digest on off switch written by who writes claude codex key", "ai", "digest-on"),
     ("Deeper dive", "deeper dive deep long video podcast minutes suggest sections chapters takeaways quotes engine model claude code codex", "ai", "deepdive"),
     ("Connections map (beta)", "beta map graph connections try early", "appearance", "betamap"),
@@ -1349,6 +1350,12 @@ class SettingsPages:
                                      bar("width", [(str(w), f"{w:,} px") for w in ui.BOX_PRESETS] + [("full", "Full")], width),
                                      info="A width only shows when the window is wider than it. Full stretches edge to edge.", sid="width"),
                               gid="tuning")
+                + _group("Use as an app", _row("Install as app", "Opens Magpiary in its own window with its own Dock icon, no tabs or address bar. "
+                                               "Works in Chrome, Edge and Brave; in Safari use File > Add to Dock.",
+                                               '<span class="muted small" data-pwa-status>Checking…</span> '
+                                               '<button type="button" class="btn sm dark" data-pwa-install hidden>Install</button>',
+                                               info="The app is this same page, still served by the Magpiary service on this Mac. Nothing is stored in the browser "
+                                                    "and nothing is sent anywhere.", sid="installrow"), gid="installapp")
                 + self._beta_group())
 
     def _beta_group(self) -> str:

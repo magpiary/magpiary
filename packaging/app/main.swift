@@ -82,6 +82,7 @@ final class Shell: NSObject, NSApplicationDelegate {
     // magpiary://uninstall is the button in Settings: the hub can't remove the app it runs from, so it asks the app. It only opens the question below.
     func application(_ application: NSApplication, open urls: [URL]) {
         if urls.contains(where: { $0.host == "uninstall" }) { uninstall() }
+        if urls.contains(where: { $0.host == "open" }) { open("/") }   // the "Start Magpiary" button of the installed web app's offline page
     }
 
     // Opening the app again (Dock, Spotlight): the installer while setup is not finished (and it starts the setup if nothing is
@@ -376,7 +377,28 @@ final class Shell: NSObject, NSApplicationDelegate {
 
     func open(_ path: String) {
         guard setupDone, canConnect() else { showInstaller(); return }
+        if path == "/", let installed = installedWebApp() {   // the library itself opens in the installed web app window
+            NSWorkspace.shared.openApplication(at: installed, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+            return
+        }
         NSWorkspace.shared.open(URL(string: "http://localhost:\(port)\(path)")!)
+    }
+
+    /// The Chrome, Edge or Brave "install as app" copy of this hub, if the user made one (Settings > Appearance > Install as app).
+    /// Chromium keeps them in ~/Applications/<Browser> Apps.localized/Magpiary.app and records the address in the shim's Info.plist
+    /// (CrAppModeShortcutURL), so only a copy of THIS account's hub counts. Anything unexpected: nil, and the browser opens as before.
+    /// Only the first account's port can be installed (Settings says so).
+    func installedWebApp() -> URL? {
+        let home = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")
+        guard let folders = try? FileManager.default.contentsOfDirectory(atPath: home.path) else { return nil }
+        for folder in folders where folder.hasSuffix("Apps.localized") {
+            let app = home.appendingPathComponent(folder).appendingPathComponent("Magpiary.app")
+            guard let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist")),
+                  let address = info["CrAppModeShortcutURL"] as? String,
+                  let url = URL(string: address), url.host == "localhost", url.port == port else { continue }
+            return app
+        }
+        return nil
     }
 
     func quit() {

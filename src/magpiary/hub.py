@@ -22,7 +22,7 @@ from pathlib import Path
 from urllib.parse import quote, urlencode, urlsplit
 
 from magpiary import keys as keyring
-from magpiary import login, modes, phone_gate, ui
+from magpiary import login, modes, phone_gate, pwa, ui
 from magpiary.activity import Activity
 from magpiary.brain import Call, http_call
 from magpiary.cleaner import UnsupportedLink
@@ -254,6 +254,10 @@ class Hub(
             return refused
         if path.startswith("/static/"):
             return ui.static(path)
+        if path == "/manifest.webmanifest":  # the installed-app files are open while locked: they hold nothing of the library
+            return pwa.manifest()
+        if path == "/sw.js":
+            return pwa.worker()
         if held := self.locked_get(path, query):
             return held
         q = {k: v[0] for k, v in query.items()}
