@@ -136,7 +136,7 @@ class WallPages:
                 f'any other website. Tracking bits are removed before it is saved.</p>'
                 f'<form method="post" action="/hub/add">{ui.hidden(self.csrf, next="/")}'
                 f'<input type="url" name="url" placeholder="https://" required autocomplete="off" aria-label="Link to the post">'
-                f'<div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-close>Cancel</button>'
+                f'<div class="row" style="justify-content:flex-end"><button class="btn quiet" type="button" data-close>Cancel</button>'
                 f'<button class="btn dark" type="submit">Add</button></div></form></div>')
 
     def add_page(self, q: dict) -> Response:
@@ -343,7 +343,7 @@ class WallPages:
                 f'<div style="flex:1;min-width:240px"><b>{n} save{"" if n == 1 else "s"} need{"s" if n == 1 else ""} you</b>'
                 f'<p>Magpiary couldn\'t open or summarise {"it" if n == 1 else "them"} by itself. The Nest shows what happened '
                 f'and what to try.</p></div><a class="btn cta alert" href="/nest">Open the Nest</a>'
-                f'<button class="btn" type="button" data-dismiss-btn>Not now</button></div>')
+                f'<button class="btn quiet" type="button" data-dismiss-btn>Not now</button></div>')
 
     def _views(self, view: str, filters: str) -> str:
         return (f'<div class="ctrl1"><div class="vgrp"><div class="views" role="tablist" id="views"><i class="vline" aria-hidden="true"></i>'

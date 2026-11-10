@@ -213,6 +213,7 @@ class LocalEngine:
     model: str
     tier: str = "local"
     secret: str = "local"
+    effort: str = "low"
     refused: str = ""
 
     @property
@@ -234,7 +235,12 @@ def summarisers(store, keys=None, today: str | None = None) -> list:
     for i in order(store, keys):
         if i in LOCAL:
             if i in ok and installed(i):
-                out.append(LocalEngine(i, i, SUMMARY_MODELS[i]))
+                if i == "claude_code":  # the owner's pick in AI keys (askconfig); Codex keeps its fixed light model
+                    from magpiary import askconfig
+
+                    out.append(LocalEngine(i, i, askconfig.summary_model(store), effort=askconfig.summary_effort(store)))
+                else:
+                    out.append(LocalEngine(i, i, SUMMARY_MODELS[i]))
         elif i in usable:
             out.append(usable[i])
     return out

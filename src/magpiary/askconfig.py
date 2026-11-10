@@ -23,6 +23,28 @@ DEFAULT_MODEL, DEFAULT_EFFORT = "haiku", "medium"
 MODEL_NAME = {"haiku": "Haiku 5.5", "sonnet": "Sonnet 5.5", "opus": "Opus 5.5"}
 
 
+# The regular per-post summary on Claude Code (owner, 10 Nov 2026): its own model and effort, apart from Ask's. A model the
+# plan or CLI cannot run falls back to SUMMARY_FALLBACK (the old fixed choice) and the post says so.
+SUMMARY_MODEL = "summary_claude_model"
+SUMMARY_EFFORT = "summary_claude_effort"
+SUMMARY_MODELS = {"sonnet": "Sonnet 5.5: balanced, the default",
+                  "haiku": "Haiku 5.5: fastest, lightest on your plan",
+                  "opus": "Opus 5.5: strongest, uses the most of your plan"}
+SUMMARY_EFFORTS = {"low": "Low: quickest, lightest", "medium": "Medium: thinks a little longer", "high": "High: thinks longest, uses the most"}
+SUMMARY_DEFAULT = ("sonnet", "low")
+SUMMARY_FALLBACK = ("haiku", "low")
+
+
+def summary_model(store) -> str:
+    value = store.get_setting(SUMMARY_MODEL, SUMMARY_DEFAULT[0])
+    return value if value in SUMMARY_MODELS else SUMMARY_DEFAULT[0]
+
+
+def summary_effort(store) -> str:
+    value = store.get_setting(SUMMARY_EFFORT, SUMMARY_DEFAULT[1])
+    return value if value in SUMMARY_EFFORTS else SUMMARY_DEFAULT[1]
+
+
 # How much an answer does (owner, 29 Oct: the first rules were all about saving tokens and made answers too short).
 # Short is the old behaviour; Normal is the default; Deep goes through the web and the library properly.
 DEPTHS = {"short": "Short", "normal": "Normal", "deep": "Deep"}

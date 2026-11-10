@@ -256,4 +256,4 @@ class DigestPages:
                 f'<div class="dgtext"><span class="dgtag">{ui.icon("digest")} New digest</span>'
                 f'<h3>Your {word}ly digest is ready</h3><p>{e(_period(d))}: what your saves were about, and what’s worth doing.</p></div>'
                 f'<div class="dgacts"><a class="btn cta" href="/digest/{did}">Read the digest</a>'
-                f'<button class="btn" type="button" data-dismiss-btn>Not now</button></div></div>')
+                f'<button class="btn quiet" type="button" data-dismiss-btn>Not now</button></div></div>')

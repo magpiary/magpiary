@@ -363,7 +363,7 @@ class BoardPages:
                 f'<h1 data-name>{e(v["name"])}</h1>'
                 f'<button type="button" class="bpen" data-renamebtn aria-label="Rename the board" title="Rename">{ui.icon("summary")}</button>'
                 f'<span class="bnameacts"><button class="btn sm dark" data-namesave>Save</button>'
-                f'<button type="button" class="btn sm" data-namecancel>Cancel</button></span></form>')
+                f'<button type="button" class="btn sm quiet" data-namecancel>Cancel</button></span></form>')
         return (f'<div class="bhead"><a class="bback" href="/?view=boards">{ui.icon("chev")}<span>Boards</span></a>'
                 f'<div class="btitle"><span class="bstkwrap"><button type="button" class="bstk" data-stickerpick '
                 f'aria-label="Change the sticker or colour" title="Change the sticker or colour">{sticker}</button>{pop}</span>'
@@ -581,7 +581,7 @@ class BoardPages:
         step1 = (f'<div class="mkpane wlpane" data-step="1">{head1}{fill}'
                  + (f'<div class="wlgo"><a class="btn dark" href="{back}">Got it</a></div>' if joined else
                     '<div class="wlgo"><button type="button" class="btn dark" data-wl="2">Next</button>'
-                    f'<a class="btn" href="{back}">Skip</a></div>')
+                    f'<a class="btn quiet" href="{back}">Skip</a></div>')
                  + '</div>')
         if joined:
             return (f'<div class="dlg-wrap qrwrap" data-close="{back}"><div class="dlg invdlg mkdlg wldlg" role="dialog" aria-modal="true" '
@@ -595,7 +595,7 @@ class BoardPages:
                  f'<form method="post" action="/hub/boards/share" class="bsharego wlgo" data-morph data-busy-label="Sharing…">'
                  f'{ui.hidden(self.csrf, board=board_id, invite="1")}'
                  f'<button class="btn dark" type="submit">{ui.icon("people")}<span>Share and invite</span></button>'
-                 f'<a class="btn" href="{back}">Not now</a></form></div>')
+                 f'<a class="btn quiet" href="{back}">Not now</a></form></div>')
         return (f'<div class="dlg-wrap qrwrap" data-close="{back}"><div class="dlg invdlg mkdlg wldlg" role="dialog" aria-modal="true" '
                 f'aria-labelledby="wlh"><a class="rb iclose" href="{back}" aria-label="Close">✕</a>'
                 f'<div class="mkpanes" data-wlpanes>{step1}{step2}</div></div></div>')
@@ -608,7 +608,7 @@ class BoardPages:
                "encrypted Nostr relays")
         form = (f'<form method="post" action="/hub/boards/share" class="bsharego" data-morph data-busy-label="Sharing…">{ui.hidden(self.csrf, board=board_id, invite="1")}'
                 f'<button class="btn dark" type="submit">{ui.icon("people")}<span>Share and invite</span></button>'
-                f'<a class="btn" href="{back}">Not now</a></form>')
+                f'<a class="btn quiet" href="{back}">Not now</a></form>')
         return (f'<div class="dlg-wrap qrwrap" data-close="{back}"><div class="dlg invdlg" role="dialog" aria-modal="true" '
                 f'aria-labelledby="shh"><a class="rb iclose" href="{back}" aria-label="Close">✕</a>'
                 + f'<header class="ihero"><span class="seticon" style="--c:#8b5cf6">{ui.icon("people")}</span>'
@@ -632,7 +632,7 @@ class BoardPages:
                 f'<li>The board is hidden. Restore it from “Deleted boards” in the Boards view within 30 days; after that it is deleted for good.</li>{ends}</ul>'
                 f'<form method="post" action="/hub/boards/delete" class="bsharego" data-busy-label="Deleting…" data-hold="1600" data-dissolve>{ui.hidden(self.csrf, board=board_id)}'
                 f'<label class="back"><input type="checkbox" name="ack" value="1" required> I understand</label>'
-                f'<button class="btn danger" type="submit" disabled>{ui.icon("trash")}<span>Delete board</span></button><a class="btn" href="{back}">Cancel</a></form>'
+                f'<button class="btn danger" type="submit" disabled>{ui.icon("trash")}<span>Delete board</span></button><a class="btn quiet" href="{back}">Cancel</a></form>'
                 f'</div></div>')
 
     def _invite_dialog(self, v: dict, board_id: str, auto: bool = False) -> str:

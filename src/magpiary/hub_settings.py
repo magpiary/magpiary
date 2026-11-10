@@ -40,7 +40,7 @@ SUPPORT_URL = "https://www.buymeacoffee.com/magpiary"  # opens in the browser on
 
 SAVED = {"key": "Key checked and saved.", "login": "Instagram connected.", "model": "Model changed.",
          "mode": "Saved. New summaries follow this mode.", "budget": "Saved.", "look": "Saved.", "phone": "Phone removed.",
-         "awake": "Saved.", "limit": "Search limit saved.", "longvideo": "Saved.", "allowed": "Allowed. The Digest, Ask and Deeper dive now use it.", "stopped": "Stopped. Magpiary no longer uses it.", "deep": "Deeper dive engine saved.", "keys": "Keys removed.", "profile": "Profile saved.",
+         "awake": "Saved.", "limit": "Search limit saved.", "longvideo": "Saved.", "allowed": "Allowed. The Digest, Ask and Deeper dive now use it.", "stopped": "Stopped. Magpiary no longer uses it.", "deep": "Deeper dive engine saved.", "summary": "Summary model saved.", "keys": "Keys removed.", "profile": "Profile saved.",
          "photo": "Photo saved.", "nophoto": "Photo removed.", "bucket": "Bucket connected and checked.",
          "nobucket": "Bucket removed from this Mac.", "claude": "Claude Code settings saved.",
          "claudetest": "Test finished.", "claudeoff": "Claude Code disconnected. Your AI key writes the digest now.", "via": "New boards will sync there.", "joined": "You joined the board. It fills in as it syncs."}
@@ -524,9 +524,23 @@ class SettingsPages:
                                     {"kind": kind, "enabled": "1", "next": "/settings/ai#keys"}, f"Allow {eng.SHORT[kind]}",
                                     confirm="" if on else confirm)
                        if on or here else '<a class="btn sm" href="/settings/ask#engine">Set it up</a>')
-            rows[kind] = _row(eng.LOCAL[kind], desc, control, lead=_handle(eng.SHORT[kind], on and here) + logo, sid=f"local-{kind}",
+            more = self._summary_pick() if kind == "claude_code" and on and here else ""
+            rows[kind] = _row(eng.LOCAL[kind], desc, control, more=more, lead=_handle(eng.SHORT[kind], on and here) + logo, sid=f"local-{kind}",
                               cls="keyrow" + ("" if on and here else " offrow"))
         return rows
+
+    def _summary_pick(self) -> str:
+        """The model and effort Claude Code writes each summary with (the Digest, Ask and Deeper dive have their own)."""
+        from magpiary import askconfig
+
+        def opts(choices: dict, current: str) -> str:
+            return "".join(f'<option value="{k}"{" selected" if k == current else ""}>{e(v)}</option>' for k, v in choices.items())
+
+        return (f'<form method="post" action="/hub/summary-pick" class="inlineform" data-autosubmit>{ui.hidden(self.csrf)}'
+                f'<label>Summary model <select name="model">{opts(askconfig.SUMMARY_MODELS, askconfig.summary_model(self.store))}</select></label> '
+                f'<label>Effort <select name="effort">{opts(askconfig.SUMMARY_EFFORTS, askconfig.summary_effort(self.store))}</select></label>'
+                '<small>Bigger models and higher effort use more of your shared Claude plan. If the chosen model is not available, '
+                'Haiku at low effort writes the summary and the post says so.</small></form>')
 
     def _keys_group(self, q: dict) -> str:
         from magpiary import engines as eng
@@ -594,7 +608,7 @@ class SettingsPages:
                       f'<span class="pastewrap"><input type="password" name="key" id="key" placeholder="Paste the key" required>{_paste("#key")}</span></div>{more}')
             guides = ""
         return (f'<form method="post" action="/hub/keys/add" autocomplete="off" class="addform">{ui.hidden(self.csrf, next=back)}'
-                f'{fields}{guides}<div class="row"><button class="btn dark" type="submit">Check and save</button><button class="btn" type="button" data-closedetails>Cancel</button>'
+                f'{fields}{guides}<div class="row"><button class="btn dark" type="submit">Check and save</button><button class="btn quiet" type="button" data-closedetails>Cancel</button>'
                 f'<span class="small muted">Checked with the provider, then stored only on this Mac and never shown again.'
                 f'</span></div></form>')
 
@@ -642,7 +656,7 @@ class SettingsPages:
                          "Minutes. Those posts show Deeper dive as suggested. 0 never suggests it.",
                          f'<form method="post" action="/hub/settings/long-video" class="iform">{ui.hidden(self.csrf)}'
                          f'<input type="number" min="0" max="600" name="minutes" value="{e(minutes)}" aria-label="Minutes">'
-                         f'<button class="btn sm" type="submit">Save</button></form>', lead=ui.icon("clock"), sid="longvideo",
+                         f'<button class="btn sm dark" type="submit">Save</button></form>', lead=ui.icon("clock"), sid="longvideo",
                          more=(f'<a class="link" href="/?deep=suggested">{waiting} long video{"s" if waiting != 1 else ""} '
                                f'could use one now →</a>') if waiting else "")
         return _group("Deeper dive", rows, gid="deep", desc=f'Uses {e(eng.choice(self.store, "deep")["label"])}.' if on else "Off.")
@@ -658,7 +672,7 @@ class SettingsPages:
             rows += _row("Monthly limit", f"{used} of {e(limit)} searches used this month.",
                          f'<form method="post" action="/hub/settings/search-limit" class="iform">{ui.hidden(self.csrf)}'
                          f'<input type="number" min="0" max="10000" name="limit" value="{e(limit)}" aria-label="Searches a month">'
-                         f'<button class="btn sm" type="submit">Save</button></form>',
+                         f'<button class="btn sm dark" type="submit">Save</button></form>',
                          info="Searches stop for the month at this number, so a paid plan never runs over.", cls="keep")
             on = True
         else:
@@ -807,7 +821,7 @@ class SettingsPages:
                f'placeholder="Like “Work iPhone”"><span class="hint">The phone sends on any Wi-Fi your Mac is on.</span></div>'
                f'{self.phone_advanced()}'
                f'<div class="row"><button class="btn dark" type="submit">'
-               f'Show the QR code</button><button class="btn" type="button" data-closedetails>Cancel</button></div></form></details></div>') if self.setup else (
+               f'Show the QR code</button><button class="btn quiet" type="button" data-closedetails>Cancel</button></div></form></details></div>') if self.setup else (
                '<p class="gnote">Pairing runs with the background service.</p>')
         qr = self._qr_block(q.get("qr", ""), q.get("phone", "")) if q.get("qr") and self.setup else ""
         out = [_group("Send posts from your iPhone", "".join(rows) + add + (self._home_group() if phones else ""), gid="phones", lock="phones", cls="hero lilac",
@@ -1130,13 +1144,13 @@ class SettingsPages:
                 f'<b>{e(shown_name)}</b><button type="button" class="pedbtn" data-edopen aria-label="Edit your name">{pencil}</button></div>'
                 f'<div class="pedform" hidden><input type="text" name="name" value="{e(me["name"])}" maxlength="{identity.NAME_MAX}" '
                 f'placeholder="Your name" aria-label="Your name" required><button class="btn sm dark">Save</button>'
-                f'<button type="button" class="btn sm" data-edcancel>Cancel</button></div></form>')
+                f'<button type="button" class="btn sm quiet" data-edcancel>Cancel</button></div></form>')
         about = (f'<form method="post" action="/hub/profile/about" class="ped pedabout" data-ed>{hidden}<div class="pedview">'
                  + (f'<p class="pabout">{e(me["about"])}</p><button type="button" class="pedbtn" data-edopen aria-label="Edit your about line">{pencil}</button>'
                     if me["about"] else f'<button type="button" class="pedadd" data-edopen>{pencil}<span>Add a line about you</span></button>')
                  + f'</div><div class="pedform" hidden><textarea name="about" rows="3" maxlength="{identity.ABOUT_MAX}" '
                  f'placeholder="What you collect, what you\'re into" aria-label="About you">{e(me["about"])}</textarea>'
-                 f'<span class="pedacts"><button class="btn sm dark">Save</button><button type="button" class="btn sm" data-edcancel>Cancel</button>'
+                 f'<span class="pedacts"><button class="btn sm dark">Save</button><button type="button" class="btn sm quiet" data-edcancel>Cancel</button>'
                  f'<small>Up to {identity.ABOUT_MAX} characters</small></span></div></form>')
         card = self._person(
             {
@@ -1157,7 +1171,7 @@ class SettingsPages:
             f'<input type="text" name="{slot}" value="{e(me["links"].get(slot, ""))}" placeholder="{self.LINK_LABELS[slot]}" '
             f'aria-label="{e(hints[slot])}" maxlength="200" autocomplete="off" spellcheck="false"></label>' for slot in identity.LINK_SLOTS)
             + '</div><div class="pform-acts" hidden><button class="btn sm dark">Save changes</button>'
-            '<button type="button" class="btn sm" data-dirtycancel>Cancel</button></div></form>')
+            '<button type="button" class="btn sm quiet" data-dirtycancel>Cancel</button></div></form>')
         rows = identity.topic_rows(self.store)
         topic_chips = "".join(
             f'<form method="post" action="/hub/profile/topic" class="tchip{" auto" if auto else ""}">'
@@ -1578,6 +1592,14 @@ class SettingsPages:
                     return Response(303, b"", headers={"Location": "/settings/ai?saved=allowed#keys"})
                 eng.disallow(self.store, kind)
             return Response(303, b"", headers={"Location": "/settings/ai?saved=stopped#keys"})
+        if path == "/hub/summary-pick":
+            from magpiary import askconfig
+
+            if form.get("model") in askconfig.SUMMARY_MODELS:
+                self.store.set_setting(askconfig.SUMMARY_MODEL, form["model"])
+            if form.get("effort") in askconfig.SUMMARY_EFFORTS:
+                self.store.set_setting(askconfig.SUMMARY_EFFORT, form["effort"])
+            return Response(303, b"", headers={"Location": "/settings/ai?saved=summary#keys"})
         if path == "/hub/askset":
             return self.askset_post(form)
         if path == "/hub/versioncheck/now":

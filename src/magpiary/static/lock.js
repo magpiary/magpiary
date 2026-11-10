@@ -296,7 +296,7 @@
     const box = document.createElement("div");
     box.className = "lkoffer"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Touch ID");
     box.innerHTML = '<b>Use Touch ID in this browser next time?</b><p>You would skip the PIN here. The PIN still works.</p>'
-      + '<div><button class="btn sm dark" type="button" data-yes>Set it up</button><button class="btn sm" type="button" data-no>Not now</button></div><p class="lkerr" role="alert"></p>';
+      + '<div><button class="btn sm dark" type="button" data-yes>Set it up</button><button class="btn sm quiet" type="button" data-no>Not now</button></div><p class="lkerr" role="alert"></p>';
     document.body.append(box);
     $("[data-no]", box).addEventListener("click", () => { put(OFFER, "no"); box.remove(); });
     $("[data-yes]", box).addEventListener("click", async () => {

@@ -988,3 +988,28 @@ html:is([data-labels="black"], [data-labels="colour"]):root[data-theme] .mx .kin
 :root[data-theme] .btn.btn.cta:active { filter: brightness(.96); }
 /* the same button for something that needs you: pink, for alerts and things gone wrong */
 :root[data-theme] .btn.btn.cta.alert { --cta-a: #ff9fc0; --cta-b: #ff5a92; --cta-ink: #3a0620; }
+
+/* (the doubled .btn.btn outranks the glass rule's :is(), the same trick as .btn.btn.cta above) */
+/* ---- button text that must stay readable (button audit, 10 Nov 2026; scripts/button_contrast_scan.py checks all of this) ----
+   Root cause: the glass rule above gives every `.btn:not(.dark)` the dark nav fill, but several surfaces set a button's TEXT
+   colour for a different fill (white pill on the update banner, an inverted pill in the Ask model picker) or re-define --fg
+   for a light surface (the cream profile ticket). The text kept its own colour and the fill turned dark: dark on dark. */
+:root[data-theme] .update .btn.btn { background: #fff; color: #111; box-shadow: none; }
+:root[data-theme] .update .btn.btn:is(:hover, .st-hover) { background: #f1eefc; box-shadow: none; }
+:root[data-theme] .pop .chmodel .btn.btn { background: var(--fg); color: var(--bg); box-shadow: none; }
+:root[data-theme] .pop .chmodel .btn.btn:is(:hover, .st-hover) { background: color-mix(in srgb, var(--fg) 85%, var(--bg)); box-shadow: none; }
+/* the profile ticket is cream paper with dark ink: its buttons and its photo pop-up use the ticket's own colours, not the dark glass */
+:root[data-theme] .person { --navglass: var(--chip); --navring: inset 0 0 0 1px var(--line); --card: var(--bg); --bad-t: #b5202a; --ok-t: #0a7a4a; --warn-t: #8a5a00; }
+:root[data-theme] .person .btn.dark { background: var(--fg); color: var(--bg); }
+:root[data-theme] .person .btn.dark:is(:hover, .st-hover):not(:disabled, .busy) { background: color-mix(in srgb, var(--fg) 82%, var(--bg)); color: var(--bg); }
+:root[data-theme] .person .pedbtn { color: var(--fg-2); opacity: .85; }
+:root[data-theme] .person .pedview:hover .pedbtn, :root[data-theme] .person .pedbtn:focus-visible { opacity: 1; }
+
+
+/* ---- one button system (owner, 10 Nov): PRIMARY is `.btn.dark` (Save, Done, Check and save, Use photo: the one thing the dialog
+   wants from you), bold and lifted; SECONDARY is `.btn.quiet` (Cancel, Not now, Skip): no fill, no ring, soft text, a faint chip
+   on hover. Danger keeps its own look. Every Save in a form is primary, every Cancel beside it is quiet. ---- */
+:root[data-theme] .btn.dark { font-weight: 700; box-shadow: 0 8px 20px -8px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.55); }
+:root[data-theme] .person .btn.dark { box-shadow: 0 6px 14px -6px rgba(29,27,22,.55); }
+:root[data-theme] .btn.btn.btn.quiet { background: none; box-shadow: none; color: var(--fg-2); font-weight: 600; }
+:root[data-theme] .btn.btn.btn.quiet:is(:hover, .st-hover):not(:disabled, .busy) { background: var(--chip); box-shadow: none; color: var(--fg); }

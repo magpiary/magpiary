@@ -1367,7 +1367,7 @@ class Store(ChatStore, StatsStore):
             row = self._db.execute(
                 "SELECT COUNT(*), SUM(status='archived'), SUM(ai_status='done'), SUM(status='needs_attention'), "
                 "SUM(ai_status='needs_attention'), SUM(senses_status='done'), SUM(links_status IS NOT NULL), "
-                "MAX(created_at), MAX(processed_at), (SELECT COUNT(*) FROM board_events), "
+                "MAX(created_at), MAX(processed_at), (SELECT COUNT(*) FROM board_events), SUM(shelf='inbox'), "
                 "(SELECT COUNT(*) || '-' || IFNULL(MAX(created_at), '') FROM board_pending) FROM items").fetchone()
         return ":".join(str(v or 0) for v in row)
 

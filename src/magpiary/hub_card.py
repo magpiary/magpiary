@@ -761,7 +761,7 @@ class CardPages:
         add = (f'<form method="post" action="/hub/facet/add" class="pvtagadd fadd" hidden>{ui.hidden(self.csrf, id=item["id"], next=here)}'
                f'<select name="facet" aria-label="Kind">{options}</select>'
                f'<input type="text" name="value" maxlength="40" placeholder="e.g. kitchen" aria-label="Value">'
-               f'<button class="btn sm" type="submit">Save</button><button class="link" type="button" data-pvhide>Cancel</button></form>'
+               f'<button class="btn sm dark" type="submit">Save</button><button class="link" type="button" data-pvhide>Cancel</button></form>'
                f'<button type="button" class="pvaddbtn" data-pvshow>{ui.icon("plus")}Add detail</button>')
         return (f'<h4>Look <span>· what it is like, not what it says</span></h4>'
                 + (f'<p class="it-sum sm looksent">{e(look)}</p>' if look else "")
@@ -849,7 +849,7 @@ class CardPages:
                    + f'<button type="button" class="pvaddbtn" data-pvshow>{ui.icon("plus")}{"Edit note" if note else "Add note"}</button>'
                    + f'<form method="post" action="/hub/note" class="pvnoteform" hidden>{ui.hidden(self.csrf, id=item["id"], next=here)}'
                    f'<textarea class="note" name="note" placeholder="Why did you save this?" aria-label="Your note">{e(note)}</textarea>'
-                   f'<div class="row" style="margin-top:8px"><button class="btn sm" type="submit">Save note</button>'
+                   f'<div class="row" style="margin-top:8px"><button class="btn sm dark" type="submit">Save note</button>'
                    f'<button class="link" type="button" data-pvhide>Cancel</button></div></form></div>')
         return "".join(out)
 
@@ -915,7 +915,7 @@ class CardPages:
         suggested = [t for t in (record or {}).get("suggested_tags", []) if t not in item["tags"]]
         add = (f'<form method="post" action="/hub/tag/add" class="pvtagadd" hidden>{ui.hidden(self.csrf, id=item["id"], next=here)}'
                f'<input type="text" name="tag" maxlength="40" placeholder="New tag" aria-label="New tag">'
-               f'<button class="btn sm" type="submit">Save</button>'
+               f'<button class="btn sm dark" type="submit">Save</button>'
                f'<button class="link" type="button" data-pvhide>Cancel</button></form>'
                f'<button type="button" class="pvaddbtn" data-pvshow>{ui.icon("plus")}Add tag</button>')
         piles = self.store.piles_for(item["canonical_url"]) if item["status"] == "archived" else []
@@ -1124,6 +1124,12 @@ class CardPages:
             details.append(("Posted", ui.day(meta["published_at"])))
         if engine:
             details.append(("Summary by", engine.get("brain", "?") + (f' using {engine["key"]}' if engine.get("key") else "")))
+            if engine.get("model"):
+                from magpiary import askconfig
+
+                made = askconfig.SUMMARY_MODELS.get(engine["model"], engine["model"]).split(":")[0] + ", " + str(engine.get("effort", "")) + " effort"
+                details.append(("Made with", made + (" (the chosen model was not available, so the default was used)"
+                                                     if engine.get("fell_back") else "")))
             if record.get("frames"):
                 details.append(("Frames read", str(len(record["frames"]))))
             if engine.get("problem"):

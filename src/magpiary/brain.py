@@ -419,9 +419,15 @@ def _asker(provider: str, key: str, model: str, call: Call, wait):
     return lambda parts, history: providers.ask_chat(provider, parts, history, key, model)
 
 
-def local_asker(provider: str, model: str):
+def local_asker(provider: str, model: str, effort: str = "low", used: dict | None = None):
     """Claude Code or Codex writing a summary: the evidence's pictures become files for it to read; the instructions and
-    answer format are the summary's own."""
+    answer format are the summary's own. Claude Code with the owner's model and effort: when that fails (not on the plan, a
+    CLI that does not know it, overloaded) it is tried once more on the old default, never blocking the item. `used` is filled
+    with what actually ran: {"model", "effort", "fell_back", "why"}."""
+    from magpiary import askconfig
+
+    used = used if used is not None else {}
+    used.update(model=model, effort=effort, fell_back=False)
     def ask(parts: list[dict], history: list[tuple[str, str]]) -> str:
         import shutil
         import tempfile
@@ -441,8 +447,16 @@ def local_asker(provider: str, model: str):
                     path.write_bytes(base64.b64decode(p["inline_data"]["data"]))
                     images.append(path)
             texts += [{"text": f"{'YOUR EARLIER ANSWER' if r == 'model' else 'NOTE'}: {t}"} for r, t in history]
-            asker = deepdive.claude_code_asker(model, "low") if provider == "claude_code" else deepdive.codex_asker(model, "low")
-            return asker(PROMPT, SCHEMA, texts, images)
+            if provider != "claude_code":
+                return deepdive.codex_asker(model, "low")(PROMPT, SCHEMA, texts, images)
+            try:
+                return deepdive.claude_code_asker(model, effort)(PROMPT, SCHEMA, texts, images)
+            except BrainFailed as err:
+                fallback = askconfig.SUMMARY_FALLBACK
+                if (model, effort) == fallback:
+                    raise
+                used.update(model=fallback[0], effort=fallback[1], fell_back=True, why=err.detail[:120])
+                return deepdive.claude_code_asker(*fallback)(PROMPT, SCHEMA, texts, images)
         finally:
             shutil.rmtree(work, ignore_errors=True)
     return ask

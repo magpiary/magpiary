@@ -118,7 +118,13 @@ def process_item(item: dict, key, notes_dir: Path, call: Call = http_call,
     known = store.known_words() if store is not None and hasattr(store, "known_words") else None
     parts = build_evidence(meta, transcript, frames, images, folder, comments, item.get("note") or "", screen, known)
     progress.step("summary")
-    record = summarise(parts, key.secret, key.model, call, provider=key.provider)
+    used: dict = {}
+    ask = None
+    if key.provider == "claude_code":  # the owner's model and effort, and what really ran (a fallback is noted on the post)
+        from magpiary.brain import local_asker
+
+        ask = local_asker("claude_code", key.model, getattr(key, "effort", "low"), used)
+    record = summarise(parts, key.secret, key.model, call, provider=key.provider, ask=ask)
     if known:
         record["suggested_tags"] = reuse_tags(record["suggested_tags"], known.get("tags") or [])[:5]
     senses_used = "local (whisper.cpp small, ffmpeg frames)"
@@ -126,6 +132,10 @@ def process_item(item: dict, key, notes_dir: Path, call: Call = http_call,
 
     record["engine"] = {"preset": current(store) if store is not None else "smart", "senses": senses_used,
                         "brain": f"{key.provider}:{key.model}", "key": key.name, "problem": problem or None}
+    if used:
+        record["engine"].update(model=used["model"], effort=used["effort"], fell_back=used["fell_back"])
+        if used["fell_back"]:
+            record["engine"]["fallback_reason"] = used.get("why", "")
     record["processed_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
     record["frames"] = frames
     (folder / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2))

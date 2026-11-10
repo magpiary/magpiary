@@ -50,7 +50,7 @@ def test_dragging_claude_code_to_the_top_makes_it_write_summaries(store, monkeyp
     assert not engines.set_order(store, ["claude_code", "key:f1"], keys)  # every one must be in the new order
     assert engines.set_order(store, ["claude_code", "key:f1", "key:p1", "codex"], keys)
     first = engines.summarisers(store, keys, today="2026-11-04")[0]
-    assert first.id == "claude_code" and first.provider == "claude_code" and first.model == "haiku"
+    assert first.id == "claude_code" and first.provider == "claude_code" and first.model == "sonnet" and first.effort == "low"
     assert engines.choice(store, "ask", keys)["id"] == "claude_code"
 
 def test_free_keys_only_everything_off_digest_and_ask_can_be_turned_on_deeper_dive_never(store):

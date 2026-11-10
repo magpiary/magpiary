@@ -290,7 +290,7 @@ class AskPages:
                     f'This sends the text of about <b>{n}</b> post{"" if n == 1 else "s"} to <b>{e(engine["name"])}</b>. Never the video.')
                 + '</p>'
                 '<div class="row"><button type="button" class="btn dark sm" data-askgo>Send</button>'
-                '<button type="button" class="btn sm ghost" data-askno>Cancel</button></div></div>')
+                '<button type="button" class="btn sm quiet" data-askno>Cancel</button></div></div>')
 
     def ask_panel(self, q: dict) -> Response:
         if not self.ask_enabled():

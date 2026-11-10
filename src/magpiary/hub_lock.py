@@ -183,13 +183,13 @@ class LockPages:
             return f'<button class="{cls}" type="button" data-lk-open="{name}">{label}</button>'
 
         touch_body = (f'<p class="lkerr" role="alert" data-touch-error></p><div class="lkacts"><button class="btn dark" type="button" data-touch-add>'
-                      f'{ui.icon("fingerprint")}Set up now</button><button class="btn" type="button" data-lk-close>Not now</button></div>')
+                      f'{ui.icon("fingerprint")}Set up now</button><button class="btn quiet" type="button" data-lk-close>Not now</button></div>')
         touch_intro = ("Your browser asks for your fingerprint once. From then on this browser skips the PIN. "
                        "Other browsers set up on their own.")
         pin_form = (lambda title: f'<form class="lkform" method="post" action="/hub/lock/on" data-lk-pin>{ui.hidden(csrf)}'
                     f'{pin_fields("New PIN" if lock.enabled else "Choose a PIN")}<p class="lkerr" role="alert"></p>'
                     f'<div class="lkacts"><button class="btn dark" type="submit">{title}</button>'
-                    f'<button class="btn" type="button" data-lk-close>Cancel</button></div></form>')
+                    f'<button class="btn quiet" type="button" data-lk-close>Cancel</button></div></form>')
         if not lock.enabled:
             dlg = dialog("pin", "Choose a PIN", "lock", "Six digits. Magpiary asks for it when the hub is locked. You can add Touch ID next.",
                          pin_form("Turn the lock on"), confirm=False)
@@ -226,7 +226,7 @@ class LockPages:
                             touch_intro, touch_body)
                    + dialog("off", "Turn the lock off?", "lock", "Your PIN and every Touch ID are forgotten. Anyone at this Mac can open the hub.",
                             f'<form class="lkform" method="post" action="/hub/lock/off">{ui.hidden(csrf)}<div class="lkacts">'
-                            f'<button class="btn danger" type="submit">Turn the lock off</button><button class="btn" type="button" data-lk-close>Keep it on</button></div></form>')
+                            f'<button class="btn danger" type="submit">Turn the lock off</button><button class="btn quiet" type="button" data-lk-close>Keep it on</button></div></form>')
                    + dialog("guard", "Confirm it's you", "lock", "This change needs your PIN or Touch ID.", "", confirm=True))
         more = (f'<details class="advmini lkmore"><summary><span class="amt"><b>More options</b><small>change PIN, lock after being idle</small></span>'
                 f'<span class="advc">{ui.icon("chev")}</span></summary>{pin_row}{idle_row}</details>')

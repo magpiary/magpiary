@@ -890,3 +890,22 @@ def test_no_stylesheet_hides_a_featured_tile():
     for name in ("hub.css", "indigo.css"):
         css = (Path(__file__).parents[1] / "src/magpiary/static" / name).read_text()
         assert not re.search(r"\.featgrid[^{]*\.tile[^{]*\{[^}]*display:\s*none", css), name
+
+
+def test_the_empty_state_shows_only_when_the_library_has_no_items_at_all(mac):
+    """An item still being read counts: no 'Your library is empty' beside its tile (friend's first save, 10 Nov)."""
+    assert "Your library is empty" in page(mac)[2]
+    mac.store.add_link(IG)  # saved, not read yet: queued, no summary, no thumbnail
+    body = page(mac)[2]
+    assert "Your library is empty" not in body
+    assert 'class="tile' in body and "lhempty" not in body
+    item_id = mac.store.id_for(IG)
+    mac.store.set_shelf(item_id, "trash")  # gone again: the empty state returns
+    assert "Your library is empty" in page(mac)[2]
+    mac.store.set_shelf(item_id, "archive")  # archived is not in the library either
+    assert "Your library is empty" in page(mac)[2]
+
+
+def test_the_wall_refresh_swaps_the_empty_state_when_the_library_fills_or_empties():
+    js = (Path(__file__).parent.parent / "src/magpiary/static/hub.js").read_text()
+    assert '!!$(".empty", wb) !== !!$(".empty", fwb)' in js  # refresh() redraws the body instead of patching tiles

@@ -70,7 +70,7 @@
       const d = document.createElement("div");
       d.className = "dlg-wrap";
       d.innerHTML = `<div class="dlg" role="alertdialog" aria-modal="true"><p>${esc(text)}</p><div class="row">` +
-        `<button type="button" class="btn" data-no>Cancel</button><button type="button" class="btn ${danger ? "dangerfill" : "dark"}" data-yes>${esc(ok)}</button></div></div>`;
+        `<button type="button" class="btn quiet" data-no>Cancel</button><button type="button" class="btn ${danger ? "dangerfill" : "dark"}" data-yes>${esc(ok)}</button></div></div>`;
       document.body.append(d);
       const done = (v) => { document.removeEventListener("keydown", key, true); const g = G(); if (g) g.to(d, { opacity: 0, duration: .15, onComplete: () => d.remove() }); else d.remove(); resolve(v); };
       const key = (ev) => { if (ev.key === "Escape") { ev.stopPropagation(); done(false); } if (ev.key === "Enter") { ev.preventDefault(); done(true); } };
@@ -87,7 +87,7 @@
       d.className = "dlg-wrap";
       d.innerHTML = `<div class="dlg dlgjob" role="alertdialog" aria-modal="true"><h3>${esc(title)}</h3><div class="jobrows">` +
         lines.filter((l) => l[1]).map(([k, v]) => `<div class="jr"><span>${esc(k)}</span><p>${esc(v)}</p></div>`).join("") +
-        `</div><div class="row"><button type="button" class="btn" data-no>Cancel</button><button type="button" class="btn dark" data-yes>${esc(ok)}</button></div></div>`;
+        `</div><div class="row"><button type="button" class="btn quiet" data-no>Cancel</button><button type="button" class="btn dark" data-yes>${esc(ok)}</button></div></div>`;
       document.body.append(d);
       const done = (v) => { document.removeEventListener("keydown", key, true); const g = G(); if (g) g.to(d, { opacity: 0, duration: .15, onComplete: () => d.remove() }); else d.remove(); resolve(v); };
       const key = (ev) => { if (ev.key === "Escape") { ev.stopPropagation(); done(false); } if (ev.key === "Enter") { ev.preventDefault(); done(true); } };
@@ -1424,6 +1424,14 @@
     const fresh = doc.getElementById("view");
     if (!fresh) return;
     syncTop(doc);
+    // the empty state belongs to the server's drawing; patchTiles only adds and removes tiles, so when the library goes
+    // from empty to not empty (first save) or back (last one deleted), redraw the heading, controls and body as served
+    const wb = $("#wallbody", view), fwb = $("#wallbody", fresh);
+    if (wb && fwb && !!$(".empty", wb) !== !!$(".empty", fwb) && wb.dataset.view === fwb.dataset.view) {
+      for (const sel of ["#hero", "#wallctl", "#wallbody"]) { const a = $(sel, view), b = $(sel, fresh); if (a && b) { a.className = b.className; a.innerHTML = b.innerHTML; } }
+      initView(true);
+      return;
+    }
     if ($$(".tile[data-id]", view).length || $$(".tile[data-id]", fresh).length) patchTiles(view, fresh);
     else patchChildren(view, fresh);
     initView(true);
@@ -2876,7 +2884,7 @@
           `<p>Drag to move it, zoom to fit. What's inside the circle is what friends see.</p>` +
           `<div class="cropstage" tabindex="0" aria-label="Photo: drag or use the arrow keys to move it"><img alt=""><i class="cropring"></i></div>` +
           `<label class="cropzoom"><span>−</span><input type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><span>+</span></label>` +
-          `<div class="row"><button type="button" class="btn" data-no>Cancel</button><button type="button" class="btn dark" data-yes>Use photo</button></div></div>`;
+          `<div class="row"><button type="button" class="btn quiet" data-no>Cancel</button><button type="button" class="btn dark" data-yes>Use photo</button></div></div>`;
         document.body.append(d);
         const stage = $(".cropstage", d), pic = $("img", stage), zoom = $("input", d);
         pic.src = src; pic.style.width = `${img.naturalWidth}px`; pic.style.height = `${img.naturalHeight}px`;
