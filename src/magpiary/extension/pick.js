@@ -30,11 +30,30 @@
     if (/instagram\.com\/(?:[^/]+\/)?reels?\/audio\b/i.test(abs)) return null; // an audio page, not a post
     const c = clean(abs);
     if (c.error || c.source === "other" || !c.kind) return null; // a profile, a tag or a short link: not one post
+    // LinkedIn: only a real post address counts. Page links such as /feed/foryou/ are tabs, not posts.
+    if (c.source === "linkedin" && !/\/(posts\/[^/]+|feed\/update\/urn:li:[A-Za-z]+:\d+|pulse\/[^/]+|events\/[^/]+)\/?$/.test(new URL(c.url).pathname)) return null;
     return { url: c.url, key: c.url.replace(/\/(p|reel|tv)\//, "/x/"), label: `${c.source} ${c.kind}` };
+  }
+
+  /** LinkedIn's feed cards carry no post link, only an id in an attribute (urn:li:activity:123). Turn it into the post address. */
+  const URN_ATTR = '[data-sdui-anchor-id*="urn:li:"],[data-urn*="urn:li:"],[data-id*="urn:li:"],[data-entity-urn*="urn:li:"]';
+  const URN = /urn:li:(activity|share|ugcPost):(\d+)/;
+  function urnPost(e) {
+    for (const a of ["data-sdui-anchor-id", "data-urn", "data-id", "data-entity-urn"]) {
+      const m = URN.exec(e.getAttribute(a) || "");
+      if (m) return postOf(`https://www.linkedin.com/feed/update/urn:li:${m[1]}:${m[2]}/`);
+    }
+    return null;
   }
 
   function postsIn(node) {
     const found = new Map();
+    if (location.hostname.endsWith("linkedin.com")) {
+      for (const e of [...(node.matches && node.matches(URN_ATTR) ? [node] : []), ...node.querySelectorAll(URN_ATTR)]) {
+        const p = urnPost(e);
+        if (p && !found.has(p.key)) found.set(p.key, p);
+      }
+    }
     const anchors = node.matches && node.matches("a[href]") ? [node] : [];
     for (const a of [...anchors, ...node.querySelectorAll("a[href]")]) {
       const p = postOf(a.getAttribute("href"));
@@ -48,8 +67,8 @@
     let best = null, many = null;
     for (let n = el; n && n !== document.documentElement && n !== document.body; n = n.parentElement) {
       const posts = postsIn(n);
-      if (posts.length === 1) best = { node: n, posts };
-      else if (posts.length > 1) { if (!best) many = posts.length <= 4 ? { node: n, posts } : null; break; }
+      if (posts.length === 1) { if (n.getBoundingClientRect().width) best = { node: n, posts }; }   // skip display:contents wrappers (no box of their own)
+      else if (posts.length > 1) { if (!best) many = posts.length <= 4 && n.getBoundingClientRect().height < innerHeight * 1.2 ? { node: n, posts } : null; break; }
     }
     return best || many;
   }
