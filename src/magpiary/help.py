@@ -572,6 +572,11 @@ PAGE_TOPIC = {"wall": "library", "search": "library", "shelf": "library", "add":
 
 # What's new, shown once after an update (newest first). Plain words; one line each.
 CHANGES = [
+    ("0.1.6", ["Settings are simpler: six pages, with Phone and AI & login renamed and Chrome moved to Library & this Mac.",
+               "Instagram and Threads photo carousels save every slide.",
+               "New downloads prefer H.264, so videos play on iPhones.",
+               "Chrome extension: on LinkedIn, Pick a post selects the one post you point at.",
+               "New, off by default: Settings → Phone can open your library on a paired iPhone over your home Wi-Fi. It is early; use it only on a network you trust."]),
     ("0.1.5", ["Save what I see: tick it in the Chrome extension to keep a page as it is on your screen, signed-in pages included.",
                "Saved pages open on a Read tab with their words and pictures in order, and download as a PDF in one click.",
                "Posts from any website show that site's name and icon.",

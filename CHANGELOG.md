@@ -2,6 +2,16 @@
 
 Newest first. Plain words; the same notes are on each GitHub release.
 
+## 0.1.6 (DRAFT date to be set at release)
+
+- **Settings are simpler.** Six pages instead of a long list. "Saving posts" is now **Phone**, and "AI & digest" is now **AI & login** (Instagram login moved there). Chrome moved to Library & this Mac, and Shared boards joined Profile & boards. Ask Magpiary and AI agents keep their own pages. Explaining text sits behind an (i) hover, and old Settings links still work.
+- **Instagram carousels save every slide.** A photo carousel whose embed is refused keeps its first slide and caption, and the rest are read from the open page when the Mac could only save part. Slides show once, with no repeated Read tab.
+- **Threads photo carousels save every slide.**
+- **Videos play on iPhones.** New downloads prefer H.264.
+- **Chrome extension 0.1.6.** On LinkedIn, Pick a post now selects the one post you point at, not a feed tab or a hidden wrapper.
+- **Phone access (new, off by default).** Settings, Phone has a switch that opens your library on a paired iPhone over your home Wi-Fi, with its own certificate and pairing code. It is early: turn it on only on a network you trust, and expect the phone layout to change.
+- **Support Magpiary.** Settings, About has a Buy me a coffee link.
+
 ## 0.1.5 (5 November 2026)
 
 - **Save what I see.** In the Chrome extension, tick it to keep a page exactly as it is on your screen: its text, its pictures and one screenshot of what you see, signed-in and member-only pages included. Nothing is saved from a page you did not tick it on. It works on any page and names no site.
