@@ -59,8 +59,8 @@ def post_decision(path: str, form: dict) -> str:
     if path == "/hub/askset" and any(k in form for k in ("setup", "remove")):
         return "refuse"  # installing or removing a tool on the Mac stays on the Mac
     if (path == "/hub/engine/allow" and form.get("enabled") == "1") or (path == "/hub/settings/mode" and form.get("mode") == "smart") \
-            or (path == "/hub/digest/on" and form.get("enabled") == "1"):
-        return "ok" if form.get(CONFIRM) == "1" else "confirm"  # these start AI work (a test prompt, waiting summaries, a digest)
+            or (path == "/hub/digest/on" and form.get("enabled") == "1") or (path == "/hub/deep/on" and form.get("enabled") == "1"):
+        return "ok" if form.get(CONFIRM) == "1" else "confirm"  # these start AI work (a test prompt, waiting summaries, a digest, queued Deeper dives)
     if is_ai_action(path, form):
         return "ok" if form.get(CONFIRM) == "1" else "confirm"
     return "ok" if path in POST_PATHS else "refuse"

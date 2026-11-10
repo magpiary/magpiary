@@ -368,8 +368,12 @@ class Hub(
         device = getattr(self._ctx, "device", None)
         own_host = urlsplit("//" + host).hostname if device is not None else None
         if origin and urlsplit(origin).hostname not in (("localhost", "127.0.0.1", "::1") if device is None else (own_host,)):
+            if device is not None:  # a phone that has not passed the PIN must learn nothing from a refusal
+                return self._phone_refused("This request came from another website.")
             return self.shell("Refused", "<p>This request came from another website.</p>", "missing", 403)
         if not hmac.compare_digest(form.get("csrf", "").encode(), self._csrf.encode()):
+            if device is not None:
+                return self._phone_refused("This page has expired. Reload the library.")
             return self.shell("Refused", '<p>This page has expired. <a class="link" href="/">Reload the library</a>.</p>',
                               "missing", 403)
         if held := self.locked_post(path):

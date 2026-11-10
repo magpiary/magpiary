@@ -249,6 +249,20 @@ def test_phone_unlock_does_not_unlock_the_mac(door):
     assert lock.is_locked()
 
 
+def test_locked_phone_learns_nothing_from_a_rejected_post(door):
+    """Review finding (0.1.6): a wrong CSRF token or Origin gave a full page with shelf counts before the PIN was entered."""
+    lock = door.primary.hub._main_lock
+    lock.turn_on("135790", "135790")
+    door.pair()
+    csrf = door.primary.hub._csrf
+    status, body, _ = door.request("POST", "/hub/add", {"csrf": "wrong", "text": "https://example.com/x"})
+    assert status == 403 and "Not on the phone" in body
+    assert "shelf" not in body.lower() and "saved" not in body.lower()
+    status, body, _ = door.request("POST", "/hub/add", {"csrf": csrf, "text": "x"}, headers={"Origin": "https://evil.example"})
+    assert status == 403 and "Not on the phone" in body
+    assert "shelf" not in body.lower()
+
+
 def test_phone_cannot_turn_the_lock_off(door):
     lock = door.primary.hub._main_lock
     lock.turn_on("135790", "135790")
@@ -656,9 +670,11 @@ def test_settings_that_start_ai_work_need_the_confirm_tap_and_installs_stay_on_t
     door.pair()
     csrf = door.primary.hub._csrf
     for path, form in (("/hub/engine/allow", {"kind": "claude_code", "enabled": "1"}), ("/hub/settings/mode", {"mode": "smart"}),
-                       ("/hub/digest/on", {"enabled": "1"})):
+                       ("/hub/digest/on", {"enabled": "1"}), ("/hub/deep/on", {"enabled": "1"})):
         status, body, _ = door.request("POST", path, {"csrf": csrf, **form})
         assert "Use your AI?" in body, path
+    assert door.store.get_setting("deep_state") != "on"  # nothing changed without the tap
+    assert door.request("POST", "/hub/deep/on", {"csrf": csrf, "enabled": "0"})[0] in (200, 303)  # turning it off stays immediate
     assert door.request("POST", "/hub/askset", {"csrf": csrf, "setup": "claude"})[0] == 403
     assert door.request("POST", "/hub/askset", {"csrf": csrf, "remove": "codex"})[0] == 403
     assert door.request("POST", "/hub/engine/allow", {"csrf": csrf, "kind": "claude_code", "enabled": "0"})[0] in (200, 303)
