@@ -2,7 +2,7 @@
 
 Newest first. Plain words; the same notes are on each GitHub release.
 
-## 0.1.6 (DRAFT date to be set at release)
+## 0.1.6 (10 November 2026)
 
 - **Settings are simpler.** Six pages instead of a long list. "Saving posts" is now **Phone**, and "AI & digest" is now **AI & login** (Instagram login moved there). Chrome moved to Library & this Mac, and Shared boards joined Profile & boards. Ask Magpiary and AI agents keep their own pages. Explaining text sits behind an (i) hover, and old Settings links still work.
 - **Instagram carousels save every slide.** A photo carousel whose embed is refused keeps its first slide and caption, and the rest are read from the open page when the Mac could only save part. Slides show once, with no repeated Read tab.
