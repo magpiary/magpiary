@@ -97,7 +97,10 @@ html.morphing .lhbird { visibility: visible; }
 /* ---- quiet pages: no moving picture behind reading and settings, only a flat dark fade ---- */
 #bgfade { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgb(var(--c-page) / .3) 0, rgb(var(--c-page) / .62) 34%, rgb(var(--c-page) / .9) 68%, rgb(var(--c-page)) 100%); }
 html.quiet #bg { visibility: hidden; }
-html.quiet #bgfade { background: linear-gradient(to bottom, var(--fade-0) 0, var(--fade-1) 45vh, var(--fade-2) 100%); }
+/* the page behind every quiet page (all but the wall and boards): one gradient, fixed to the window. The post view's bars are filled with the same
+   gradient, fixed the same way, so they are the page itself and nothing passes through them */
+:root[data-theme] { --page-fade: linear-gradient(to bottom, var(--fade-0) 0, var(--fade-1) 45vh, var(--fade-2) 100%); }
+html.quiet #bgfade { background: var(--page-fade); }
 
 /* post view: no strip behind the bar; its pieces carry their own surface */
 :root[data-theme] .crumbbar { background: none; }
@@ -257,6 +260,11 @@ html[data-labels="soft"]:root[data-size] .label { background: rgb(var(--c-deep) 
 :root[data-theme] .tabs.pvtabs > .tline { background: var(--pink); }  /* pink on the reading page; gold under the library and Nest tabs */
 :root[data-theme] .tabs.pvtabs a.off { color: var(--fg-3); opacity: .55; cursor: default; }
 :root[data-theme] .tabs.pvtabs small { background: none; padding: 0 0 0 6px; color: var(--fg-3); }
+/* stuck under the post's bar (hub.js adds .stuck) the row takes the colour of the post surface it sits on, so the text scrolling under it never shows
+   through its words; in its place in the flow it stays plain words. The 3px of shadow above closes any hairline between it and the bar. */
+:root[data-theme] .cardm.pagemode .tabs.pvtabs { transition: top .32s cubic-bezier(.2,.8,.2,1), background-color .18s ease, box-shadow .18s ease; }
+:root[data-theme] .cardm.pagemode .tabs.pvtabs.stuck { background-color: var(--bg); box-shadow: 0 -3px 0 0 var(--bg); }
+@media (prefers-reduced-motion: reduce) { :root[data-theme] .cardm.pagemode .tabs.pvtabs { transition: none; } }
 
 /* sections in a tab: small names, then what they name */
 :root[data-theme] .cardm.pagemode .pane h4 { font: 700 15px var(--display); letter-spacing: 0; text-transform: none; color: var(--fg); margin: 26px 0 8px; }
@@ -268,13 +276,9 @@ html[data-labels="soft"]:root[data-size] .label { background: rgb(var(--c-deep) 
 /* the crumbs stay on one line; while reading the nav leaves and the post's own bar moves up */
 :root[data-theme] .crumbbar .crumbs { flex-wrap: nowrap; white-space: nowrap; padding: 8px 4px; min-width: 0; font-size: var(--type-small); color: var(--fg-3); }
 .crumbbar .crumbs > span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-html.navhid .postpage { --top-h: 0px; }
-.crumbbar { transition: top .32s cubic-bezier(.2,.8,.2,1); }
-html.navhid .crumbbar { top: 6px; }
+html.navhid .postpage { --top-h: 0px; --stick: 6px; }
+.crumbbar, .cardm.pagemode .tabs.pvtabs { transition: top .32s cubic-bezier(.2,.8,.2,1); }
 @media (max-width: 760px) { .cardm.pagemode .vid .capslot { max-height: none; } .crumbbar .crumbs { display: none !important; } }
-/* scrolled, the post's bar gets the same dark fade as the nav, so text passing under it never tangles with it */
-.crumbbar::before { content: ""; position: absolute; left: calc(-1 * var(--pad)); right: calc(-1 * var(--pad)); top: -16px; bottom: -30px; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .25s; background: linear-gradient(to bottom, rgba(4,4,20,.96) 0, rgba(4,4,20,.86) 55%, rgb(var(--c-page) / 0) 100%); }
-#top.scrolled ~ #view .crumbbar::before { opacity: 1; }
 #top ~ #view .crumbbar { isolation: isolate; }
 
 /* ---- Settings: one surface per group, the same type scale, the accent only for what is on ---- */
@@ -906,8 +910,11 @@ html.lhslim #wallctl .views a:not(.on):hover { background: var(--hov); color: va
 :root[data-theme] :is(form[action="/hub/links/remove"], form[action="/hub/not-related"]) button.link:hover { background: color-mix(in srgb, #ff8a8f 14%, transparent); color: #ff8a8f; }
 
 /* post page: the bar and the Back / pager row stay readable when text scrolls under them */
-:root[data-theme] body:has(.crumbbar) .top { background: linear-gradient(rgb(var(--c-page)) 62%, rgb(var(--c-page) / 0)); }
-:root[data-theme] .crumbbar::before { content: ""; position: absolute; z-index: -1; inset: -6px -40px -20px; background: linear-gradient(rgb(var(--c-page)) 60%, rgb(var(--c-page) / 0)); pointer-events: none; }
+:root[data-theme] body:has(.crumbbar) .top { background: var(--page-fade) fixed; }
+:root[data-theme] body:has(.crumbbar) .top::before { display: none; }
+/* the post's own bar: filled with the page, from the top of the window down to the bar's bottom edge and from side to side, so text scrolling up
+   never shows above it, beside it or through it (no gradient edge, no darker band). Phones have their own bar (phone.css). */
+:root[data-theme] .crumbbar::before { content: ""; position: absolute; z-index: -1; top: calc(-1 * var(--stick)); bottom: 0; left: calc(-1 * var(--pad)); right: calc(-1 * var(--pad)); background: var(--page-fade) fixed; pointer-events: none; }
 
 /* the confirmation for jobs that cost time or quota */
 .dlg.dlgjob { width: min(480px, 100%); text-align: left; }

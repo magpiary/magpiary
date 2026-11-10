@@ -770,12 +770,41 @@
   try { cardMuted = sessionStorage.getItem(soundKey) !== "1"; } catch (e) { /* muted */ }
   const rememberSound = (muted) => { cardMuted = muted; try { muted ? sessionStorage.removeItem(soundKey) : sessionStorage.setItem(soundKey, "1"); } catch (e) { /* fine */ } };
   let seekAfterOpen = null;  // a cited moment in an Ask answer: the post opens and jumps there
+  // The tab row sticks under the post's bar while the page scrolls. While it is stuck it gets the colour of the post surface (class "stuck", see
+  // indigo.css), so text scrolling up never shows through its words; where it sits in the flow it stays plain words. One IntersectionObserver
+  // watches the row against the line it sticks to (the bottom of the post's bar), not a scroll handler; the line moves when the site bar leaves or
+  // returns and when the window is resized, so the observer is set up again then.
+  let stuckWatch = null;
+  function watchStuck(bar, host) {
+    if (stuckWatch) stuckWatch.end();
+    stuckWatch = null;
+    const crumb = $(".crumbbar");
+    if (!bar || !crumb || !host.classList.contains("pagemode") || typeof IntersectionObserver === "undefined") return;
+    let io = null, line = 0;
+    const set = (on) => bar.classList.toggle("stuck", on);
+    const arm = () => {
+      if (io) io.disconnect();
+      if (getComputedStyle(bar).position !== "sticky") { set(false); return; }  // the phone layout pins its own row
+      line = crumb.getBoundingClientRect().bottom;
+      io = new IntersectionObserver((es) => {
+        const e = es[es.length - 1];
+        set(e.intersectionRatio < 1 && e.boundingClientRect.top < line + 2);  // clipped by the line, and not just by the foot of the window
+      }, { rootMargin: `${-Math.round(line + 1)}px 0px 0px 0px`, threshold: [0, 1] });
+      io.observe(bar);
+    };
+    const again = () => requestAnimationFrame(arm);
+    const classes = new MutationObserver(again); classes.observe(root, { attributes: true, attributeFilter: ["class"] });
+    crumb.addEventListener("transitionend", again); addEventListener("resize", again);
+    arm();
+    stuckWatch = { end() { if (io) io.disconnect(); classes.disconnect(); crumb.removeEventListener("transitionend", again); removeEventListener("resize", again); } };
+  }
   function wireCard(host) {
     const main = $(".main", host); if (!main) return;
     // the tab the server opened (Read, for a page saved as the owner saw it) wins over Summary
     const want = new URLSearchParams(location.search).get("tab") || host.dataset.tab || $("[data-tab].on", host)?.dataset.tab || "sum";
     const tabs = $$("[data-tab]", host), bar = $(".tabs", host);
     if (bar && !$(".tline", bar)) { const i = document.createElement("i"); i.className = "tline"; bar.prepend(i); }
+    watchStuck(bar, host);
     const show = (k, animate) => {
       tabs.forEach((t) => { const on = t.dataset.tab === k; t.classList.toggle("on", on); t.setAttribute("aria-selected", String(on)); });
       $$("[data-pane]", host).forEach((p) => { p.hidden = p.dataset.pane !== k; });

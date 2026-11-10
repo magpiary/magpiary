@@ -3347,8 +3347,8 @@ html[data-kb] #pileedit:focus-visible ~ .phead .peditbtn { box-shadow: none; }
 
 /* ===== The post as a page (28 Oct 2026): the site bar, a breadcrumb bar, then the same two columns across the page ===== */
 body[data-page="card"] .wrap { padding-top: 4px; }
-.postpage { min-width: 0; --crumb-h: 58px; }
-.crumbbar { position: sticky; top: var(--top-h, 64px); z-index: 15; display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; min-height: var(--crumb-h);
+.postpage { min-width: 0; --crumb-h: 60px; --stick: var(--top-h, 64px); }  /* --stick: where the post's bar sticks; the tab row sticks right under it */
+.crumbbar { position: sticky; top: var(--stick); z-index: 15; display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; min-height: var(--crumb-h);
   padding: 8px 0; background: var(--bg); }
 .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 9px; min-width: 0; font-size: 14.5px; color: var(--fg-3); }
 .crumbs a { color: var(--fg-2); text-decoration: none; } .crumbs a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
@@ -3362,7 +3362,8 @@ body[data-page="card"] .wrap { padding-top: 4px; }
 .cardm.pagemode .vid { position: sticky; top: calc(var(--top-h, 64px) + var(--crumb-h)); align-self: start; height: calc(100dvh - var(--top-h, 64px) - var(--crumb-h) - 16px); border-radius: 24px 0 0 24px; }
 .cardm.pagemode .main { display: block; overflow: visible; border-radius: 0 24px 24px 0; }
 .cardm.pagemode .pscroll { overflow: visible; padding: 0 44px 90px; }
-.cardm.pagemode .tabs { position: sticky; z-index: 6; top: calc(var(--top-h, 64px) + var(--crumb-h)); background: var(--card); }
+@media (min-width: 761px) { .crumbbar { height: var(--crumb-h); } }  /* exactly as tall as the tab row's offset says, so the row sticks flush under it */
+.cardm.pagemode .tabs { position: sticky; z-index: 6; top: calc(var(--stick) + var(--crumb-h)); background: var(--card); }
 @media (max-width: 760px) {
   .postpage { --crumb-h: 52px; }
   .cardm.pagemode { display: block; border-radius: 18px; min-height: 0; }
