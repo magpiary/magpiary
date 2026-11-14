@@ -572,7 +572,8 @@ PAGE_TOPIC = {"wall": "library", "search": "library", "shelf": "library", "add":
 
 # What's new, shown once after an update (newest first). Plain words; one line each.
 CHANGES = [
-    ("0.1.9", ["Posts get tabs that fit what they are: 22 categories (recipes, travel, music, books, fitness, AI & code and more), each with its own tabs between Summary and Details, at most five, the rest in More.",
+    ("0.1.9", ["Posts get tabs that fit what they are: 22 categories (recipes, travel, music, books, fitness, AI & code and more), each with its own tabs between Summary and Details: up to seven show, the rest in More. Settings, Appearance turns it off.",
+               "The Mac app updates itself: Update now checks the download, swaps the app and opens it again, and puts the old one back if the new one does not start.",
                "The tabs do things: tick ingredients and steps, change servings, copy prompts and colours, jump the video, flip flashcards, add events to your calendar.",
                "New posts get their tabs with their summary; older posts show Build this view (one AI call, only when you click it). Private mode fills tabs only from what the Mac already knows.",
                "Cards have search links, and in Smart mode free public directories check names the post mentions (never your notes, never in Private mode).",

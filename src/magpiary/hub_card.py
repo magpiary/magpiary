@@ -780,7 +780,8 @@ class CardPages:
     def _card_tabs(self, item, record, folder, caption, meta, here, tab, context: str = "library") -> str:
         """Summary first, Details last; between them the saved page (Read), Deeper dive, the post's category tabs
         (views.py), Links and Related when they have something, Transcript only when there is speech. At most
-        views.VISIBLE show; the rest wait in a More menu after Details (owner decisions 6 and 9, 14 Nov 2026)."""
+        views.VISIBLE show with no More; above that views.VISIBLE_WITH_MORE show and the rest wait in a More menu after
+        Details (owner decisions 6 and 9, 14 Nov 2026; limit raised 15 Nov)."""
         links = self.store.links_for(item["canonical_url"])
         saved = item.get("status") == "archived" and item.get("shelf") != "trash"
         related = []
@@ -789,7 +790,9 @@ class CardPages:
             related = rel.related(self.related_library(), item["canonical_url"])
         related_html = (f'<a class="link" href="{here}?tab=rel">Show related saves</a>' if lazy_related
                         else self._related_pane(item, related, here))
-        view = views.current(item, record, meta, folder)
+        # Contextual Post View off (Settings): no category, no category tabs, no Build this view; Links stays first in line
+        plain = not self.store.contextual_view()
+        view = {"category": "", "category2": "", "tabs": {}} if plain else views.current(item, record, meta, folder)
         panes = {"links": ("Links", str(len(links)) if links else "", self._links_pane(item, links, here, record)),
                  "rel": ("Related", str(len(related)) if related else "", related_html),
                  "tr": ("Transcript", "", self._transcript_pane(folder)),
@@ -803,15 +806,17 @@ class CardPages:
         # Links shows when it has links, or when asked for (?tab=links: "Add a link yourself" opens it to add the first)
         core = {"read": "read" in panes, "deep": "deep" in panes, "links": bool(links) or tab == "links", "rel": saved or bool(related),
                 "tr": not self._transcript_off(folder)[0]}
-        visible, more = views.tab_plan(view, core, self.store.hidden_tabs())
+        visible, more = views.tab_plan(view, core, {} if plain else self.store.hidden_tabs())
         # the summary leaves out what a category tab already shows in full (Ingredients, the steps)
-        panes["sum"] = ("Summary", "", self.build_strip(item, view)
+        panes["sum"] = ("Summary", "", ("" if plain else self.build_strip(item, view))
                         + self._summary_pane(item, record, caption, here, set(visible + more) & set(cats.TABS)))
         if any(k in cats.TABS for k in visible + more):
             state = self.store.view_state(item["canonical_url"])
             for k in visible + more:
                 if k in cats.TABS:
                     panes[k] = (cats.TABS[k].label, "", self.category_pane(k, view, state, item))
+        if saved and item.get("shelf") != "board" and "links" not in visible + more and plain and not more:
+            visible.insert(visible.index("det"), "links")  # plain view, room to spare: Links shows as a tab, as in 0.1.8
         if saved and item.get("shelf") != "board" and "links" not in visible + more:
             more.append("links")  # no links yet: Links waits in More with its Add form (as 0.1.8 always showed it)
         if tab == "rel" and "rel" not in visible + more:

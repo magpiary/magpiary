@@ -172,8 +172,8 @@ def _view(category, tabs, second=""):
 def test_tab_plan_order_cap_and_more():
     full = {"read": False, "deep": False, "links": True, "rel": True, "tr": True}
     visible, more = views.tab_plan(_view("recipe", ["ingredients", "method", "swaps", "equipment"]), full)
-    assert visible == ["sum", "ingredients", "method", "swaps", "det"]
-    assert more == ["equipment", "links", "rel", "tr"]
+    assert visible == ["sum", "ingredients", "method", "swaps", "equipment", "det"]  # 9 tabs: 6 show (owner, 15 Nov)
+    assert more == ["links", "rel", "tr"]
     visible, more = views.tab_plan(_view("recipe", ["method"]), {"rel": True})
     assert visible == ["sum", "method", "rel", "det"] and more == []
     visible, more = views.tab_plan(_view("other", []), {})
@@ -182,17 +182,25 @@ def test_tab_plan_order_cap_and_more():
 
 def test_tab_plan_puts_read_first_and_counts_it():
     visible, more = views.tab_plan(_view("recipe", ["ingredients", "method"]), {"read": True, "deep": True, "rel": True})
-    assert visible == ["read", "sum", "ingredients", "method", "det"] and more == ["deep", "rel"]
+    assert visible == ["read", "sum", "ingredients", "method", "deep", "rel", "det"] and more == []  # 7 fit, no More
 
 
 def test_tab_plan_never_gives_a_category_slot_to_deeper_dive():
     # real-post test, 14 Nov: Deeper dive took a slot, so only 2 category tabs showed before More
     core = {"deep": True, "links": True, "rel": True, "tr": True}
     visible, more = views.tab_plan(_view("recipe", ["ingredients", "method", "swaps", "equipment"]), core)
-    assert visible == ["sum", "ingredients", "method", "swaps", "det"]
-    assert more == ["equipment", "deep", "links", "rel", "tr"]
+    assert visible == ["sum", "ingredients", "method", "swaps", "equipment", "det"]
+    assert more == ["deep", "links", "rel", "tr"]
     visible, more = views.tab_plan(_view("recipe", ["method"]), core)
-    assert visible == ["sum", "method", "deep", "links", "det"] and more == ["rel", "tr"]
+    assert visible == ["sum", "method", "deep", "links", "rel", "tr", "det"] and more == []
+
+
+def test_tab_plan_shows_up_to_seven_tabs_without_more_and_six_above():
+    core = {"links": True, "rel": True}
+    visible, more = views.tab_plan(_view("recipe", ["ingredients", "method", "swaps"]), core)
+    assert len(visible) == 7 and more == []  # exactly 7: everything shows
+    visible, more = views.tab_plan(_view("recipe", ["ingredients", "method", "swaps", "equipment"]), core)
+    assert len(visible) == views.VISIBLE_WITH_MORE and more == ["links", "rel"]  # 8: 6 show, 2 in More
 
 
 def test_tab_plan_skips_empty_and_owner_hidden_tabs():
@@ -314,10 +322,10 @@ def test_a_recipe_post_shows_its_tabs_in_order_with_more(mac, recipe):
     views.save(folder, VIEW)
     body = page(mac, f"/item/{item_id}")[2]
     nav = _nav(body)
-    order = [nav.index(f">{label}") for label in ("Summary", "Ingredients", "Method", "Swaps &amp; notes", "Details", "More")]
-    assert order == sorted(order)
+    order = [nav.index(f">{label}") for label in ("Summary", "Ingredients", "Method", "Swaps &amp; notes", "Equipment", "Related", "Details", "More")]
+    assert order == sorted(order)  # 7 tabs with content all show (owner, 15 Nov); only the empty Links waits in More
     more = nav[nav.index('<details class="pvmore'):]
-    assert "Equipment" in more and "Related" in more
+    assert "Related" not in more and "Equipment" not in more
     assert "Transcript" not in nav  # no speech: hidden, not greyed
     assert nav.index(">Links<") > nav.index('<details class="pvmore')  # no links yet: last in More, for its Add form
     assert 'data-pane="equipment"' in body and "Large pot" in body
@@ -412,3 +420,71 @@ def test_private_mode_offers_no_link_search_and_the_worker_sends_none(mac, lib):
         raise AssertionError("a link search ran in Private mode")
     assert worker.links_due(mac.store, get=no_network, pause=lambda s: None) == 0
     assert mac.store.item_by_id(lib["ig"])["links_force"] == 1  # it waits for Smart
+
+
+# ---- Contextual Post View switch (Settings > Appearance; owner, 15 Nov 2026) ------------------------------------------
+
+def test_turning_contextual_post_view_off_gives_the_plain_post_view_and_back(mac, recipe):
+    item_id, folder = recipe
+    views.save(folder, VIEW)
+    assert mac.store.contextual_view()
+    body = page(mac, "/settings/appearance")[2]
+    assert 'id="contextual"' in body and 'aria-label="Contextual Post View"' in body and 'id="posttabs"' in body
+
+    status, headers, _ = post(mac, "/hub/views/contextual", enabled="0", next="/settings/appearance#contextual")
+    assert status == 303 and not mac.store.contextual_view()
+    body = page(mac, "/settings/appearance")[2]
+    assert 'aria-checked="false" aria-label="Contextual Post View"' in body and 'id="posttabs"' not in body
+
+    body = page(mac, f"/item/{item_id}")[2]
+    nav = _nav(body)
+    assert ">Summary" in nav and ">Links" in nav and ">Details" in nav and "pvmore" not in nav
+    assert ">Ingredients" not in nav and ">Method" not in nav and "Build this view" not in body
+    assert 'action="/hub/pv/category"' not in body  # no Change category
+    assert 'data-pane="ingredients"' not in body
+
+    post(mac, "/hub/views/contextual", enabled="maybe")  # junk is ignored
+    assert not mac.store.contextual_view()
+    post(mac, "/hub/views/contextual", enabled="1")
+    nav = _nav(page(mac, f"/item/{item_id}")[2])
+    assert ">Ingredients" in nav and ">Method" in nav  # the built view comes back as it was
+
+
+def test_off_the_summary_is_asked_without_category_and_tabs(tmp_path):
+    from magpiary import brain
+
+    seen = {}
+
+    def fake(provider, key, model, call, wait, system=brain.PROMPT, schema=brain.SCHEMA, guard=None):
+        seen["system"], seen["schema"] = system, schema
+        return lambda parts, history: json.dumps({"title": "T", "summary": "S", "key_points": [], "type": "other",
+                                                   "entities": {}, "suggested_tags": []})
+    import magpiary.brain as b
+    real = b._asker
+    b._asker = fake
+    try:
+        brain.summarise([{"text": "x"}], "k", "m", contextual=False)
+        assert seen["system"] is brain.BASE_PROMPT and seen["schema"] is brain.BASE_SCHEMA
+        brain.summarise([{"text": "x"}], "k", "m")
+        assert seen["system"] is brain.PROMPT and seen["schema"] is brain.SCHEMA
+    finally:
+        b._asker = real
+
+
+def test_off_no_view_builds_or_lookups_run(tmp_path):
+    from magpiary import lookups, views_ai
+    from magpiary.store import CONTEXTUAL_SETTING
+
+    store = Store(tmp_path / "m.db")
+    store.set_setting(CONTEXTUAL_SETTING, "0")
+    called = []
+    assert views_ai.views_due(store, asker_for=lambda *a, **k: called.append(1)) == 0
+    assert lookups.lookups_due(store, get=lambda *a, **k: called.append(1)) == 0
+    assert called == []
+
+
+def test_off_search_words_stay_words():
+    from magpiary.query import understand
+
+    assert any(p.kind == "category" for p in understand("music", {}).parts)
+    assert not any(p.kind == "category" for p in understand("music", {}, categories=False).parts)

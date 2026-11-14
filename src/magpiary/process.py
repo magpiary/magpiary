@@ -120,11 +120,14 @@ def process_item(item: dict, key, notes_dir: Path, call: Call = http_call,
     progress.step("summary")
     used: dict = {}
     ask = None
+    # Contextual Post View off (Settings): the summary is asked without the category and tabs, so it costs no more
+    contextual = store is None or not hasattr(store, "contextual_view") or store.contextual_view()
     if key.provider == "claude_code":  # the owner's model and effort, and what really ran (a fallback is noted on the post)
-        from magpiary.brain import local_asker
+        from magpiary.brain import BASE_PROMPT, BASE_SCHEMA, PROMPT, SCHEMA, local_asker
 
-        ask = local_asker("claude_code", key.model, getattr(key, "effort", "low"), used)
-    record = summarise(parts, key.secret, key.model, call, provider=key.provider, ask=ask)
+        ask = local_asker("claude_code", key.model, getattr(key, "effort", "low"), used,
+                          system=PROMPT if contextual else BASE_PROMPT, schema=SCHEMA if contextual else BASE_SCHEMA)
+    record = summarise(parts, key.secret, key.model, call, provider=key.provider, ask=ask, contextual=contextual)
     if known:
         record["suggested_tags"] = reuse_tags(record["suggested_tags"], known.get("tags") or [])[:5]
     senses_used = "local (whisper.cpp small, ffmpeg frames)"

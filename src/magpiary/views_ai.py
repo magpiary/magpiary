@@ -254,6 +254,8 @@ def views_due(store, key_source=None, asker_for=None, log: Callable[[str], None]
     key_source = key_source or keyring
     asker_for = asker_for or real_asker
     done = 0
+    if hasattr(store, "contextual_view") and not store.contextual_view():
+        return 0  # Contextual Post View is off: queued builds wait until it is back on
     for item in store.views_due_items(limit):
         item_id = item["id"]
         if modes.current(store) == "private":  # nothing is sent; it waits, and the free view shows meanwhile

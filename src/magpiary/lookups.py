@@ -569,8 +569,8 @@ def lookups_due(store, get: Get | None = None, log: Callable[[str], None] = lamb
     """Check the cards of up to `posts` built views with the free APIs (at most `requests` requests), saving each
     view's `lookups`. Only names grounded in the post are checked. Returns how many views were updated."""
     today = today or date.today().isoformat()
-    if not allowed(store):
-        return 0
+    if not allowed(store) or (hasattr(store, "contextual_view") and not store.contextual_view()):
+        return 0  # Private mode, or Contextual Post View off: no lookups
     run = Run(get, allow=lambda: allowed(store), requests=requests, pacer=pacer)
     saved = touched = 0
     for row in _candidates(store):

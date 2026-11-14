@@ -47,9 +47,10 @@ def post_starters(item: dict, base: list[str]) -> list[str]:
     return [base[0], ask[0], base[2]]  # questions about the post's own tool or place stay; one category question joins
 
 
-def suggestions(kind: str, items: list[dict], label: str) -> list[str]:
-    """Three starting questions that fit what you are looking at (no AI call: made from the post's own details)."""
-    if kind == "post" and items:
+def suggestions(kind: str, items: list[dict], label: str, contextual: bool = True) -> list[str]:
+    """Three starting questions that fit what you are looking at (no AI call: made from the post's own details).
+    `contextual`: Contextual Post View is on, so a post's category adds its own questions."""
+    if kind == "post" and items and contextual:
         return post_starters(items[0], _suggestions(kind, items, label))
     return _suggestions(kind, items, label)
 
@@ -231,7 +232,7 @@ class AskPages:
                     "starters": ["What have I saved this week?", "Which of my newest saves should I act on first?",
                                  "Which tools in my saves are worth trying?"]}
         kind = scope.partition(":")[0]
-        starters = suggestions(kind, items, label)
+        starters = suggestions(kind, items, label, self.store.contextual_view())
         if kind == "post":
             ctx = (f'The person has this saved post open: "{label[:120]}" (the posts shown above are this post). Treat it as the subject of the '
                    "conversation: a question that does not name something else is about this post (the tool, place, person or claim in it). "

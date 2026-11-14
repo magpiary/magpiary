@@ -83,7 +83,8 @@ DATE_PHRASES = re.compile(r"\b(today|yesterday|this week|last week|this month|la
 
 
 def understand(query: str, known_facets: dict[str, dict[str, int]], type_name=lambda t: t, source_name=lambda s: s,
-               today: date | None = None, no: set[str] | None = None, category_name=lambda c: c) -> Understood:
+               today: date | None = None, no: set[str] | None = None, category_name=lambda c: c,
+               categories: bool = True) -> Understood:
     """Read dates, sources, types and known facet values out of `query`. `known_facets` is {facet: {value: count}};
     only values the library really has are used. Parts named in `no` are left as plain words."""
     today = today or datetime.now().date()
@@ -108,7 +109,7 @@ def understand(query: str, known_facets: dict[str, dict[str, int]], type_name=la
             text = re.sub(rf"\b(?:on |from )?{re.escape(word)}\b", " ", text, 1)
         elif word in TYPES and take(Part("type", "type", TYPES[word], type_name(TYPES[word]), word)):
             text = re.sub(rf"\b{re.escape(word)}\b", " ", text, 1)
-        elif word in CATEGORY_WORDS and take(Part("category", "category", CATEGORY_WORDS[word],
+        elif categories and word in CATEGORY_WORDS and take(Part("category", "category", CATEGORY_WORDS[word],
                                                   category_name(CATEGORY_WORDS[word]), word)):
             text = re.sub(rf"\b{re.escape(word)}\b", " ", text, 1)  # the hub filters by category (keep() ignores it)
     for facet, values in known_facets.items():

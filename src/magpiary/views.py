@@ -23,7 +23,8 @@ FILE = "view.json"
 ITEM_FIELDS = ("name", "detail", "at", "amount", "group", "kind", "value")
 LIMITS = {"name": 200, "detail": 400, "at": 8, "amount": 60, "group": 80, "kind": 30, "value": 4000}
 MAX_TABS, MAX_ITEMS, MAX_TEXT = 12, 40, 1500
-VISIBLE = 5  # tabs shown before More (owner, 14 Nov): Summary and Details always among them
+VISIBLE = 7  # up to this many tabs all show, with no More (owner, 15 Nov); Summary and Details always among them
+VISIBLE_WITH_MORE = 6  # above VISIBLE, this many show and the rest wait in More
 BY = ("ai", "rules", "owner")
 
 
@@ -319,8 +320,9 @@ def tab_plan(view: dict, core: dict[str, bool], hidden: dict[str, list[str]] | N
     """(visible tab ids, tab ids in More). `core` says which core panes have something (read, deep, links, rel, tr).
 
     Order: read, sum, the category's tabs with content, the second category's lent tab, then deep, links, rel, tr, det.
-    Summary and Details always show; up to VISIBLE - 2 others show in that order, so the category's own tabs come before
-    Deeper dive, Links, Related and Transcript, which fold into More, in that order, when there is no room. Read (a
+    Summary and Details always show. When all the tabs fit in VISIBLE they all show and there is no More; otherwise
+    VISIBLE_WITH_MORE show, so the category's own tabs come before Deeper dive, Links, Related and Transcript, which fold
+    into More, in that order. Read (a
     saved page) is the post itself and keeps its place first."""
     hidden = hidden or {}
     category, second = view.get("category", "other"), view.get("category2", "")
@@ -333,7 +335,7 @@ def tab_plan(view: dict, core: dict[str, bool], hidden: dict[str, list[str]] | N
     if lent and lent in filled and lent not in own and lent not in set(hidden.get(second, [])):
         middle.append(lent)
     middle += [k for k in ("deep", "links", "rel", "tr") if core.get(k)]
-    room = VISIBLE - 2
+    room = len(middle) if len(middle) + 2 <= VISIBLE else VISIBLE_WITH_MORE - 2
     first, rest = middle[:room], middle[room:]
     visible = (["read"] if "read" in first else []) + ["sum"] + [k for k in first if k != "read"] + ["det"]
     return visible, rest

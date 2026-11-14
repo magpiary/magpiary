@@ -330,6 +330,8 @@ class WallPages:
 
     def categories_for(self, items: list[dict]) -> dict[int, str]:
         """{item id: category} for these posts ("" before a post is saved), cached until the post changes."""
+        if not self.store.contextual_view():
+            return {i["id"]: "" for i in items}  # Contextual Post View off: tiles show the post's type, as in 0.1.8
         cache = self.__dict__.setdefault("_cat_cache", {})
         out = {}
         for i in items:
@@ -345,7 +347,7 @@ class WallPages:
     def category_menu(self, item: dict, record: dict | None = None) -> str:
         """Change category, inside the post's ... menu: a fold listing the categories by group; picking one posts to
         /hub/pv/category, which rebuilds the post's tabs (owner decision 6)."""
-        if item.get("status") != "archived" or item.get("shelf") in ("trash", "board"):
+        if item.get("status") != "archived" or item.get("shelf") in ("trash", "board") or not self.store.contextual_view():
             return ""
         now = self.categories_for([item]).get(item["id"]) or "other"
         groups = []
@@ -438,7 +440,7 @@ class WallPages:
 
     def _everything(self, q: dict, items: list[dict], ctx: dict, part: int = 0) -> tuple[str, str]:
         source, tag, kind = q.get("source", ""), q.get("tag", ""), q.get("type", "")
-        cat = q.get("cat", "") if q.get("cat", "") in cats.CATEGORIES else ""
+        cat = q.get("cat", "") if q.get("cat", "") in cats.CATEGORIES and self.store.contextual_view() else ""
         author = q.get("author", "")
         links, attention = q.get("links") == "1", q.get("attention") == "1"
         deep = q.get("deep") == "suggested"  # long videos that could use a deeper dive (Settings links here)
@@ -704,7 +706,9 @@ class WallPages:
 
     def find(self, query: str, no: set, words_only: bool = False):
         """The search itself: what was understood in the query, then the words and meaning left over, then the filters."""
-        got = understand(query, self.store.facet_counts(), ui.type_name, ui.source_name, no=no, category_name=cats.name)
+        # Contextual Post View off: "music" is an ordinary search word again, not a category chip
+        got = understand(query, self.store.facet_counts(), ui.type_name, ui.source_name, no=no, category_name=cats.name,
+                         categories=self.store.contextual_view())
         words = re.findall(r"\w+", got.rest, flags=re.UNICODE)[:12]
         items = self.store.hub_items("kept", got.rest if words else "", limit=5000 if got.parts else 300)
         if words and not words_only:

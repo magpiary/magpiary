@@ -31,6 +31,8 @@ from magpiary.expand import FAILURE_REASON, retry_delay
 
 log = logging.getLogger(__name__)
 
+CONTEXTUAL_SETTING = "contextual_view"  # "0" turns Contextual Post View off (store.contextual_view)
+
 MAX_ID_LEN = 64
 MAX_NOTE_LEN = 2000
 
@@ -2209,6 +2211,11 @@ class Store(ChatStore, StatsStore):
             raise ValueError(status)
         with self._lock:
             self._db.execute("UPDATE items SET view_status=?, view_detail=? WHERE rowid=?", (status, detail[:200], item_id))
+
+    def contextual_view(self) -> bool:
+        """Contextual Post View is on (Settings > Appearance; owner, 15 Nov 2026). Off: posts show the plain 0.1.8 tabs,
+        no category label, filter or Ask starters, and no AI work for categories or tabs (summaries ask without them)."""
+        return self.get_setting(CONTEXTUAL_SETTING, "1") != "0"
 
     def hidden_tabs(self) -> dict[str, list[str]]:
         """The owner's per-category hidden tabs (Settings > Advanced), from the `view_tabs_off` setting."""

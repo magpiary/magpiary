@@ -108,6 +108,7 @@ SEARCH_INDEX = [
     ("Digest on or off", "digest on off switch written by who writes claude codex key", "ai", "digest-on"),
     ("Deeper dive", "deeper dive deep long video podcast minutes suggest sections chapters takeaways quotes engine model claude code codex", "ai", "deepdive"),
     ("Connections map (beta)", "beta map graph connections try early", "appearance", "betamap"),
+    ("Contextual Post View", "contextual post view category tabs recipe travel music on off plain", "appearance", "contextual"),
     ("Post tabs by category", "category tabs hide show ingredients method tracks places more recipe music travel", "appearance", "posttabs"),
     ("Interface size", "scale zoom smaller bigger laptop 14 inch size text", "appearance", "scale"),
     ("Your library folders", "storage media notes models size finder", "storage", "library"),
@@ -1339,6 +1340,7 @@ class SettingsPages:
         art = settings_art
         return (_group("Theme", picks("theme", [(k, v, art.theme(k)) for k, v in ui.THEMES.items()], look["theme"]),
                        desc="Indigo is colourful; Dark is plainer.", gid="theme", cls="plain")
+                + self._contextual_group()
                 + _group("Tile size", picks("size", [(k, v.replace(" tiles", ""), art.tiles(k)) for k, v in ui.SIZES.items()],
                                             look["size"]),
                          desc="The same as the tile-size control above the wall.", gid="tiles", cls="plain")
@@ -1375,9 +1377,25 @@ class SettingsPages:
                 + self._beta_group()
                 + self._post_tabs_adv())
 
+    def _contextual_group(self) -> str:
+        """Contextual Post View on or off (owner, 15 Nov 2026). Off: the plain post view of 0.1.8, and no AI work for it."""
+        on = self.store.contextual_view()
+        back = "/settings/appearance#contextual"
+        switch = self._switch("/hub/views/contextual", on, {"enabled": "0", "next": back}, {"enabled": "1", "next": back},
+                              "Contextual Post View")
+        return _group("Contextual Post View",
+                      _row("Tabs that fit each post", "A recipe gets Ingredients and Method, a trip gets Places, music gets "
+                           "Tracks. Each post also gets a category label and filter.", switch,
+                           info="Off: every post shows Summary, Links, Related, Transcript and Details, as before. New saves "
+                                "skip the category and tabs, so each summary sends less to your AI. Turning it back on brings "
+                                "back every view already built.", sid="contextualrow"),
+                      gid="contextual", status=_status("On" if on else "Off"))
+
     def _post_tabs_adv(self) -> str:
         """Advanced: which of each category's tabs show on its posts (owner decision 6). Summary and Details always show and
         are not listed; a hidden tab is also not lent when the category is a post's second one."""
+        if not self.store.contextual_view():
+            return ""  # Contextual Post View is off: there are no category tabs to choose
         hidden = self.store.hidden_tabs()
         n_off = sum(len(v) for v in hidden.values())
         groups = []
@@ -1391,7 +1409,7 @@ class SettingsPages:
         status = _status(f'{n_off} tab{"" if n_off == 1 else "s"} hidden' if n_off else "Every category shows all its tabs")
         body = _group("Post tabs by category", "".join(groups), gid="posttabs", cls="ptgroup", action=reset, status=status,
                       desc="Each kind of post gets its own tabs between Summary and Details. Turn off the ones you do not "
-                           "use. Summary and Details always show; at most five tabs show, the rest wait under More.")
+                           "use. Summary and Details always show; up to seven tabs show, and only past that do the rest wait under More.")
         return _adv(body, "Which tabs each kind of post shows", gid="advanced", label="Advanced settings") if body else ""
 
     def _tab_pills(self, category, off: set) -> str:
@@ -1485,6 +1503,12 @@ class SettingsPages:
 
     def settings_post(self, path: str, form: dict) -> bool:
         """Settings changes that end with a plain redirect to `next`. False for a path this does not handle."""
+        if path == "/hub/views/contextual":  # Appearance > Contextual Post View on or off
+            if form.get("enabled") in ("0", "1"):
+                from magpiary.store import CONTEXTUAL_SETTING
+
+                self.store.set_setting(CONTEXTUAL_SETTING, form["enabled"])
+            return True
         if path == "/hub/views/tabs":  # Advanced > Post tabs by category: one tab on or off, or all back on
             hidden = {} if form.get("reset") == "1" else self.store.hidden_tabs()
             category, (tab, _, on) = form.get("category", ""), form.get("toggle", "").partition(":")
