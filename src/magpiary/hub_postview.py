@@ -79,7 +79,8 @@ class PostViewPages:
     def category_pane(self, tab_id: str, view: dict, state: dict, item: dict) -> str:
         """One category tab's pane, drawn by hub_views. `state` is the post's whole view_state ({tab: {key: value}})."""
         tab, body = cats.TABS[tab_id], (view.get("tabs") or {}).get(tab_id) or {"text": "", "items": []}
-        return hub_views.render_tab(tab, body, view, state.get(tab_id, {}), item)
+        links = self.store.links_for(item["canonical_url"]) if "official" in tab.providers else ()
+        return hub_views.render_tab(tab, body, view, state.get(tab_id, {}), item, links)
 
     def build_strip(self, item: dict, view: dict) -> str:
         """Inside the Summary: offer to build this post's view (old posts; owner decision 2). Empty when there is

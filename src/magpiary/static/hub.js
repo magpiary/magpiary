@@ -830,8 +830,10 @@
     tabs.forEach((t) => t.addEventListener("click", (ev) => { ev.preventDefault(); if (!t.classList.contains("off")) show(t.dataset.tab, true); }));
     // "Add tag" / "Add note": the form stays hidden until its button is pressed
     $$("[data-tabto]", host).forEach((a) => a.addEventListener("click", (ev) => {
+      const to = $(`[data-tab="${a.dataset.tabto}"]`, host);
+      if (!to) return;  // that tab is not on the page (Links with no links yet): the link's own address opens it
       ev.preventDefault();
-      $(`[data-tab="${a.dataset.tabto}"]`, host)?.click();
+      to.click();
       const sc = $(".pscroll", host), bar2 = $(".tabs", host);  // bring the tab's content to the top of the page
       if (host.classList.contains("pagemode") && bar2) {  // a page: the window scrolls, under the site bar and the breadcrumb bar
         const stick = (parseFloat(getComputedStyle(root).getPropertyValue("--top-h")) || 64) + ($(".crumbbar")?.offsetHeight || 0) + 6;

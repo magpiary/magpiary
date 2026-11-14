@@ -154,7 +154,7 @@ def test_cards_fall_back_to_search_links_without_lookups(monkeypatch):  # as if 
 def test_card_links_come_from_lookups_and_survive_its_bugs(monkeypatch):
     class Fake:
         @staticmethod
-        def search_links(providers, item, tab):
+        def search_links(providers, item, tab, links=()):
             return [{"provider": "spotify", "label": "Spotify", "url": "https://open.spotify.com/search/x"},
                     {"provider": "bad", "label": "Bad", "url": "javascript:alert(1)"}]
     monkeypatch.setattr(hv.lookups, "search_links", Fake.search_links)
@@ -340,3 +340,90 @@ def test_ingredients_servings_round_trip_through_the_route(mac, tmp_path, monkey
     assert json.loads(post(mac, "/hub/pv/state", id=item_id, tab="ingredients", key="servings", value="4")[2]) == {"ok": True}
     body = page(mac, f"/item/{item_id}?tab=ingredients")[2]
     assert 'data-base="2" data-chosen="4"' in body and ">400 g<" in body and ">4 tbsp<" in body
+
+
+# ---- review 14 Nov 2026 (Codex) ---------------------------------------------------------------------------------------
+
+def test_an_ai_written_url_never_becomes_an_official_site_but_a_found_link_does():
+    """Correctness 11 / security 3: an Alternatives card linked https://attacker.example/ as "Official site"."""
+    items = [{"name": "Paletteer", "detail": "lighter", "value": "https://attacker.example/"}]
+    html = render("alternatives", items)
+    assert "attacker.example" not in html and "Official site" not in html
+    rows = [{"name": "Paletteer", "url": "https://paletteer.example/app"}]
+    html = hv.render_tab(cats.TABS["alternatives"], {"text": "", "items": items}, {}, {}, ITEM, rows)
+    assert 'href="https://paletteer.example/app"' in html and "Official site" in html and "attacker.example" not in html
+
+
+def test_an_event_at_the_end_of_the_calendar_still_renders():
+    """Security 6: 9999-12-31 passed date validation, then adding the length raised OverflowError."""
+    html = render("when", [{"name": "Far future", "value": "9999-12-31"}, {"name": "Late", "value": "9999-12-31T23:30"},
+                           {"name": "Soon", "value": "2026-12-01"}])
+    assert "Far future" in html and "Late" in html and html.count("data-pvical") == 1
+
+
+def test_links_keeps_an_add_link_entry_point_when_empty(mac, tmp_path):
+    """Correctness 10: with no links the Links pane (and its Add form) was gone, and ?tab=links could not open it."""
+    item_id, folder = archive(mac, tmp_path, "https://www.instagram.com/reel/ExampleNoLinks/", "instagram",
+                              {"text": "A fictional tool demo", "author": "Example Maker", "duration": 30.0},
+                              {"record.json": json.dumps({"title": "Example tool", "summary": "A fictional tool.",
+                                                          "key_points": [], "type": "tool", "entities": {},
+                                                          "suggested_tags": []}).encode()})
+    mac.store.set_setting("ai_mode", "private")
+    body = page(mac, f"/item/{item_id}")[2]
+    assert 'data-pane="links"' not in body
+    add = re.search(r'<a class="pvprimary find" href="([^"]+)" data-tabto="links">', body)
+    assert add and add.group(1).replace("&amp;", "&") == f"/item/{item_id}?tab=links#links"
+    asked = page(mac, f"/item/{item_id}?tab=links")[2]
+    assert 'data-pane="links"' in asked and 'data-tab="links" class="on"' in asked
+
+
+JS_HARNESS = r"""
+const fs = require("fs"), vm = require("vm");
+const handlers = {};
+class Element {}
+class HTMLInputElement extends Element {}
+class HTMLDetailsElement extends Element {}
+const server = {};  // what the hub stored, in the order requests finished
+let n = 0;
+const delays = [60, 5];  // the first request (tick) is slow, the second (untick) fast
+async function fetch(url, opts) {
+  const p = new URLSearchParams(opts.body), wait = delays[n++] ?? 1;
+  await new Promise((r) => setTimeout(r, wait));
+  server[p.get("key")] = p.get("value");
+  return { ok: true, json: async () => ({ ok: true }) };
+}
+const root = { dataset: { pvid: "7", pvtab: "ingredients" }, querySelector: () => null, querySelectorAll: () => [] };
+const row = { classList: { toggle() {}, add() {}, remove() {} }, querySelector: () => null, animate() {} };
+const box = Object.assign(new HTMLInputElement(), { checked: false, dataset: { pvkey: "i.abc" },
+  matches: () => true, closest: (sel) => (sel === "li" ? row : root) });
+const document = { addEventListener: (t, f) => { (handlers[t] ||= []).push(f); }, querySelector: () => null,
+                   querySelectorAll: () => [] };
+const ctx = { window: {}, document, fetch, URLSearchParams, setTimeout, clearTimeout, console, Element, HTMLInputElement,
+              HTMLDetailsElement, matchMedia: () => ({ matches: true }), addEventListener() {}, innerWidth: 1000,
+              navigator: {}, WeakMap, Map, Promise };
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(process.argv[2], "utf8"), ctx);
+(async () => {
+  box.checked = true; const a = Promise.all(handlers.change.map((f) => f({ target: box })));
+  box.checked = false; const b = Promise.all(handlers.change.map((f) => f({ target: box })));
+  await a; await b;
+  console.log(JSON.stringify({ stored: server["i.abc"] ?? null, shown: box.checked }));
+})();
+"""
+
+
+def test_quick_tick_then_untick_is_stored_as_unticked(tmp_path):
+    """Correctness 12: the two saves ran at once; when the tick finished last the hub kept it ticked."""
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is not installed")
+    script = tmp_path / "harness.js"
+    script.write_text(JS_HARNESS)
+    js = Path(hv.__file__).parent / "static" / "views.js"
+    done = subprocess.run([node, str(script), str(js)], capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr[-2000:]
+    out = json.loads(done.stdout.strip().splitlines()[-1])
+    assert out == {"stored": "", "shown": False}

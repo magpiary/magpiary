@@ -227,7 +227,7 @@ def links_for(tab: cats.Tab, it: dict, view: dict, post: dict | None = None) -> 
     if value and not in_post(value, post or {}):
         it = {k: v for k, v in it.items() if k != "value"}
     try:
-        found = lookups.search_links(tab.providers or ("google",), it, tab)
+        found = lookups.search_links(tab.providers or ("google",), it, tab, (post or {}).get("link_rows") or ())
     except Exception:  # a lookups bug must not break the post view
         found = []
     out, seen = [], set()
@@ -515,6 +515,14 @@ def when_of(value: str) -> tuple[datetime, bool] | None:
         return None
 
 
+def _end(start: datetime, timed: bool) -> datetime | None:
+    """2 hours later, or the next day; None at the end of the calendar (9999-12-31: no Add to calendar)."""
+    try:
+        return start + (timedelta(hours=2) if timed else timedelta(days=1))
+    except OverflowError:
+        return None
+
+
 def _event(tab, body, view, state, item) -> str:
     out = []
     for it in body.get("items") or []:
@@ -523,12 +531,12 @@ def _event(tab, body, view, state, item) -> str:
             start, timed = when
             day = f"{start:%a} {start.day} {start:%b %Y}"
             shown = day + (f", {start:%H:%M}" if timed else "")
-            end = start + (timedelta(hours=2) if timed else timedelta(days=1))
+            end = _end(start, timed)
             stamp = "%Y%m%dT%H%M%S" if timed else "%Y%m%d"
             cal = (f'<button type="button" class="btn sm dark pvical" data-pvical data-title="{e(it["name"])}" '
                    f'data-start="{start.strftime(stamp)}" data-end="{end.strftime(stamp)}" data-allday="{"0" if timed else "1"}" '
                    f'data-place="{e(it.get("group", ""))}" data-note="{e(it.get("detail", ""))}">{ICONS["cal"]}'
-                   f'<span>Add to calendar</span></button>')
+                   f'<span>Add to calendar</span></button>') if end else ""
             date = (f'<div class="pvdate" aria-hidden="true"><small>{start:%b}</small><b>{start.day}</b>'
                     f'<small>{start:%a}</small></div>')
         else:
@@ -550,8 +558,11 @@ RENDERERS = {"checklist": _checklist, "steps": _steps, "cards": _cards, "places"
              "timeline": _timeline, "event": _event}
 
 
-def render_tab(tab: cats.Tab, body: dict, view: dict, state: dict, item: dict) -> str:
-    """One category tab's pane. `body` = {"text", "items"}; `state` = this tab's saved ticks/servings ({key: value})."""
+def render_tab(tab: cats.Tab, body: dict, view: dict, state: dict, item: dict, links=()) -> str:
+    """One category tab's pane. `body` = {"text", "items"}; `state` = this tab's saved ticks/servings ({key: value});
+    `links` = the post's Links rows (store.links_for): an "Official site" button comes from these or from a URL the
+    post itself contains, never from one the AI wrote."""
+    item = {**item, "link_rows": list(links)} if links else item
     body = body if isinstance(body, dict) else {}
     items = [it for it in (body.get("items") or []) if isinstance(it, dict) and str(it.get("name") or "").strip()]
     items = [{k: str(v) for k, v in it.items() if isinstance(v, (str, int, float))} for it in items]

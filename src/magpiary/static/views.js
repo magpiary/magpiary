@@ -54,6 +54,17 @@
       return !!(data && data.ok);
     } catch (e) { return false; }
   }
+  // One value at a time per key (review 14 Nov 2026): a quick tick then untick sent two requests at once, and when the
+  // tick landed last the box showed unticked while the hub kept it ticked. Each save waits for the one before it.
+  const lines = new Map();
+  function saveInOrder(root, key, value) {
+    const id = `${root.dataset.pvid}|${root.dataset.pvtab}|${key}`;
+    const run = (lines.get(id) || Promise.resolve()).then(() => save(root, key, value));
+    const tail = run.then(() => {}, () => {});
+    lines.set(id, tail);
+    tail.then(() => { if (lines.get(id) === tail) lines.delete(id); });
+    return run;
+  }
 
   function count(root) {
     const prog = root.querySelector("[data-pvprog]"); if (!prog) return;
@@ -70,7 +81,10 @@
     if (on && !calm) row?.animate([{ transform: "scale(.985)" }, { transform: "scale(1)" }], { duration: 220, easing: "cubic-bezier(.2,.9,.3,1)" });
     count(root);
     const name = row?.querySelector(".pvname")?.textContent || "Item";
-    if (await save(root, box.dataset.pvkey, on ? "1" : "")) { say(root, `${name} ${on ? "ticked" : "unticked"}`); return; }
+    const seq = (box._pvseq = (box._pvseq || 0) + 1);
+    const ok = await saveInOrder(root, box.dataset.pvkey, on ? "1" : "");
+    if (seq !== box._pvseq) return;  // a later click owns the box now; its save runs after this one
+    if (ok) { say(root, `${name} ${on ? "ticked" : "unticked"}`); return; }
     box.checked = !on; row?.classList.toggle("on", !on); count(root);  // not saved: put it back and say so
     row?.classList.add("pvfail"); setTimeout(() => row?.classList.remove("pvfail"), 1600);
     say(root, "Couldn't save that tick. If the hub is locked, unlock it and try again.");
@@ -135,7 +149,7 @@
     });
     clearTimeout(timers.get(box));
     timers.set(box, setTimeout(async () => {
-      const ok = await save(root, "servings", chosen === (base || 1) ? "" : String(chosen));
+      const ok = await saveInOrder(root, "servings", chosen === (base || 1) ? "" : String(chosen));
       say(root, ok ? (base ? `Amounts for ${chosen}` : `Amounts times ${chosen}`) : "Couldn't remember the servings; the amounts still changed here.");
       if (!ok) flag(root, "Couldn't remember the servings; the amounts still changed here.");
     }, 450));

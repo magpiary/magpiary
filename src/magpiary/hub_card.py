@@ -502,7 +502,8 @@ class CardPages:
             else:
                 out.append(self._form("/hub/links/again", {"id": item["id"], "next": here + "?tab=links"},
                                       f'Find the link{" for " + e(tool) if tool else ""}', "pvprimary find"))
-            out.append('<a class="pvprimary find" href="#links" data-tabto="links"><span><b>Add a link yourself</b></span></a>')
+            # a real address: with no links yet there is no Links tab on the page, so the click loads ?tab=links
+            out.append(f'<a class="pvprimary find" href="{here}?tab=links#links" data-tabto="links"><span><b>Add a link yourself</b></span></a>')
         return f'<div class="pvactions">{"".join(out)}</div>' if out else ""
 
     def _state(self, item: dict, record: dict | None, here: str) -> str:
@@ -799,7 +800,8 @@ class CardPages:
         if isinstance(article, dict) and article.get("blocks") and item["source"] != "instagram":  # a page saved as the owner saw it: read it first (an Instagram carousel is only pictures, the gallery shows them)
             panes["read"] = ("Read", "", self._reader_pane(item, article, folder))
             tab = tab or "read"
-        core = {"read": "read" in panes, "deep": "deep" in panes, "links": bool(links), "rel": saved or bool(related),
+        # Links shows when it has links, or when asked for (?tab=links: "Add a link yourself" opens it to add the first)
+        core = {"read": "read" in panes, "deep": "deep" in panes, "links": bool(links) or tab == "links", "rel": saved or bool(related),
                 "tr": not self._transcript_off(folder)[0]}
         visible, more = views.tab_plan(view, core, self.store.hidden_tabs())
         # the summary leaves out what a category tab already shows in full (Ingredients, the steps)
