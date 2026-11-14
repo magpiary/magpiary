@@ -490,8 +490,9 @@ class Hub(
         elif path == "/hub/links/add":
             self.store.add_link_by_owner(item_id, form.get("name", ""), form.get("url", ""), form.get("kind", "links"))
         elif path == "/hub/links/again":
-            self.store.find_links_again(item_id)
-            self.wake()
+            if modes.current(self.store) != "private":  # Private: no link search (checked again by the worker)
+                self.store.find_links_again(item_id)
+                self.wake()
         elif path == "/hub/refresh-stats":
             self._refresh_stats(item_id)
         elif path == "/hub/control":

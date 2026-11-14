@@ -319,6 +319,22 @@ def type_colour(kind: str | None) -> str:
     return f"var(--t-{kind if kind in TYPE_NAMES else 'other'})"
 
 
+# A post's category takes the colour of the old type it is closest to; music, film and books have their own (--t-media).
+# Every one has a -deep shade that carries white text (scripts/contrast_check.py).
+CATEGORY_TONES = {"design_inspiration": "design", "ui_ux": "design", "branding_marketing": "design", "fashion": "design",
+                  "interiors": "design", "travel": "place", "food_places": "place", "recipe": "recipe",
+                  "software_tool": "tool", "ai_coding": "tool", "gadgets": "tool", "music": "media", "film_tv": "media",
+                  "books": "media", "fitness": "howto", "wellbeing": "howto", "howto_diy": "howto",
+                  "events_deals": "discussion", "learning": "explainer", "news_opinion": "news_opinion",
+                  "money_business": "explainer", "discussion": "discussion"}
+
+
+def category_colour(category: str | None, kind: str | None = None) -> str:
+    """The colour of a post's category (header chip, tile dot, tab accents); without one, its old type's colour."""
+    tone = CATEGORY_TONES.get(category or "")
+    return f"var(--t-{tone})" if tone else type_colour(kind)
+
+
 # Piles and board folders use their own deep palette, so a bright colour on a tile always means a kind of post
 PILE_COLOURS = ("sky", "coral", "lilac", "rose", "mint", "butter", "peach", "aqua")
 # a board's stored colour (also the creator's colour, synced to friends) shown in the folder palette

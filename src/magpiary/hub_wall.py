@@ -315,7 +315,7 @@ class WallPages:
             sub = "Reading it · " + WORKING.get(lane["step"], STEPS.get(lane["step"], "Working…"))
         elif done:
             kind = item.get("ai_type") or "other"
-            colour = ui.type_colour(item.get("ai_type"))
+            colour = ui.category_colour(category, item.get("ai_type"))
             kind_name = cats.name(category) or ui.type_name(item.get("ai_type"))  # the category names it (owner decision 11)
             sub = item.get("author") or src
         elif ctx["private"] or not ctx["summaries"]:
@@ -331,6 +331,7 @@ class WallPages:
             sub, badge = item.get("author") or src, '<span class="sumb">Summary problem</span>'
         else:
             pend, sub = True, "Received · waiting to be read"
+        dot = ui.category_colour(category, item.get("ai_type"))  # the category's colour beside its name (owner decision 11)
         onb = (f'<a class="onb" href="/board/{on[0][2]}" title="On {e(", ".join(b[1] for b in on))}">'
                f'{ui.sticker(on[0][0])}<span>{e(on[0][1])}</span>{f"<em>+{len(on) - 1}</em>" if len(on) > 1 else ""}</a>'
                if on else "")
@@ -343,9 +344,9 @@ class WallPages:
         label_style = f' style="--lc:{ui.deep(colour)}"' if colour and not pend else ""  # used by the Coloured look only
         return (f'<div class="tile{" pend" if pend else ""}" {base}{preview}>'
                 f'<a class="cover" href="{href}" aria-label="{e(title[:120])}"></a>'
-                f'<div class="sq">{art}<span class="src"><i class="sd" style="background:{ui.source_colour(item["source"])}"></i>{f'<i class="kd2" style="background:{ui.type_colour(kind)}"></i>' if kind else ""}{e(src)}{lock}</span>{solo}{badge_top}{prog}{q_html}{extra}{onb}</div>'
+                f'<div class="sq">{art}<span class="src"><i class="sd" style="background:{ui.source_colour(item["source"])}"></i>{f'<i class="kd2" style="background:{dot}"></i>' if kind else ""}{e(src)}{lock}</span>{solo}{badge_top}{prog}{q_html}{extra}{onb}</div>'
                 f'<div class="label"{label_style}><div class="t">{ui.mark(title, words)}</div>'
-                f'<div class="m">{who}{f'<span class="kind"><i class="kd" style="background:{ui.type_colour(kind)}"></i>{e(kind_name)}</span>' if kind_name else ""}{badge}</div>{summary}</div>{over}</div>')
+                f'<div class="m">{who}{f'<span class="kind"><i class="kd" style="background:{dot}"></i>{e(kind_name)}</span>' if kind_name else ""}{badge}</div>{summary}</div>{over}</div>')
 
     def grid(self, items: list[dict], ctx: dict, over=None, words=None, big: set | None = None) -> str:
         """`over(item)` gives what sits on a tile: buttons (top right), or (buttons, a badge inside the picture).

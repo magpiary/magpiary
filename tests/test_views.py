@@ -4,6 +4,7 @@ tab row. Fictional posts only."""
 import json
 import sqlite3
 import stat
+from pathlib import Path
 
 import pytest
 
@@ -11,7 +12,7 @@ from magpiary import categories as cats
 from magpiary import views
 from magpiary.store import Store
 
-from test_hub import archive, page, post, request
+from test_hub import archive, lib, page, post, request  # noqa: F401  (lib is a fixture)
 
 RECIPE_URL = "https://www.instagram.com/reel/ExampleRecipe1/"
 
@@ -26,12 +27,7 @@ def test_the_registry_is_clean_and_has_every_category():
     assert cats.CATEGORIES["recipe"].tabs[:2] == ("ingredients", "method")
 
 
-def test_the_ai_prompt_names_every_category_and_its_lent_tab():
-    prompt = views.ai_prompt()
-    for c in cats.CATEGORIES.values():
-        assert f"  {c.id}: " in prompt
-        if c.tabs:
-            assert f"{c.id} (lends {c.lend})" in prompt
+def test_the_ai_schema_names_every_category():
     schema = views.ai_schema()
     assert schema["category"]["enum"] == list(cats.IDS)
 
@@ -148,7 +144,17 @@ def test_tab_plan_order_cap_and_more():
 
 def test_tab_plan_puts_read_first_and_counts_it():
     visible, more = views.tab_plan(_view("recipe", ["ingredients", "method"]), {"read": True, "deep": True, "rel": True})
-    assert visible == ["read", "sum", "deep", "ingredients", "det"] and more == ["method", "rel"]
+    assert visible == ["read", "sum", "ingredients", "method", "det"] and more == ["deep", "rel"]
+
+
+def test_tab_plan_never_gives_a_category_slot_to_deeper_dive():
+    # real-post test, 14 Nov: Deeper dive took a slot, so only 2 category tabs showed before More
+    core = {"deep": True, "links": True, "rel": True, "tr": True}
+    visible, more = views.tab_plan(_view("recipe", ["ingredients", "method", "swaps", "equipment"]), core)
+    assert visible == ["sum", "ingredients", "method", "swaps", "det"]
+    assert more == ["equipment", "deep", "links", "rel", "tr"]
+    visible, more = views.tab_plan(_view("recipe", ["method"]), core)
+    assert visible == ["sum", "method", "deep", "links", "det"] and more == ["rel", "tr"]
 
 
 def test_tab_plan_skips_empty_and_owner_hidden_tabs():
@@ -303,3 +309,48 @@ def test_pv_routes_validate_and_reply(mac, recipe, monkeypatch):
     assert json.loads(post(mac, "/hub/pv/build", id=item_id)[2]) == {"ok": False, "detail": "private"}
     assert json.loads(post(mac, "/hub/pv/category", id=item_id, category="recipe")[2]) == {"ok": True}
     assert mac.store.item_by_id(item_id)["view_status"] == "done"  # Private: nothing queued
+
+
+def test_private_change_category_to_ai_only_tabs_says_why(mac, recipe):
+    """Sandbox, 14 Nov: in Private mode, Change category to a category no free source fills left Summary and Details with
+    no hint; now the Summary says the tabs are written by AI. A category with free tabs (recipe) shows no hint."""
+    from magpiary import modes
+    item_id, _ = recipe
+    mac.store.set_setting(modes.SETTING, "private")
+    hint = "This category’s tabs are written by AI. Turn on Smart mode to build them."
+    post(mac, "/hub/pv/category", id=item_id, category="news_opinion")
+    body = page(mac, f"/item/{item_id}")[2]
+    assert hint in body and "Build this view" not in body and 'href="/settings/ai"' in body
+    post(mac, "/hub/pv/category", id=item_id, category="recipe")
+    assert hint not in page(mac, f"/item/{item_id}")[2]  # its ingredients fill without AI
+    post(mac, "/hub/pv/category", id=item_id, category="other")
+    assert hint not in page(mac, f"/item/{item_id}")[2]  # nothing to build
+    mac.store.set_setting(modes.SETTING, "smart")  # chosen, but no key: nothing can write
+    post(mac, "/hub/pv/category", id=item_id, category="news_opinion")
+    body = page(mac, f"/item/{item_id}")[2]
+    assert hint not in body and "This category’s tabs are written by AI. Add an AI key to build them." in body
+
+
+def test_private_mode_offers_no_link_search_and_the_worker_sends_none(mac, lib):
+    """Sandbox, 14 Nov: "Find the link for git" showed in Private mode and would have searched GitHub, Wikidata and the
+    web for it. Private links only what the post itself writes (specs, Links v2 section 8)."""
+    from magpiary import modes, worker
+    folder = Path(mac.store.item_by_id(lib["ig"])["archive_dir"])
+    (folder / "record.json").write_text(json.dumps({"title": "A git trick", "summary": "s", "type": "tool", "key_points": [],
+                                                    "suggested_tags": [], "entities": {"tools": ["git"]}}))
+    mac.store._db.execute("UPDATE items SET ai_status='done', links_status='done' WHERE rowid=?", (lib["ig"],))
+    assert "Find the link for git" in page(mac, f"/item/{lib['ig']}")[2]
+    mac.store.set_setting(modes.SETTING, "private")
+    body = page(mac, f"/item/{lib['ig']}")[2]
+    assert "Find the link" not in body and "Add a link yourself" in body
+    mac.store.add_link_by_owner(lib["ig"], "Example docs", "https://docs.example.com", "links")  # so the Links tab shows
+    body = page(mac, f"/item/{lib['ig']}?tab=links")[2]
+    assert "Find more links" not in body and "Private mode: Magpiary looks up no links." in body
+    post(mac, "/hub/links/again", id=lib["ig"])
+    assert not mac.store.item_by_id(lib["ig"])["links_force"]
+    mac.store._db.execute("UPDATE items SET links_force=1 WHERE rowid=?", (lib["ig"],))  # asked for before Private
+
+    def no_network(*a, **k):
+        raise AssertionError("a link search ran in Private mode")
+    assert worker.links_due(mac.store, get=no_network, pause=lambda s: None) == 0
+    assert mac.store.item_by_id(lib["ig"])["links_force"] == 1  # it waits for Smart

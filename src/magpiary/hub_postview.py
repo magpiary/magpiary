@@ -106,10 +106,17 @@ class PostViewPages:
 
     def build_strip(self, item: dict, view: dict) -> str:
         """Inside the Summary: offer to build this post's view (old posts; owner decision 2). Empty when there is
-        nothing to build, in Private mode, or before the post is saved."""
-        if (not views.needs_build(view) or item.get("status") != "archived" or item.get("shelf") == "trash"
-                or modes.effective(self.store) == "private"):
+        nothing to build or before the post is saved. In Private mode a category the owner chose whose tabs only an AI
+        can fill says so, instead of leaving him with Summary and Details and no reason why."""
+        if not views.needs_build(view) or item.get("status") != "archived" or item.get("shelf") == "trash":
             return ""
+        if modes.effective(self.store) == "private":
+            if view.get("by") != "owner" or any((b.get("items") or b.get("text")) for b in (view.get("tabs") or {}).values()):
+                return ""
+            how = ("Turn on Smart mode to build them." if modes.current(self.store) == "private"
+                   else "Add an AI key to build them.")  # Smart chosen, but nothing can write
+            return (f'<p class="pvbuild pvhint" role="note"><span>This category’s tabs are written by AI. {how}</span>'
+                    '<a class="btn sm" href="/settings/ai">AI settings</a></p>')
         name = cats.name(view.get("category", ""))
         status = item.get("view_status") or ""
         if status in ("queued", "working"):

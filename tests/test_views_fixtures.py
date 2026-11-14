@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from magpiary import categories as cats
-from magpiary import views
+from magpiary import ui, views
 
 from test_hub import page
 
@@ -105,8 +105,20 @@ def test_every_fixture_post_renders_with_every_category_tab(mac, loaded):
         assert all("src=" in s or "nonce=" in s for s in scripts), (name, scripts)  # no script tag came from the data
         assert "Build this view" not in body  # every view is built (and Private mode never offers it)
         if view["tabs"]:
-            chip = re.search(r'<b style="[^"]*" data-cat="([a-z_]*)">([^<]*)</b>', body)
-            assert chip and chip.groups() == (name, cats.name(name).replace("&", "&amp;")), name  # the header chip names the category, as on the wall
+            chip = re.search(r'<b style="background:([^"]*)" data-cat="([a-z_]*)">([^<]*)</b>', body)
+            assert chip and chip.groups()[1:] == (name, cats.name(name).replace("&", "&amp;")), name  # the header chip names the category, as on the wall
+            # ...in the category's colour (the deep shade carries white text), and the tabs take the same accent
+            tone = ui.deep(ui.category_colour(name))
+            assert chip.group(1) == tone and f'class="tabs pvtabs" role="tablist" style="--tc:{tone}"' in body, name
+
+
+def test_every_category_has_a_colour_with_a_deep_shade():
+    css = (Path(views.__file__).parent / "static" / "hub.css").read_text()
+    for name in cats.IDS:
+        tone = ui.category_colour(name)
+        assert tone.startswith("var(--t-"), name
+        assert f"--{tone[6:-1]}-deep:" in css and f"--{tone[6:-1]}:" in css, name
+    assert ui.category_colour("music") != ui.category_colour("recipe") and ui.category_colour("", "recipe") == "var(--t-recipe)"
 
 
 def test_the_wall_lists_every_fixture_with_its_category(mac, loaded):
@@ -138,3 +150,5 @@ def test_narrow_window_fixes_found_in_the_sandbox():
     phone = (static / "phone.css").read_text()
     rule = next(line for line in phone.splitlines() if 'a[target="_blank"]:not(.pvprimary)' in line and "margin-block: -10px" in line)
     assert ":not(.pvprov)" in rule
+    # More menu items were --fg-3 (the row's quiet unselected tabs) and looked disabled; they are choices: --fg
+    assert re.search(r"\.tabs\.pvtabs \.pvmorelist a \{[^}]*color: var\(--fg\);", css)

@@ -9,12 +9,12 @@
   --display: "Quicksand", system-ui, sans-serif; --logo: "Bricolage Grotesque", system-ui, sans-serif; --sans: "DM Sans", system-ui, sans-serif;
   /* category colours mean the kind of post, everywhere (bright: dots, icons, accents) */
   --t-howto: #2a62f0; --t-news_opinion: #ff4f2b; --t-tool: #8a3ffc; --t-design: #ff2e93; --t-explainer: #00a37a;
-  --t-discussion: #f5a300; --t-recipe: #e04b00; --t-place: #0091b3; --t-other: #a08c72;
+  --t-discussion: #f5a300; --t-recipe: #e04b00; --t-place: #0091b3; --t-media: #4f46e5; --t-other: #a08c72;
   /* the same colours deeper and a touch more saturated where white text sits on them (tile labels, type badges);
      checked by scripts/contrast_check.py (owner, 26 Oct: white text on every colour) */
   --t-howto-deep: #2a62f0; --t-news_opinion-deep: #cf4800; --t-tool-deep: #8a3ffc; --t-design-deep: #e0006c;
   --t-explainer-deep: #008261; --t-discussion-deep: #a16600; --t-recipe-deep: #a85800; --t-place-deep: #007c99;
-  --t-other-deep: #846f54;
+  --t-media-deep: #4f46e5; --t-other-deep: #846f54;
   --s-instagram: #c13584; --s-threads: #2b2b2b; --s-youtube: #d81f1f; --s-reddit: #ff4500; --s-x: #1d1d1d;
   --s-linkedin: #0a66c2; --s-other: #5b5b5b;
   --s-instagram-deep: #c13584; --s-threads-deep: #2b2b2b; --s-youtube-deep: #d81f1f; --s-reddit-deep: #d43900;

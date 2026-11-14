@@ -420,8 +420,12 @@ def links_due(store: Store, activity=None, get=None, pause: Callable[[str], None
     key_source = key_source or keyring
     get = get or http_get
     done = 0
+    from magpiary import modes
+
     for item in store.due_for_links():
         forced = bool(item.get("links_force"))
+        if modes.current(store) == "private":  # checked before each post: no link search leaves the Mac in Private
+            return done
         if store.paused("links") and not forced:
             return done
         folder = Path(item["archive_dir"])

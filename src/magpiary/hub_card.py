@@ -245,7 +245,8 @@ class CardPages:
         stage, under = self._stage(item, meta, caption)
         context, extra_menu, votes = self.post_context(item, board, pile)
         kind = type_of(record) if record else ""
-        tint = ui.deep(ui.type_colour(kind)) if record else ui.deep(ui.source_colour(item["source"]))
+        category = self.categories_for([item]).get(item["id"], "") if record and hasattr(self, "categories_for") else ""
+        tint = ui.deep(ui.category_colour(category, kind)) if record else ui.deep(ui.source_colour(item["source"]))
         if page is not None:
             page["ckind"] = context[0]
         bar = self._card_bar(item, record, here, context[1], extra_menu, page=page)
@@ -410,8 +411,8 @@ class CardPages:
         """The type tag and when it was saved: "How-to  Saved yesterday 22:24"."""
         done = bool(record)
         kind = type_of(record) if record else ""
-        colour = ui.deep(ui.type_colour(kind)) if done else ui.deep(ui.source_colour(item["source"]))
         category = self.categories_for([item]).get(item.get("id"), "") if done and hasattr(self, "categories_for") else ""
+        colour = ui.deep(ui.category_colour(category, kind)) if done else ui.deep(ui.source_colour(item["source"]))
         label = cats.name(category) if category and category != "other" else ui.type_name(kind)  # as on the wall tile
         badge = (f'<b style="background:{colour}" data-cat="{e(category)}">{e(label if done else ui.source_label(item))}</b>')
         where = ui.source_badge(item["source"], item.get("canonical_url", "")) if done else ""
@@ -492,7 +493,9 @@ class CardPages:
             query = " ".join(x for x in (extras["place_name"], extras.get("city", "")) if x)
             out.append(row("https://maps.apple.com/?q=" + quote(query), f'Open {e(extras["place_name"])} in Maps', extras.get("city", "") or "Apple Maps", "maps"))
         if len(out) == base and (tool or type_of(record) == "tool"):
-            if item.get("links_force"):
+            if modes.current(self.store) == "private":
+                pass  # no link search in Private (specs, Links v2 section 8): only "Add a link yourself"
+            elif item.get("links_force"):
                 out.append('<span class="pvprimary wait"><span><b>Looking for the link…</b><small>This can take a minute</small></span></span>')
             else:
                 out.append(self._form("/hub/links/again", {"id": item["id"], "next": here + "?tab=links"},
@@ -808,7 +811,8 @@ class CardPages:
         order = visible + more
         tab = tab if tab in order else "sum"
         kind = type_of(record) if record else ""
-        tint = ui.deep(ui.type_colour(kind)) if record else ui.deep(ui.source_colour(item["source"]))
+        tint = (ui.deep(ui.category_colour(view.get("category"), kind)) if record
+                else ui.deep(ui.source_colour(item["source"])))
 
         def link(k: str, role: str = "tab") -> str:
             name, n, _ = panes[k]
@@ -1058,7 +1062,8 @@ class CardPages:
                        + "".join(row(g) for g in passing) + "</details>")
         known = {n.lower() for (_, n) in rows}
         missing = [n for n in ((record or {}).get("entities") or {}).get("tools", []) if n.lower() not in known]
-        if missing and links_done(item):
+        private = modes.current(self.store) == "private"  # no link search in Private (specs, Links v2 section 8)
+        if missing and links_done(item) and not private:
             out.append("".join(
                 f'<div class="lk pvnolink"><div><b>{e(n)}</b><span class="bd">No link found yet</span></div>'
                 + ('<span class="bd">Looking…</span>' if item.get("links_force") else self._form("/hub/links/again", {"id": item["id"], "next": back}, "Find it", "btn sm")) + "</div>"
@@ -1079,11 +1084,13 @@ class CardPages:
                    f'<input type="url" name="url" required placeholder="https://" aria-label="Link">'
                    f'<select name="kind" aria-label="Kind">{kinds}</select><button class="btn sm" type="submit">Add</button></form>'
                    f'<div class="row" style="margin-top:14px">'
-                   + ('<span class="bd looking">Looking…</span>' if item.get("links_force")
-                      else self._form("/hub/links/again", {"id": item["id"], "next": here + "?tab=links"}, "Find more links", "btn sm"))
-                   + '<span class="small muted">The post\'s own links first, then free directories (Wikidata, GitHub, '
-                   'App Store, Wikipedia, OpenStreetMap, Crossref), then a web search if you added a key. Never your AI '
-                   'quota.</span></div>')
+                   + ('<span class="small muted">Private mode: Magpiary looks up no links. Add one yourself above.</span></div>'
+                      if private else
+                      ('<span class="bd looking">Looking…</span>' if item.get("links_force")
+                       else self._form("/hub/links/again", {"id": item["id"], "next": here + "?tab=links"}, "Find more links", "btn sm"))
+                      + '<span class="small muted">The post\'s own links first, then free directories (Wikidata, GitHub, '
+                      'App Store, Wikipedia, OpenStreetMap, Crossref), then a web search if you added a key. Never your AI '
+                      'quota.</span></div>'))
         return "".join(out)
 
     def _related_pane(self, item: dict, related: list[dict], here: str) -> str:
