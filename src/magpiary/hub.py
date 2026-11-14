@@ -43,6 +43,7 @@ from magpiary.hub_media import MediaPages
 from magpiary.hub_settings import SettingsPages
 from magpiary.hub_wall import WallPages
 from magpiary.hub_welcome import WelcomePages
+from magpiary.hub_postview import PostViewPages
 from magpiary.store import Store
 from magpiary.web import Response, e, local_only
 
@@ -127,6 +128,7 @@ class Hub(
     ActivityPages,
     MediaPages,
     AccessPages,
+    PostViewPages,
 ):
     port = 0  # the plain-HTTP port this hub is served on (set by the server)
 
@@ -404,6 +406,8 @@ class Hub(
             return self.activity_post(form)
         if path.startswith("/hub/ask/"):
             return self.ask_post(path, form)
+        if (handled := self.postview_post(path, form)) is not None:
+            return handled
         if path == "/hub/pile/note-delete":
             if form.get("note", "").isdigit():
                 self.store.ask_note_delete(int(form["note"]))

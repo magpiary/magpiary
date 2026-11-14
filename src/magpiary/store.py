@@ -96,7 +96,12 @@ MIGRATIONS = ["ALTER TABLE items ADD COLUMN archive_dir TEXT", "ALTER TABLE item
               "ALTER TABLE items ADD COLUMN look TEXT NOT NULL DEFAULT ''",
               # Deeper dive (deepdive.py): NULL (none), queued, running, done or failed; deep_text is its words, for search
               "ALTER TABLE items ADD COLUMN deep_status TEXT", "ALTER TABLE items ADD COLUMN deep_text TEXT NOT NULL DEFAULT ''",
-              "ALTER TABLE items ADD COLUMN deep_detail TEXT NOT NULL DEFAULT ''"]
+              "ALTER TABLE items ADD COLUMN deep_detail TEXT NOT NULL DEFAULT ''",
+              # contextual post tabs (views.py, 14 Nov 2026): the post's category, a second one lending one tab, who chose
+              # it (ai, rules, owner), and the view build: NULL (none), queued, working, done or failed
+              "ALTER TABLE items ADD COLUMN category TEXT", "ALTER TABLE items ADD COLUMN category2 TEXT",
+              "ALTER TABLE items ADD COLUMN category_by TEXT", "ALTER TABLE items ADD COLUMN view_status TEXT",
+              "ALTER TABLE items ADD COLUMN view_detail TEXT NOT NULL DEFAULT ''"]
 
 HUB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS agent_usage (day TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, kind));
@@ -154,6 +159,8 @@ CREATE TABLE IF NOT EXISTS board_slugs (slug TEXT PRIMARY KEY, board_id TEXT NOT
 CREATE TABLE IF NOT EXISTS board_invites (id TEXT PRIMARY KEY, board_id TEXT NOT NULL, created_at TEXT NOT NULL,
     expires INTEGER NOT NULL, used_by TEXT NOT NULL DEFAULT '', bucket_key_id TEXT NOT NULL DEFAULT '',
     state TEXT NOT NULL DEFAULT 'open');
+CREATE TABLE IF NOT EXISTS view_state (canonical_url TEXT NOT NULL, tab TEXT NOT NULL, key TEXT NOT NULL,
+    value TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (canonical_url, tab, key));
 """
 SEARCH_SCHEMA = (f"CREATE VIRTUAL TABLE search USING fts5(url UNINDEXED, {', '.join(SEARCH_COLUMNS)}, "
                  "tokenize='unicode61 remove_diacritics 2')")
@@ -2127,3 +2134,73 @@ class Store(ChatStore, StatsStore):
             self.remove_from_pile(pile_id, u)
         return new_id
 
+    # ---- contextual post tabs (views.py) ------------------------------------------------------------------
+
+    def set_category(self, item_id: int, category: str, category2: str = "", by: str = "rules") -> bool:
+        """Store a post's category. The owner's choice is never overwritten by the AI or the rules. Returns True when set."""
+        from magpiary import categories as cats
+
+        if category not in cats.CATEGORIES or by not in ("ai", "rules", "owner"):
+            return False
+        category2 = category2 if category2 in cats.CATEGORIES and category2 not in (category, "other") else ""
+        guard = "" if by == "owner" else " AND COALESCE(category_by, '') != 'owner'"
+        with self._lock:
+            cur = self._db.execute(f"UPDATE items SET category=?, category2=?, category_by=? WHERE rowid=?{guard}",
+                                   (category, category2, by, item_id))
+        return cur.rowcount > 0
+
+    def view_state(self, url: str) -> dict[str, dict[str, str]]:
+        """The post's ticks and servings: {tab: {key: value}}."""
+        with self._lock:
+            rows = self._db.execute("SELECT tab, key, value FROM view_state WHERE canonical_url=?", (url,)).fetchall()
+        out: dict[str, dict[str, str]] = {}
+        for r in rows:
+            out.setdefault(r["tab"], {})[r["key"]] = r["value"]
+        return out
+
+    def set_view_state(self, url: str, tab: str, key: str, value: str) -> None:
+        """One tick or servings value; an empty value removes it."""
+        with self._lock, self._db:
+            if value == "":
+                self._db.execute("DELETE FROM view_state WHERE canonical_url=? AND tab=? AND key=?", (url, tab, key))
+            else:
+                self._db.execute("INSERT INTO view_state (canonical_url, tab, key, value, at) VALUES (?,?,?,?,?) "
+                                 "ON CONFLICT(canonical_url, tab, key) DO UPDATE SET value=excluded.value, at=excluded.at",
+                                 (url, tab, key, value, self._stamp()))
+
+    def queue_view(self, item_id: int) -> bool:
+        """Build this view (or rebuild after Change category). Not while one is already queued or working."""
+        with self._lock:
+            cur = self._db.execute("UPDATE items SET view_status='queued', view_detail='' WHERE rowid=? "
+                                   "AND COALESCE(view_status, '') NOT IN ('queued', 'working') AND shelf != 'trash'",
+                                   (item_id,))
+        return cur.rowcount > 0
+
+    def views_due_items(self, limit: int = 5) -> list[dict]:
+        """Posts whose view build is queued or was cut off while working, oldest first."""
+        with self._lock:
+            return [dict(r) for r in self._db.execute(
+                "SELECT rowid AS id, * FROM items WHERE view_status IN ('queued', 'working') AND shelf != 'trash' "
+                "ORDER BY rowid LIMIT ?", (max(1, int(limit)),)).fetchall()]
+
+    def set_view_status(self, item_id: int, status: str, detail: str = "") -> None:
+        """working, done or failed (with a short reason), for session C's worker."""
+        if status not in ("queued", "working", "done", "failed"):
+            raise ValueError(status)
+        with self._lock:
+            self._db.execute("UPDATE items SET view_status=?, view_detail=? WHERE rowid=?", (status, detail[:200], item_id))
+
+    def hidden_tabs(self) -> dict[str, list[str]]:
+        """The owner's per-category hidden tabs (Settings > Advanced), from the `view_tabs_off` setting."""
+        from magpiary import views
+
+        return views.hidden_tabs(self.get_setting("view_tabs_off"))
+
+    def set_hidden_tabs(self, hidden: dict) -> dict[str, list[str]]:
+        """Save the hidden tabs, unknown categories and tabs dropped; returns what was saved."""
+        from magpiary import views
+
+        clean = views.hidden_tabs(json.dumps(hidden if isinstance(hidden, dict) else {}))
+        clean = {c: sorted(set(v)) for c, v in clean.items() if v}
+        self.set_setting("view_tabs_off", json.dumps(clean, sort_keys=True))
+        return clean

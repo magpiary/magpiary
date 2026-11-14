@@ -58,7 +58,7 @@ _TABS = [
     Tab("structure", "Structure", "notes", "layout, grid, hierarchy and components; group = Layout / Hierarchy / Components"),
     Tab("style", "Visual language", "notes", "the style's name, era, influences and references; what to borrow; group = Style / Influences / Borrow"),
     Tab("borrow", "Borrow this", "checklist", "a concrete idea to reuse in your own work, as an instruction; at = when shown"),
-    Tab("patterns", "Patterns", "cards", "each UI pattern or component shown: name = pattern, detail = how it is done here, at = when shown", providers=("mobbin", "google")),
+    Tab("patterns", "Patterns", "cards", "each UI pattern or component shown: name = pattern, detail = how it is done here, at = when shown", providers=("google",)),  # Mobbin has no search URL (research, 14 Nov)
     Tab("motion", "Interactions", "notes", "each interaction or animation: name = what moves, detail = timing/easing/trigger, at = when shown"),
     Tab("made_with", "Made with", "cards", "each tool, plugin, font or kit used: name, detail = what it was used for", free="tools", providers=WEB),
     Tab("concept", "The idea", "notes", "the campaign or brand idea, audience, insight and why it works; group = Idea / Audience / Why it works"),
@@ -187,7 +187,7 @@ _CATEGORIES = [
              "AI tools and prompts, coding tips, repositories, packages, developer workflows",
              ("snippets", "setup", "repos", "caveats"), "snippets",
              ("Turn this prompt into one for my use", "What do I need installed first?", "Explain this code line by line"),
-             types=("tool", "howto"),
+             types=("tool",),
              words=("ai", "chatgpt", "claude", "gpt", "llm", "prompt", "agent", "code", "coding", "github", "python", "javascript", "api", "mcp", "cursor", "developer", "repo", "open source")),
     Category("gadgets", "Gadgets & products", "tech",
              "hardware, gadgets, cameras, phones, desk setups and product reviews",

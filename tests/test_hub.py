@@ -402,8 +402,9 @@ def test_static_files_are_served_from_a_fixed_list_and_cached(mac):
 def test_a_post_opens_as_a_card_over_the_wall_or_as_a_page(mac, lib):
     status, headers, data = request(mac, "GET", f"/item/{lib['ig']}?frag=1")
     assert status == 200 and not data.startswith(b"<!doctype") and b'class="it-h"' in data and b"<video" in data
-    for tab in ("Summary", "Links", "Related", "Details"):
+    for tab in ("Summary", "Related", "Details"):
         assert f">{tab}<" in data.decode()
+    assert ">Links<" not in data.decode()  # contextual tabs (14 Nov 2026): Links shows only once it has links
     assert "data-standalone" in page(mac, f"/item/{lib['ig']}")[2]
     assert request(mac, "GET", "/item/999?frag=1")[0] == 404
 

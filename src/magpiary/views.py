@@ -129,7 +129,7 @@ def scores(record: dict | None, meta: dict | None = None, item: dict | None = No
     for c in cats.CATEGORIES.values():
         s = 0.0
         if kind and kind in c.types:
-            s += 3
+            s += 2  # an old type points at several categories (tool: apps, AI, gadgets); the words decide between them
         if fmt and fmt in c.formats:
             s += 1
         s += min(6, 2 * sum(1 for k in kinds if k in c.list_kinds))
@@ -140,7 +140,8 @@ def scores(record: dict | None, meta: dict | None = None, item: dict | None = No
 
 
 def guess(record: dict | None, meta: dict | None = None, item: dict | None = None) -> tuple[str, str]:
-    """(category, second category or "") by rules. A category needs 2 points; the second needs 3 and another group."""
+    """(category, second category or "") by rules. A category needs 2 points (its old type alone is enough); the second
+    needs 3 and another group."""
     ranked = sorted(scores(record, meta, item).items(), key=lambda kv: -kv[1])
     if not ranked or ranked[0][1] < 2:
         return "other", ""
@@ -201,15 +202,15 @@ def _free_items(source: str, tab: cats.Tab, record: dict, meta: dict) -> list[di
         return tidy_items(items)
     if source == "places":
         names = ([{"name": extras.get("place_name"), "group": extras.get("city"), "detail": extras.get("why")}]
-                 + [{"name": t["name"], "detail": t.get("what")} for t in targets if t.get("kind") == "place"]
+                 + [{"name": t.get("name"), "detail": t.get("what")} for t in targets if isinstance(t, dict) and t.get("kind") == "place"]
                  + [{"name": p} for p in ents.get("places") or []]
                  + [{"name": x.get("name"), "detail": x.get("note")} for x in listed if isinstance(x, dict) and x.get("kind") == "place"])
         return _unique(names)
     if source == "products":
-        return _unique([{"name": t["name"], "detail": t.get("what")} for t in targets if t.get("kind") == "product"]
+        return _unique([{"name": t.get("name"), "detail": t.get("what")} for t in targets if isinstance(t, dict) and t.get("kind") == "product"]
                        + [{"name": p} for p in ents.get("products") or []])
     if source == "tools":
-        return _unique([{"name": t["name"], "detail": t.get("what")} for t in targets if t.get("kind") in ("tool", "code")]
+        return _unique([{"name": t.get("name"), "detail": t.get("what")} for t in targets if isinstance(t, dict) and t.get("kind") in ("tool", "code")]
                        + [{"name": p} for p in (ents.get("tools") or []) + (ents.get("skills_code") or [])])
     return []
 
@@ -259,8 +260,10 @@ def hidden_tabs(setting: str) -> dict[str, list[str]]:
         raw = json.loads(setting or "{}")
     except ValueError:
         return {}
-    return {c: [t for t in v if t in cats.TABS] for c, v in raw.items()
-            if c in cats.CATEGORIES and isinstance(v, list)} if isinstance(raw, dict) else {}
+    if not isinstance(raw, dict):
+        return {}
+    return {c: [t for t in v if isinstance(t, str) and t in cats.TABS] for c, v in raw.items()
+            if c in cats.CATEGORIES and isinstance(v, list)}
 
 
 def tab_plan(view: dict, core: dict[str, bool], hidden: dict[str, list[str]] | None = None) -> tuple[list[str], list[str]]:
@@ -287,8 +290,10 @@ def tab_plan(view: dict, core: dict[str, bool], hidden: dict[str, list[str]] | N
 
 
 def needs_build(view: dict) -> bool:
-    """True when the category has AI tabs the built view would fill and no AI view exists yet."""
-    return view.get("by") != "ai" and view.get("category") in cats.CATEGORIES and bool(cats.CATEGORIES[view["category"]].tabs)
+    """True when the category has tabs an AI would fill and no AI has built this view yet (an AI-built view always
+    names its engine, also when the owner chose the category). The caller also checks Private mode."""
+    return (view.get("by") != "ai" and not view.get("engine") and view.get("category") in cats.CATEGORIES
+            and bool(cats.CATEGORIES[view["category"]].tabs))
 
 
 # ---- the AI's part (used by brain.py for new posts and by the Build this view pass) --------------------------------
@@ -311,11 +316,11 @@ def ai_prompt() -> str:
              "  Categories:"]
     for c in cats.CATEGORIES.values():
         lines.append(f"  {c.id}: {c.blurb}")
-    lines += ["- view: fill the tabs of the chosen category, and the second category's first-listed tab, from the evidence",
+    lines += ["- view: fill the tabs of the chosen category, and the second category's lent tab (named below), from the evidence",
               "  only. One entry per tab: tab (its id), text (optional, one or two sentences), items. Each item has name and",
               "  only the other fields that apply: detail, at (m:ss), amount, group, kind, value. Leave a tab out when the",
               "  evidence has nothing for it; never invent places, songs, prices, dates or quotes. Tabs per category:"]
     for c in cats.CATEGORIES.values():
         if c.tabs:
-            lines.append(f"  {c.id}: " + "; ".join(f"{t} ({cats.TABS[t].ai})" for t in c.tabs))
+            lines.append(f"  {c.id} (lends {c.lend}): " + "; ".join(f"{t} ({cats.TABS[t].ai})" for t in c.tabs))
     return "\n".join(lines)

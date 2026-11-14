@@ -12,7 +12,8 @@ from urllib.parse import parse_qs, quote, urlsplit
 from magpiary.hub_map import local_map_html
 from magpiary.hub_wall import empty_state
 from magpiary import keys as keyring
-from magpiary import facets, icons, login, modes, ocr, ui
+from magpiary import categories as cats
+from magpiary import facets, icons, login, modes, ocr, ui, views
 from magpiary import related as rel
 from magpiary.activity import STEPS
 from magpiary.brain import type_of
@@ -768,38 +769,59 @@ class CardPages:
                 + f'<div class="facets">{"".join(rows)}</div><div class="pvadd">{add}</div>')
 
     def _card_tabs(self, item, record, folder, caption, meta, here, tab, context: str = "library") -> str:
+        """Summary first, Details last; between them the saved page (Read), Deeper dive, the post's category tabs
+        (views.py), Links and Related when they have something, Transcript only when there is speech. At most
+        views.VISIBLE show; the rest wait in a More menu after Details (owner decisions 6 and 9, 14 Nov 2026)."""
         links = self.store.links_for(item["canonical_url"])
+        saved = item.get("status") == "archived" and item.get("shelf") != "trash"
         related = []
-        lazy_related = tab != "rel" and item.get("status") == "archived" and item.get("shelf") != "trash"
-        if not lazy_related and item.get("status") == "archived" and item.get("shelf") != "trash":
+        lazy_related = tab != "rel" and saved  # Related loads when its tab is opened; a saved post counts as having it
+        if not lazy_related and saved:
             related = rel.related(self.related_library(), item["canonical_url"])
         related_html = (f'<a class="link" href="{here}?tab=rel">Show related saves</a>' if lazy_related
                         else self._related_pane(item, related, here))
-        tabs = [("sum", "Summary", "", self._summary_pane(item, record, caption, here)),
-                ("links", "Links", str(len(links)) if links else "", self._links_pane(item, links, here, record)),
-                ("rel", "Related", str(len(related)) if related else "", related_html),
-                ("tr", "Transcript", "", self._transcript_pane(folder)),
-                ("det", "Details", "", self._details_pane(item, record, folder, meta))]
-        tabs = tabs[:1] + self._extra_tabs(item, record, context) + tabs[1:]  # Ask Magpiary is the second tab, after Summary
+        view = views.current(item, record, meta, folder)
+        panes = {"sum": ("Summary", "", self.build_strip(item, view) + self._summary_pane(item, record, caption, here)),
+                 "links": ("Links", str(len(links)) if links else "", self._links_pane(item, links, here, record)),
+                 "rel": ("Related", str(len(related)) if related else "", related_html),
+                 "tr": ("Transcript", "", self._transcript_pane(folder)),
+                 "det": ("Details", "", self._details_pane(item, record, folder, meta))}
+        for k, name, n, html_ in self._extra_tabs(item, record, context):
+            panes[k] = (name, n, html_)
         article = _read_json(folder / "article.json") if folder else None
         if isinstance(article, dict) and article.get("blocks") and item["source"] != "instagram":  # a page saved as the owner saw it: read it first (an Instagram carousel is only pictures, the gallery shows them)
-            tabs.insert(0, ("read", "Read", "", self._reader_pane(item, article, folder)))
+            panes["read"] = ("Read", "", self._reader_pane(item, article, folder))
             tab = tab or "read"
-        off = self._transcript_off(folder)  # no speech or no transcript: the tab stays, greyed, with the reason on hover
-        tab = tab if tab in {t[0] for t in tabs} and tab != off[0] else "sum"
+        core = {"read": "read" in panes, "deep": "deep" in panes, "links": bool(links), "rel": saved or bool(related),
+                "tr": not self._transcript_off(folder)[0]}
+        visible, more = views.tab_plan(view, core, self.store.hidden_tabs())
+        if any(k in cats.TABS for k in visible + more):
+            state = self.store.view_state(item["canonical_url"])
+            for k in visible + more:
+                if k in cats.TABS:
+                    panes[k] = (cats.TABS[k].label, "", self.category_pane(k, view, state, item))
+        if tab == "rel" and "rel" not in visible + more:
+            more.append("rel")  # asked for by the lazy loader: the pane must be there
+        order = visible + more
+        tab = tab if tab in order else "sum"
         kind = type_of(record) if record else ""
         tint = ui.deep(ui.type_colour(kind)) if record else ui.deep(ui.source_colour(item["source"]))
-        nav = (f'<nav class="tabs pvtabs" role="tablist" style="--tc:{tint}">' + "".join(
-            (f'<a role="tab" data-tab="{k}" class="off" aria-disabled="true" tabindex="-1" title="{e(off[1])}" aria-label="{name}: {e(off[1])}">{name}</a>'
-             if k == off[0] else
-             f'<a href="#{k}" role="tab" data-tab="{k}" class="{"on" if k == tab else ""}" '
-             f'aria-selected="{str(k == tab).lower()}">{name}'
-             + ((f'<em class="sugtext">✦ {n}</em>' if not str(n).isdigit() else f"<small>{n}</small>") if n else "") + "</a>")
-            for k, name, n, _ in tabs) + "</nav>")
+
+        def link(k: str, role: str = "tab") -> str:
+            name, n, _ = panes[k]
+            return (f'<a href="#{k}" role="{role}" data-tab="{k}" class="{"on" if k == tab else ""}" '
+                    f'aria-selected="{str(k == tab).lower()}">{e(name)}'
+                    + ((f'<em class="sugtext">✦ {e(n)}</em>' if not str(n).isdigit() else f"<small>{n}</small>") if n else "") + "</a>")
+
+        more_html = (f'<details class="pvmore{" on" if tab in more else ""}"><summary aria-haspopup="true">More'
+                     f'<small>{len(more)}</small></summary><div class="pvmorelist">'
+                     + "".join(link(k) for k in more) + "</div></details>") if more else ""
+        nav = (f'<nav class="tabs pvtabs" role="tablist" style="--tc:{tint}" data-category="{e(view.get("category", ""))}">'
+               + "".join(link(k) for k in visible) + more_html + "</nav>")
         return nav + "".join(f'<section class="pane" id="{k}" role="tabpanel" data-pane="{k}"'
                              + (f' data-related-src="{here}?frag=1&amp;tab=rel&amp;from=preview"' if k == "rel" and lazy_related else "")
-                             + f'>{v}</section>'
-                             for k, _, _, v in tabs)
+                             + f'>{panes[k][2]}</section>'
+                             for k in order)
 
     def _reader_pane(self, item: dict, article: dict, folder: Path) -> str:
         """The page as the owner saw it in Chrome, in reading order (reader.py), with Download PDF on top."""
