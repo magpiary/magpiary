@@ -73,7 +73,7 @@
  },
  "lookups": {
   "tracks": {
-   "kind of blue": {
+   "kind of blue | miles davis": {
     "musicbrainz": {
      "status": "ok",
      "at": "2026-11-14",
@@ -82,7 +82,7 @@
      "year": "1959"
     }
    },
-   "music for airports": {
+   "music for airports | brian eno": {
     "musicbrainz": {
      "status": "ok",
      "at": "2026-11-14",
@@ -91,7 +91,7 @@
      "year": "1978"
     }
    },
-   "selected ambient works 85–92": {
+   "selected ambient works 85–92 | aphex twin": {
     "musicbrainz": {
      "status": "ok",
      "at": "2026-11-14",
@@ -100,7 +100,7 @@
      "year": "1992"
     }
    },
-   "blue lines": {
+   "blue lines | massive attack": {
     "musicbrainz": {
      "status": "ok",
      "at": "2026-11-14",

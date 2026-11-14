@@ -74,7 +74,7 @@
  },
  "lookups": {
   "spots": {
-   "taquería la ejemplar": {
+   "taquería la ejemplar | roma norte": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",
@@ -84,7 +84,7 @@
      "lon": -99.162
     }
    },
-   "café nube ficticia": {
+   "café nube ficticia | roma norte": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",
@@ -94,7 +94,7 @@
      "lon": -99.165
     }
    },
-   "panadería prueba": {
+   "panadería prueba | roma norte": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",
@@ -104,7 +104,7 @@
      "lon": -99.1695
     }
    },
-   "mercado imaginario": {
+   "mercado imaginario | roma norte": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",

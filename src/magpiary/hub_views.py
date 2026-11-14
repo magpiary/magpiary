@@ -213,7 +213,7 @@ def lookup_for(view: dict, tab_id: str, it: dict) -> dict:
     is "ok". Thumbnails are remote images and are never shown (opening a post must not contact other sites)."""
     found = (view.get("lookups") or {}) if isinstance(view.get("lookups"), dict) else {}
     found = found.get(tab_id) if isinstance(found.get(tab_id), dict) else {}
-    hit = found.get(lookups.key(it.get("name", "")))
+    hit = found.get(lookups.item_key(it, tab_id))  # name plus artist/author/city: the key lookups.py saved under
     if not isinstance(hit, dict):
         return {}
     return {k: v for k, v in hit.items() if isinstance(v, dict) and v.get("status", "ok") == "ok"}

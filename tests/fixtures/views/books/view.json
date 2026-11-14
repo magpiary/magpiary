@@ -61,7 +61,7 @@
  },
  "lookups": {
   "books": {
-   "the hobbit": {
+   "the hobbit | j. r. r. tolkien": {
     "openlibrary": {
      "status": "ok",
      "at": "2026-11-14",
@@ -70,7 +70,7 @@
      "year": "1937"
     }
    },
-   "pride and prejudice": {
+   "pride and prejudice | jane austen": {
     "openlibrary": {
      "status": "ok",
      "at": "2026-11-14",
@@ -79,7 +79,7 @@
      "year": "1813"
     }
    },
-   "dune": {
+   "dune | frank herbert": {
     "openlibrary": {
      "status": "ok",
      "at": "2026-11-14",

@@ -125,7 +125,7 @@
  },
  "lookups": {
   "places": {
-   "belém tower": {
+   "belém tower | belém": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",
@@ -135,7 +135,7 @@
      "lon": -9.216
     }
    },
-   "lx factory": {
+   "lx factory | alcântara": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",
@@ -145,7 +145,7 @@
      "lon": -9.1786
     }
    },
-   "miradouro da senhora do monte": {
+   "miradouro da senhora do monte | graça": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",
@@ -155,7 +155,7 @@
      "lon": -9.1328
     }
    },
-   "time out market": {
+   "time out market | cais do sodré": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",
@@ -165,7 +165,7 @@
      "lon": -9.1459
     }
    },
-   "alfama": {
+   "alfama | old town": {
     "nominatim": {
      "status": "ok",
      "at": "2026-11-14",

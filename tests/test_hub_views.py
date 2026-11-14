@@ -220,9 +220,9 @@ def test_places_draw_a_map_when_lookups_have_coordinates(monkeypatch):
     plain = render("places", items)
     assert "pvmap" not in plain and "google.com/maps/search/?api=1&amp;query=Harbour%20Caf%C3%A9%20Old%20Town" in plain
     assert "maps.apple.com" in plain
-    view = {"lookups": {"places": {"harbour café": {"nominatim": {"status": "ok", "lat": 52.37, "lon": 4.89,
+    view = {"lookups": {"places": {"harbour café | old town": {"nominatim": {"status": "ok", "lat": 52.37, "lon": 4.89,
                                                                   "url": "https://www.openstreetmap.org/node/1"}},
-                                   "hill park": {"nominatim": {"status": "ok", "lat": 52.38, "lon": 4.91}},
+                                   "hill park | old town": {"nominatim": {"status": "ok", "lat": 52.38, "lon": 4.91}},
                                    "nowhere": {"nominatim": {"status": "ok", "lat": 999.0, "lon": 4.0}},
                                    "gone": {"nominatim": {"status": "failed", "lat": 1.0, "lon": 1.0}}}}}
     html = render("places", items, view=view)

@@ -112,7 +112,7 @@ def test_enrich_checks_title_and_artist_and_sends_a_generic_agent():
     out = lookups.enrich(view, "tracks", [{"name": "Midnight Lantern", "detail": "The Fictional Band", "kind": "song"},
                                           {"name": "Some Playlist", "kind": "playlist"}],
                          run=run_with(net), today="2026-11-14")
-    entry = out["midnight lantern"]["musicbrainz"]
+    entry = out["midnight lantern | the fictional band"]["musicbrainz"]
     assert entry["status"] == "ok" and entry["url"] == "https://musicbrainz.org/recording/rec-1" and entry["year"] == "1987"
     assert "some playlist" not in out and len(net.calls) == 1
     host, url, headers = net.calls[0]
@@ -125,12 +125,12 @@ def test_each_api_fills_its_fields():
                "api.tvmaze.com": (200, TVMAZE), "www.wikidata.org": (200, WIKIDATA)})
     run = run_with(net)
     place = lookups.enrich({}, "places", [{"name": "Plaça Exemple", "group": "Barcelona"}], run=run, today="2026-11-14")
-    assert place["plaça exemple"]["nominatim"] | {} == {"status": "ok", "at": "2026-11-14", "lat": 41.38, "lon": 2.17,
+    assert place["plaça exemple | barcelona"]["nominatim"] | {} == {"status": "ok", "at": "2026-11-14", "lat": 41.38, "lon": 2.17,
                                                        "url": "https://www.openstreetmap.org/node/12345",
                                                        "title": "Plaça Exemple, Barcelona, Spain"}
     wrong_city = lookups.enrich({}, "spots", [{"name": "Plaça Exemple", "group": "Lisbon"}], run=run, today="2026-11-14")
-    assert wrong_city["plaça exemple"]["nominatim"]["status"] == "none"
-    book = lookups.enrich({}, "books", [{"name": "The Paper Orchard", "detail": "Ana Example"}], run=run)["the paper orchard"]["openlibrary"]
+    assert wrong_city["plaça exemple | lisbon"]["nominatim"]["status"] == "none"
+    book = lookups.enrich({}, "books", [{"name": "The Paper Orchard", "detail": "Ana Example"}], run=run)["the paper orchard | ana example"]["openlibrary"]
     assert book["year"] == "2003" and book["thumb"] == "https://covers.openlibrary.org/b/id/42-M.jpg"
     show = lookups.enrich({}, "titles", [{"name": "Harbour Lights", "kind": "show"}], run=run)["harbour lights"]["tvmaze"]
     assert show["year"] == "2019" and show["thumb"].startswith("https://static.tvmaze.com/")
@@ -188,6 +188,10 @@ def test_failure_keeps_old_data_and_is_not_done():
 def built_post(tmp_path, store, tabs, url=POST):
     folder = tmp_path / f"post-{abs(hash(url)) % 1000}"
     folder.mkdir()
+    # the post names what its cards name (lookups only check names grounded in the post itself)
+    said = " ".join(f"{i.get('name', '')} by {i.get('detail', '')} in {i.get('group', '')}"
+                    for body in tabs.values() for i in body.get("items") or [])
+    (folder / "meta.json").write_text(json.dumps({"title": "Fictional post", "text": said}))
     store.add_link(url)
     store.fetch_succeeded(url, str(folder))
     item_id = store.id_for(url)
@@ -211,7 +215,7 @@ def test_lookups_due_saves_into_the_view_privately(tmp_path, store):
     clock = Clock()
     assert lookups.lookups_due(store, get=net, pacer=lookups.Pacer(clock.time, clock.sleep), today="2026-11-14") == 1
     view = views.load(folder)
-    assert view["lookups"]["tracks"]["midnight lantern"]["musicbrainz"]["year"] == "1987"
+    assert view["lookups"]["tracks"]["midnight lantern | the fictional band"]["musicbrainz"]["year"] == "1987"
     assert view["tabs"] == views.tidy_view({"tabs": TRACKS})["tabs"] and view["engine"] == "test:model"
     assert stat.S_IMODE((folder / views.FILE).stat().st_mode) == 0o600
     assert lookups.lookups_due(store, get=net, pacer=lookups.Pacer(clock.time, clock.sleep), today="2026-11-14") == 0
@@ -267,3 +271,91 @@ def test_offline_run_keeps_old_lookups(tmp_path, store):
     saved = views.load(folder)["lookups"]["tracks"]
     assert saved["midnight lantern"]["musicbrainz"]["url"] == "https://musicbrainz.org/recording/rec-1"
     assert saved["new song"]["musicbrainz"] == {"status": "failed", "at": "2026-11-14"}
+
+
+# ---- review 14 Nov 2026 (Codex) ---------------------------------------------------------------------------------------
+
+def test_the_same_name_in_two_cities_gets_two_answers_and_old_name_only_keys_are_dropped(tmp_path, store):
+    """Correctness 8: two Central Cafes (Paris, London) made one request and both showed the Paris pin."""
+    tabs = {"places": {"items": [{"name": "Central Cafe", "group": "Paris"}, {"name": "Central Cafe", "group": "London"}]}}
+    folder = built_post(tmp_path, store, tabs)
+    view = views.load(folder)
+    view["lookups"] = {"places": {"central cafe": {"nominatim": {"status": "ok", "at": "2026-11-01", "lat": 48.8, "lon": 2.3}}}}
+    views.save(folder, view)  # what an older build wrote: a name-only key
+    answers = {"Paris": [{"lat": "48.85", "lon": "2.35", "display_name": "Central Cafe, Paris, France", "osm_id": 1}],
+               "London": [{"lat": "51.5", "lon": "-0.12", "display_name": "Central Cafe, London, UK", "osm_id": 2}]}
+    sent = []
+
+    def get(url, headers):
+        sent.append(url)
+        city = "Paris" if "Paris" in url else "London"
+        return 200, url, json.dumps(answers[city]).encode()
+    clock = Clock()
+    assert lookups.lookups_due(store, get=get, pacer=lookups.Pacer(clock.time, clock.sleep), today="2026-11-14") == 1
+    saved = views.load(folder)["lookups"]["places"]
+    assert len(sent) == 2 and set(saved) == {"central cafe | paris", "central cafe | london"}
+    assert saved["central cafe | london"]["nominatim"]["lat"] == 51.5
+    from magpiary import hub_views
+
+    view = views.load(folder)
+    pins = [hub_views._point(hub_views.lookup_for(view, "places", it)) for it in view["tabs"]["places"]["items"]]
+    assert pins == [(48.85, 2.35), (51.5, -0.12)]
+    # the artist changes: the old answer no longer belongs to the card
+    assert lookups.item_key({"name": "Hello", "detail": "Adele"}, "tracks") != lookups.item_key(
+        {"name": "Hello", "detail": "Lionel Richie"}, "tracks")
+
+
+def test_views_older_than_the_newest_400_are_reached(tmp_path, store, monkeypatch):
+    """Correctness 13: every pass read the same newest 400 rows; the 401st never got lookups."""
+    monkeypatch.setattr(lookups, "PAGE", 3)
+    oldest = built_post(tmp_path, store, TRACKS, url="https://www.instagram.com/reel/ExampleOld0/")
+    for n in range(4):
+        built_post(tmp_path, store, {"artists": {"items": []}}, url=f"https://www.instagram.com/reel/ExampleNew{n}/")
+    net = Net({"musicbrainz.org": (200, MB_RECORDING)})
+    clock = Clock()
+    assert lookups.lookups_due(store, get=net, pacer=lookups.Pacer(clock.time, clock.sleep), today="2026-11-14") == 1
+    assert views.load(oldest)["lookups"]["tracks"]
+
+
+def test_only_names_the_post_itself_contains_are_looked_up_and_never_the_note(tmp_path, store):
+    """Security 2: an injected caption could make the AI copy the owner's note into a card name, which went to
+    MusicBrainz. Now a card is looked up only when its name (and artist) are in the post's own words."""
+    folder = built_post(tmp_path, store, TRACKS)
+    (folder / "meta.json").write_text(json.dumps({"title": "Fictional mix", "text": "Midnight Lantern by The Fictional Band"}))
+    store._db.execute("UPDATE items SET note='SECRET-MARKER plans' WHERE canonical_url=?", (POST,))
+    view = views.load(folder)
+    view["tabs"]["tracks"]["items"].append({"name": "SECRET-MARKER plans", "kind": "song"})
+    view["tabs"]["tracks"]["items"].append({"name": "Midnight Lantern", "detail": "Invented Artist", "kind": "song"})
+    views.save(folder, view)
+    (folder / "record.json").write_text(json.dumps({"entities": {"products": ["SECRET-MARKER plans"]}}))
+    net = Net({"musicbrainz.org": (200, MB_RECORDING)})
+    clock = Clock()
+    lookups.lookups_due(store, get=net, pacer=lookups.Pacer(clock.time, clock.sleep), today="2026-11-14")
+    queries = [unquote(url) for _, url, _ in net.calls]
+    assert len(queries) == 1 and "Fictional Band" in queries[0]
+    assert not any("SECRET" in q or "Invented" in q for q in queries)
+    # grounding reads caption, transcript, on-screen text, and the summary's names when there is no note
+    text = lookups.post_text(folder, {"note": "", "screen_text": "Glass Meadow"})
+    assert lookups.grounded({"name": "SECRET-MARKER plans"}, "tracks", text)  # an entity, no note: allowed
+    assert lookups.grounded({"name": "glass meadow"}, "titles", text)
+    assert not lookups.grounded({"name": "Midnight"}, "tracks", " midnightlantern ")
+
+
+def test_one_broken_view_does_not_stop_the_others(tmp_path, store, monkeypatch):
+    """Correctness 6: an error while planning one post's lookups was outside the per-post handler."""
+    good = built_post(tmp_path, store, TRACKS)
+    bad = built_post(tmp_path, store, TRACKS, url="https://www.instagram.com/reel/ExampleBroken/")
+    real = lookups.wanted
+
+    def wanted(view, today):
+        if view is not None and bad.name in str(view.get("made_at")):
+            raise AttributeError("odd")
+        return real(view, today)
+    view = views.load(bad)
+    view["made_at"] = bad.name
+    views.save(bad, view)
+    monkeypatch.setattr(lookups, "wanted", wanted)
+    clock = Clock()
+    assert lookups.lookups_due(store, get=Net({"musicbrainz.org": (200, MB_RECORDING)}),
+                               pacer=lookups.Pacer(clock.time, clock.sleep), today="2026-11-14") == 1
+    assert views.load(good)["lookups"]["tracks"]

@@ -101,8 +101,18 @@ def clean_text(text) -> str:
 
 
 def key(name) -> str:
-    """The lookups key of an item: its name, tidied and lower-cased (the renderer reads lookups with the same key)."""
+    """A name tidied and lower-cased: the base of an item's lookups key."""
     return clean_text(name).lower()
+
+
+def item_key(item: dict, tab) -> str:
+    """The lookups key of an item on a tab: its name plus the field that narrows its query (artist, author, city), so
+    two "Central Cafe"s in two cities, or one song by two artists, never share an answer, and an answer stops matching
+    when that field changes (review 14 Nov 2026). The renderer reads lookups with the same key."""
+    tab_id = getattr(tab, "id", tab)
+    name = key(item.get("name"))
+    extra = key(item.get(QUERY_DETAIL[tab_id])) if tab_id in QUERY_DETAIL else ""
+    return f"{name} | {extra}" if name and extra else name
 
 
 def query_for(item: dict, tab) -> str:
@@ -444,8 +454,10 @@ def wanted(view: dict, today: str) -> list[tuple[str, dict, str]]:
     for tab_id, body in (view.get("tabs") or {}).items():
         for item in body.get("items") or []:
             api = api_for(tab_id, item)
-            k = key(item.get("name"))
-            if api and k and _due(((done.get(tab_id) or {}).get(k) or {}).get(api), today):
+            k = item_key(item, tab_id)
+            found = done.get(tab_id) if isinstance(done.get(tab_id), dict) else {}
+            entries = found.get(k) if isinstance(found.get(k), dict) else {}
+            if api and k and _due(entries.get(api), today):
                 out.append((tab_id, item, api))
     return out
 
@@ -460,7 +472,7 @@ def enrich(view: dict, tab_id: str, items: list[dict], get: Get | None = None, r
     old = (view.get("lookups") or {}).get(tab_id) or {}
     out = {k: dict(v) for k, v in old.items() if isinstance(v, dict)}
     for item in items:
-        api, k = api_for(tab_id, item), key(item.get("name"))
+        api, k = api_for(tab_id, item), item_key(item, tab_id)
         if not api or not k or not _due((out.get(k) or {}).get(api), today):
             continue
         try:
@@ -489,28 +501,83 @@ def allowed(store) -> bool:
     return modes.current(store) != "private" and not store.paused("links")
 
 
-def _built(store, limit: int = 400) -> list[dict]:
-    """Saved posts whose view the AI built (newest first). Read-only."""
+_quiet: dict[str, tuple] = {}  # url -> (view.json mtime, day, note) when nothing was due: not read again that day
+PAGE = 400  # candidates read at a time, newest first; later pages are read when the newer ones have nothing due
+
+
+def _built(store, before: int | None = None, limit: int = PAGE) -> list[dict]:
+    """Saved posts whose view the AI built, newest first, older than rowid `before`. Read-only."""
     with store._lock:
         rows = store._db.execute(
-            "SELECT rowid AS id, canonical_url, archive_dir FROM items WHERE view_status='done' AND shelf != 'trash' "
-            "AND archive_dir IS NOT NULL ORDER BY rowid DESC LIMIT ?", (limit,)).fetchall()
+            "SELECT rowid AS id, canonical_url, archive_dir, note, screen_text FROM items WHERE view_status='done' "
+            "AND shelf != 'trash' AND archive_dir IS NOT NULL" + (" AND rowid < ?" if before else "")
+            + " ORDER BY rowid DESC LIMIT ?", ((before, limit) if before else (limit,))).fetchall()
     return [dict(r) for r in rows]
 
 
-_quiet: dict[str, tuple[int, str]] = {}  # url -> (view.json mtime, day) when nothing was due: not read again that day
+def _candidates(store):
+    """Every built post, a page at a time (the newest 400 used to be the only ones ever looked at)."""
+    before = None
+    while True:
+        rows = _built(store, before)
+        yield from rows
+        if len(rows) < PAGE:
+            return
+        before = rows[-1]["id"]
+
+
+def post_text(folder: Path, row: dict) -> str:
+    """What the post itself says, folded for matching: its title and caption, the transcript, the text read off the
+    screen, and the names its summary found (only when the owner wrote no note: the summary reads the note too). The
+    owner's note is never part of it: a lookup must not carry his own words to another service (review 14 Nov 2026)."""
+    from magpiary.config import load_json
+
+    meta = load_json(folder / "meta.json") or {}
+    parts = [meta.get(k) for k in ("title", "text", "description", "author")] if isinstance(meta, dict) else []
+    transcript = load_json(folder / "transcript.json") or {}
+    if isinstance(transcript, dict):
+        parts += [s.get("text") for s in transcript.get("segments") or [] if isinstance(s, dict)]
+    screen = load_json(folder / "ocr.json") or []
+    parts += [line.get("text") for line in screen if isinstance(line, dict)] if isinstance(screen, list) else []
+    parts.append(row.get("screen_text"))
+    record = load_json(folder / "record.json") or {}
+    if isinstance(record, dict) and not str(row.get("note") or "").strip():
+        ents = record.get("entities") if isinstance(record.get("entities"), dict) else {}
+        parts += [v for values in ents.values() if isinstance(values, list) for v in values]
+    return " " + _fold(" ".join(str(p) for p in parts if isinstance(p, (str, int, float)))) + " "
+
+
+def grounded(item: dict, tab_id: str, text: str) -> bool:
+    """The item's name, and the detail its query adds (artist, author, city), appear in the post's own words. Only
+    those are looked up by themselves; anything else (an AI's guess, or words planted to make it send something) waits
+    for the owner's click on a search link."""
+    words = [item.get("name")] + ([item.get(QUERY_DETAIL[tab_id])] if tab_id in QUERY_DETAIL else [])
+    folded = [_fold(w) for w in words if clean_text(w)]
+    return bool(folded) and all(f and f" {f} " in text for f in folded)
+
+
+def current_only(view: dict, lookups: dict) -> dict:
+    """The lookups of the cards the view still has, under their current keys: answers for a card that is gone, or
+    kept under an older key (name only, before the city or artist joined it), are dropped."""
+    out = {}
+    for tab_id, body in (view.get("tabs") or {}).items():
+        keys = {item_key(i, tab_id) for i in body.get("items") or []}
+        found = {k: v for k, v in (lookups.get(tab_id) or {}).items() if k in keys}
+        if found:
+            out[tab_id] = found
+    return out
 
 
 def lookups_due(store, get: Get | None = None, log: Callable[[str], None] = lambda m: None, pacer: Pacer | None = None,
                 posts: int = POSTS_PER_RUN, requests: int = REQUESTS_PER_RUN, today: str | None = None) -> int:
     """Check the cards of up to `posts` built views with the free APIs (at most `requests` requests), saving each
-    view's `lookups`. Returns how many views were updated."""
+    view's `lookups`. Only names grounded in the post are checked. Returns how many views were updated."""
     today = today or date.today().isoformat()
     if not allowed(store):
         return 0
     run = Run(get, allow=lambda: allowed(store), requests=requests, pacer=pacer)
     saved = touched = 0
-    for row in _built(store):
+    for row in _candidates(store):
         if touched >= posts or run.left <= 0 or run.refused:
             break
         folder = Path(row["archive_dir"])
@@ -518,12 +585,20 @@ def lookups_due(store, get: Get | None = None, log: Callable[[str], None] = lamb
             stamp = (folder / views.FILE).stat().st_mtime_ns
         except OSError:
             continue
-        if _quiet.get(row["canonical_url"]) == (stamp, today):
+        quiet = (stamp, today, str(row.get("note") or ""))
+        if _quiet.get(row["canonical_url"]) == quiet:
             continue
-        view = views.load(folder)
-        todo = wanted(view, today) if view else []
+        try:  # one odd file must not stop the worker: everything about this post is contained here
+            view = views.load(folder)
+            todo = wanted(view, today) if view else []
+            if todo:
+                text = post_text(folder, row)
+                todo = [t for t in todo if grounded(t[1], t[0], text)]
+        except Exception as err:
+            log(f"lookups skipped a post: {type(err).__name__}")
+            continue
         if not todo:
-            _quiet[row["canonical_url"]] = (stamp, today)
+            _quiet[row["canonical_url"]] = quiet
             continue
         touched += 1
         lookups = dict(view.get("lookups") or {})
@@ -540,12 +615,14 @@ def lookups_due(store, get: Get | None = None, log: Callable[[str], None] = lamb
         fresh = views.load(folder)  # rebuilt meanwhile (Change category)? Its new cards are looked up next pass
         if not fresh or fresh.get("made_at") != view.get("made_at") or fresh.get("tabs") != view.get("tabs"):
             continue
-        fresh["lookups"] = {t: v for t, v in lookups.items() if t in fresh["tabs"]}
+        fresh["lookups"] = current_only(fresh, lookups)
         try:
             views.save(folder, fresh)
             saved += 1
         except OSError as err:
             log(f"lookups not saved: {type(err).__name__}")
+            continue
+        store.view_changed(row["id"])
     if run.refused:
         log("lookups stopped: Private mode or link finding paused")
     return saved
