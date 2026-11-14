@@ -1,0 +1,72 @@
+{
+ "version": 1,
+ "category": "howto_diy",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "steps": {
+   "text": "",
+   "items": [
+    {
+     "name": "Turn off the water at the isolation valve",
+     "at": "1:30"
+    },
+    {
+     "name": "Open the tap to drain it",
+     "at": "3:00"
+    },
+    {
+     "name": "Prise off the cap and unscrew the handle",
+     "at": "4:30"
+    },
+    {
+     "name": "Undo the headgear nut with a spanner",
+     "at": "6:00"
+    },
+    {
+     "name": "Replace the washer with one the same size",
+     "at": "7:30"
+    },
+    {
+     "name": "Rebuild, turn the water on, test",
+     "at": "9:00"
+    }
+   ]
+  },
+  "needs": {
+   "text": "",
+   "items": [
+    {
+     "name": "Tap washer set",
+     "amount": "mixed sizes"
+    },
+    {
+     "name": "Adjustable spanner"
+    },
+    {
+     "name": "Flat screwdriver"
+    },
+    {
+     "name": "Old towel"
+    }
+   ]
+  },
+  "pitfalls": {
+   "text": "",
+   "items": [
+    {
+     "name": "Not turning the water off first"
+    },
+    {
+     "name": "Overtightening the headgear cracks the body"
+    },
+    {
+     "name": "Plug the sink so small parts don't fall in"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

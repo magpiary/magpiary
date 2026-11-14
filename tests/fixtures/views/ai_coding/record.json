@@ -1,0 +1,48 @@
+{
+ "title": "A local agent that reviews your diff before commit",
+ "summary": "A short thread with a reusable review prompt, the commands to set up a pre-commit hook that runs it, and a note on false positives.",
+ "key_points": [],
+ "type": "tool",
+ "entities": {
+  "tools": [
+   "git",
+   "uv"
+  ],
+  "skills_code": [
+   "pre-commit hook"
+  ],
+  "products": [],
+  "books_media": [],
+  "places": [],
+  "people": [],
+  "links": []
+ },
+ "extras": {},
+ "suggested_tags": [
+  "ai",
+  "git",
+  "code review",
+  "prompt"
+ ],
+ "link_targets": [
+  {
+   "name": "example-org/diff-reviewer",
+   "kind": "code",
+   "role": "central",
+   "what": "review script",
+   "domain": "",
+   "open_source": false,
+   "maker": ""
+  }
+ ],
+ "list_items": [],
+ "format": "tutorial",
+ "topic": "code review",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "ai_coding",
+ "category2": ""
+}

@@ -1,0 +1,73 @@
+{
+ "version": 1,
+ "category": "film_tv",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "titles": {
+   "text": "",
+   "items": [
+    {
+     "name": "Spirited Away",
+     "detail": "A world you never want to leave",
+     "amount": "2001",
+     "kind": "film"
+    },
+    {
+     "name": "Up",
+     "detail": "The first ten minutes",
+     "amount": "2009",
+     "kind": "film"
+    },
+    {
+     "name": "Persepolis",
+     "detail": "Coming of age in black and white",
+     "amount": "2007",
+     "kind": "film"
+    }
+   ]
+  },
+  "people": {
+   "text": "",
+   "items": [
+    {
+     "name": "Hayao Miyazaki",
+     "detail": "Director, Spirited Away"
+    },
+    {
+     "name": "Pete Docter",
+     "detail": "Director, Up"
+    },
+    {
+     "name": "Marjane Satrapi",
+     "detail": "Co-director, Persepolis"
+    }
+   ]
+  },
+  "similar_watch": {
+   "text": "",
+   "items": [
+    {
+     "name": "My Neighbor Totoro",
+     "amount": "1988",
+     "kind": "film"
+    }
+   ]
+  }
+ },
+ "lookups": {
+  "titles": {
+   "spirited away": {
+    "wikidata": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.wikidata.org/wiki/Q0000001",
+     "title": "Spirited Away",
+     "year": "2001"
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,70 @@
+{
+ "version": 1,
+ "category": "wellbeing",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "advice": {
+   "text": "",
+   "items": [
+    {
+     "name": "A fixed wake time matters more than a fixed bedtime"
+    },
+    {
+     "name": "Morning light sets your body clock"
+    },
+    {
+     "name": "Keep the bedroom cool, around 18 °C"
+    }
+   ]
+  },
+  "habits": {
+   "text": "",
+   "items": [
+    {
+     "name": "Wake at the same time every day",
+     "amount": "daily"
+    },
+    {
+     "name": "10 minutes outside before 10 am",
+     "amount": "daily"
+    },
+    {
+     "name": "No caffeine after 2 pm",
+     "amount": "daily"
+    },
+    {
+     "name": "Screens off 30 minutes before bed",
+     "amount": "nightly"
+    }
+   ]
+  },
+  "evidence": {
+   "text": "",
+   "items": [
+    {
+     "name": "Light exposure research on circadian rhythm is cited",
+     "kind": "evidence"
+    },
+    {
+     "name": "Not a treatment for insomnia; see a doctor if it persists",
+     "kind": "caveat"
+    }
+   ]
+  },
+  "quotes": {
+   "text": "",
+   "items": [
+    {
+     "name": "Calm Corner Example",
+     "at": "5:40",
+     "kind": "quote",
+     "value": "Protect your mornings and your nights take care of themselves."
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

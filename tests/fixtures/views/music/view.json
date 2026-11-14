@@ -1,0 +1,114 @@
+{
+ "version": 1,
+ "category": "music",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "tracks": {
+   "text": "",
+   "items": [
+    {
+     "name": "Kind of Blue",
+     "detail": "Miles Davis",
+     "at": "0:00",
+     "amount": "1959",
+     "kind": "album"
+    },
+    {
+     "name": "Music for Airports",
+     "detail": "Brian Eno",
+     "at": "0:02",
+     "amount": "1978",
+     "kind": "album"
+    },
+    {
+     "name": "Selected Ambient Works 85–92",
+     "detail": "Aphex Twin",
+     "at": "0:04",
+     "amount": "1992",
+     "kind": "album"
+    },
+    {
+     "name": "Blue Lines",
+     "detail": "Massive Attack",
+     "at": "0:06",
+     "amount": "1991",
+     "kind": "album"
+    }
+   ]
+  },
+  "artists": {
+   "text": "",
+   "items": [
+    {
+     "name": "Miles Davis",
+     "detail": "jazz"
+    },
+    {
+     "name": "Brian Eno",
+     "detail": "ambient"
+    },
+    {
+     "name": "Aphex Twin",
+     "detail": "electronic"
+    },
+    {
+     "name": "Massive Attack",
+     "detail": "trip hop"
+    }
+   ]
+  },
+  "similar_music": {
+   "text": "",
+   "items": [
+    {
+     "name": "Ambient 2: The Plateaux of Mirror",
+     "detail": "Harold Budd and Brian Eno",
+     "kind": "album"
+    }
+   ]
+  }
+ },
+ "lookups": {
+  "tracks": {
+   "kind of blue": {
+    "musicbrainz": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://musicbrainz.org/release-group/00000000-0000-4000-8000-000000000000",
+     "title": "Kind of Blue",
+     "year": "1959"
+    }
+   },
+   "music for airports": {
+    "musicbrainz": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://musicbrainz.org/release-group/00000000-0000-4000-8000-000000000001",
+     "title": "Music for Airports",
+     "year": "1978"
+    }
+   },
+   "selected ambient works 85–92": {
+    "musicbrainz": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://musicbrainz.org/release-group/00000000-0000-4000-8000-000000000002",
+     "title": "Selected Ambient Works 85–92",
+     "year": "1992"
+    }
+   },
+   "blue lines": {
+    "musicbrainz": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://musicbrainz.org/release-group/00000000-0000-4000-8000-000000000003",
+     "title": "Blue Lines",
+     "year": "1991"
+    }
+   }
+  }
+ }
+}

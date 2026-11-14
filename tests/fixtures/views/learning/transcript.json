@@ -1,0 +1,30 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 11.5,
+   "text": "Why is the sky blue?"
+  },
+  {
+   "start": 12,
+   "end": 23.5,
+   "text": "Sunlight is all colours mixed together."
+  },
+  {
+   "start": 24,
+   "end": 35.5,
+   "text": "Air molecules scatter short wavelengths more."
+  },
+  {
+   "start": 36,
+   "end": 47.5,
+   "text": "Blue is scattered all over the sky."
+  },
+  {
+   "start": 48,
+   "end": 59.5,
+   "text": "At sunset the light goes through more air, so the reds are left."
+  }
+ ]
+}

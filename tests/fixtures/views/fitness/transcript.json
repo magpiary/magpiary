@@ -1,0 +1,35 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 6.5,
+   "text": "Twenty minutes, no equipment."
+  },
+  {
+   "start": 7,
+   "end": 13.5,
+   "text": "Warm up with jumping jacks and arm circles."
+  },
+  {
+   "start": 14,
+   "end": 20.5,
+   "text": "Then squats, three sets of fifteen."
+  },
+  {
+   "start": 21,
+   "end": 27.5,
+   "text": "Push-ups, knees down is fine."
+  },
+  {
+   "start": 28,
+   "end": 34.5,
+   "text": "Plank to finish."
+  },
+  {
+   "start": 35,
+   "end": 41.5,
+   "text": "And put it in your calendar like a meeting."
+  }
+ ]
+}

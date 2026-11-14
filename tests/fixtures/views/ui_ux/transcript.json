@@ -1,0 +1,40 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 59.5,
+   "text": "Today, five onboarding patterns that respect people's time."
+  },
+  {
+   "start": 60,
+   "end": 119.5,
+   "text": "First, progressive disclosure."
+  },
+  {
+   "start": 120,
+   "end": 179.5,
+   "text": "Show one control, then reveal the rest when it's needed."
+  },
+  {
+   "start": 180,
+   "end": 239.5,
+   "text": "Second, start people with a sample project."
+  },
+  {
+   "start": 240,
+   "end": 299.5,
+   "text": "Third, an empty state that teaches the next step."
+  },
+  {
+   "start": 300,
+   "end": 359.5,
+   "text": "Fourth, a short checklist with a small reward."
+  },
+  {
+   "start": 360,
+   "end": 419.5,
+   "text": "Fifth, let people try before you ask them to sign up."
+  }
+ ]
+}

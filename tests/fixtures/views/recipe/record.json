@@ -1,0 +1,51 @@
+{
+ "title": "One-pan lemon garlic orzo",
+ "summary": "Orzo toasted in butter with garlic, simmered in stock, then finished with lemon, parmesan and spinach. Serves 4 in about 25 minutes using one pan.",
+ "key_points": [
+  {
+   "text": "Toast the orzo before adding stock for a nutty taste.",
+   "at": "0:14"
+  },
+  {
+   "text": "Add lemon off the heat.",
+   "at": "0:48"
+  }
+ ],
+ "type": "recipe",
+ "entities": {
+  "tools": [],
+  "skills_code": [],
+  "products": [],
+  "books_media": [],
+  "places": [],
+  "people": [],
+  "links": []
+ },
+ "extras": {
+  "ingredients": [
+   "300 g orzo",
+   "750 ml stock"
+  ],
+  "steps": [
+   "Toast orzo",
+   "Simmer"
+  ]
+ },
+ "suggested_tags": [
+  "recipe",
+  "orzo",
+  "one pan",
+  "dinner"
+ ],
+ "link_targets": [],
+ "list_items": [],
+ "format": "tutorial",
+ "topic": "pasta",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "recipe",
+ "category2": ""
+}

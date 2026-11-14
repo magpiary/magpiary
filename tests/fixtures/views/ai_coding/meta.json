@@ -1,0 +1,8 @@
+{
+ "url": "https://www.threads.com/@devnotes.example/post/FixtureAiCode1/",
+ "source": "threads",
+ "author": "Dev Notes Example",
+ "author_handle": "devnotes.example",
+ "text": "My 3-line setup for a local coding agent that reviews diffs before I commit. Prompt below 👇",
+ "published_at": "2026-10-20"
+}

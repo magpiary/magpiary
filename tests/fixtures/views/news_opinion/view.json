@@ -1,0 +1,72 @@
+{
+ "version": 1,
+ "category": "news_opinion",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "claims": {
+   "text": "",
+   "items": [
+    {
+     "name": "The road closes to cars from 1 March",
+     "detail": "Council vote, 7–4",
+     "kind": "fact"
+    },
+    {
+     "name": "Footfall on the harbour will rise",
+     "detail": "The council's own study",
+     "kind": "prediction"
+    },
+    {
+     "name": "Deliveries will become impossible",
+     "detail": "Traders' association",
+     "kind": "opinion"
+    }
+   ]
+  },
+  "sources": {
+   "text": "",
+   "items": [
+    {
+     "name": "Exampleton Council meeting minutes",
+     "detail": "Vote record and amendments"
+    },
+    {
+     "name": "Harbour Footfall Study 2026",
+     "detail": "Council-commissioned pedestrian counts"
+    }
+   ]
+  },
+  "context": {
+   "text": "",
+   "items": [
+    {
+     "name": "Trial weekend closures start",
+     "group": "Summer 2025"
+    },
+    {
+     "name": "Footfall study published",
+     "group": "September 2026"
+    },
+    {
+     "name": "Council vote, 7–4",
+     "group": "13 November 2026"
+    }
+   ]
+  },
+  "takes": {
+   "text": "",
+   "items": [
+    {
+     "name": "Traders want delivery windows before 10 am"
+    },
+    {
+     "name": "Cycling group asks for a bike lane too"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

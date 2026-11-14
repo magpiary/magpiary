@@ -1,0 +1,86 @@
+{
+ "version": 1,
+ "category": "interiors",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "pieces": {
+   "text": "",
+   "items": [
+    {
+     "name": "Jute rug, 200 × 300 cm",
+     "detail": "Front legs of the sofa on it",
+     "amount": "£120"
+    },
+    {
+     "name": "Plug-in wall lights (pair)",
+     "detail": "Warm 2700 K bulbs",
+     "amount": "£60"
+    },
+    {
+     "name": "Linen sofa slipcover",
+     "detail": "Oatmeal, washable",
+     "amount": "£85"
+    },
+    {
+     "name": "Olive tree in a terracotta pot",
+     "amount": "£30"
+    }
+   ]
+  },
+  "palette": {
+   "text": "",
+   "items": [
+    {
+     "name": "Oatmeal",
+     "value": "#d8cbb3"
+    },
+    {
+     "name": "Terracotta",
+     "value": "#c0643b"
+    },
+    {
+     "name": "Olive",
+     "value": "#6b7a3a"
+    },
+    {
+     "name": "Warm white",
+     "value": "#f6f1e7"
+    }
+   ]
+  },
+  "materials": {
+   "text": "",
+   "items": [
+    {
+     "name": "Command strips",
+     "amount": "1 pack"
+    },
+    {
+     "name": "Cable covers",
+     "amount": "2 m"
+    },
+    {
+     "name": "Furniture pads",
+     "amount": "8"
+    }
+   ]
+  },
+  "styling": {
+   "text": "",
+   "items": [
+    {
+     "name": "Group plants in threes at different heights",
+     "group": "Layout"
+    },
+    {
+     "name": "Light at eye level makes a room feel warmer than overhead light",
+     "group": "Light"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

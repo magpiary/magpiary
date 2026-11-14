@@ -1,0 +1,35 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 8.5,
+   "text": "Three days in Lisbon, here's exactly what we did."
+  },
+  {
+   "start": 9,
+   "end": 17.5,
+   "text": "Day one, get lost in Alfama."
+  },
+  {
+   "start": 18,
+   "end": 26.5,
+   "text": "Sunset at Senhora do Monte, the best viewpoint in the city."
+  },
+  {
+   "start": 27,
+   "end": 35.5,
+   "text": "Day two, Belém Tower and the custard tarts."
+  },
+  {
+   "start": 36,
+   "end": 44.5,
+   "text": "Then LX Factory for the bookshop."
+  },
+  {
+   "start": 45,
+   "end": 53.5,
+   "text": "Day three, eat your way through Time Out Market."
+  }
+ ]
+}

@@ -411,7 +411,9 @@ class CardPages:
         done = bool(record)
         kind = type_of(record) if record else ""
         colour = ui.deep(ui.type_colour(kind)) if done else ui.deep(ui.source_colour(item["source"]))
-        badge = (f'<b style="background:{colour}">{e(ui.type_name(kind) if done else ui.source_label(item))}</b>')
+        category = self.categories_for([item]).get(item.get("id"), "") if done and hasattr(self, "categories_for") else ""
+        label = cats.name(category) if category and category != "other" else ui.type_name(kind)  # as on the wall tile
+        badge = (f'<b style="background:{colour}" data-cat="{e(category)}">{e(label if done else ui.source_label(item))}</b>')
         where = ui.source_badge(item["source"], item.get("canonical_url", "")) if done else ""
         from magpiary.brain import FORMAT_NAMES
         shape = " · ".join(x for x in (FORMAT_NAMES.get((record or {}).get("format") or "", ""), (record or {}).get("topic") or "") if x)

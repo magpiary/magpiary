@@ -1,0 +1,35 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 59.5,
+   "text": "Five small habits for better sleep."
+  },
+  {
+   "start": 60,
+   "end": 119.5,
+   "text": "Wake up at the same time every day, even weekends."
+  },
+  {
+   "start": 120,
+   "end": 179.5,
+   "text": "Get outside light in the first hour."
+  },
+  {
+   "start": 180,
+   "end": 239.5,
+   "text": "No caffeine after two pm."
+  },
+  {
+   "start": 240,
+   "end": 299.5,
+   "text": "A cool, dark room."
+  },
+  {
+   "start": 300,
+   "end": 359.5,
+   "text": "These help most people, but they're not a cure for insomnia."
+  }
+ ]
+}

@@ -1,0 +1,38 @@
+{
+ "title": "4 cheap eats in Roma Norte",
+ "summary": "A short food guide to four invented spots in Roma Norte, Mexico City: a taquería, a coffee bar, a bakery and a market stall, with what to order and rough prices.",
+ "key_points": [],
+ "type": "place",
+ "entities": {
+  "tools": [],
+  "skills_code": [],
+  "products": [],
+  "books_media": [],
+  "places": [
+   "Taquería La Ejemplar",
+   "Café Nube Ficticia",
+   "Panadería Prueba",
+   "Mercado Imaginario"
+  ],
+  "people": [],
+  "links": []
+ },
+ "extras": {},
+ "suggested_tags": [
+  "restaurants",
+  "mexico city",
+  "street food",
+  "tacos"
+ ],
+ "link_targets": [],
+ "list_items": [],
+ "format": "list",
+ "topic": "mexico city food",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "food_places",
+ "category2": ""
+}

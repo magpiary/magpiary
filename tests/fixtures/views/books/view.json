@@ -1,0 +1,93 @@
+{
+ "version": 1,
+ "category": "books",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "books": {
+   "text": "",
+   "items": [
+    {
+     "name": "The Hobbit",
+     "detail": "J. R. R. Tolkien",
+     "amount": "1937",
+     "kind": "book"
+    },
+    {
+     "name": "Pride and Prejudice",
+     "detail": "Jane Austen",
+     "amount": "1813",
+     "kind": "book"
+    },
+    {
+     "name": "Dune",
+     "detail": "Frank Herbert",
+     "amount": "1965",
+     "kind": "book"
+    }
+   ]
+  },
+  "ideas": {
+   "text": "",
+   "items": [
+    {
+     "name": "Adventure stories are often about coming home changed"
+    },
+    {
+     "name": "First impressions are usually wrong"
+    },
+    {
+     "name": "Ecology as the real main character"
+    }
+   ]
+  },
+  "quotes": {
+   "text": "",
+   "items": [
+    {
+     "name": "J. R. R. Tolkien, The Hobbit",
+     "kind": "quote",
+     "value": "In a hole in the ground there lived a hobbit."
+    },
+    {
+     "name": "Frank Herbert, Dune",
+     "kind": "quote",
+     "value": "Fear is the mind-killer."
+    }
+   ]
+  }
+ },
+ "lookups": {
+  "books": {
+   "the hobbit": {
+    "openlibrary": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://openlibrary.org/works/OL0000000W",
+     "title": "The Hobbit",
+     "year": "1937"
+    }
+   },
+   "pride and prejudice": {
+    "openlibrary": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://openlibrary.org/works/OL0000001W",
+     "title": "Pride and Prejudice",
+     "year": "1813"
+    }
+   },
+   "dune": {
+    "openlibrary": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://openlibrary.org/works/OL0000002W",
+     "title": "Dune",
+     "year": "1965"
+    }
+   }
+  }
+ }
+}

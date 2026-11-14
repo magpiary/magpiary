@@ -1,0 +1,46 @@
+{
+ "title": "Tallyleaf notes app, a month in",
+ "summary": "A review of Tallyleaf, an invented notes app that turns bulleted lists into sortable tables. It is fast and works offline, but has no web version and a small plugin ecosystem.",
+ "key_points": [],
+ "type": "tool",
+ "entities": {
+  "tools": [
+   "Tallyleaf",
+   "Obsidian",
+   "Apple Notes"
+  ],
+  "skills_code": [],
+  "products": [],
+  "books_media": [],
+  "places": [],
+  "people": [],
+  "links": []
+ },
+ "extras": {},
+ "suggested_tags": [
+  "app",
+  "notes",
+  "productivity"
+ ],
+ "link_targets": [
+  {
+   "name": "Tallyleaf",
+   "kind": "tool",
+   "role": "central",
+   "what": "notes app",
+   "domain": "",
+   "open_source": false,
+   "maker": ""
+  }
+ ],
+ "list_items": [],
+ "format": "review",
+ "topic": "notes apps",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "software_tool",
+ "category2": ""
+}

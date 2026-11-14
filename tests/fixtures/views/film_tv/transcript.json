@@ -1,0 +1,25 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 11.5,
+   "text": "Three animated films that are secretly for adults."
+  },
+  {
+   "start": 12,
+   "end": 23.5,
+   "text": "Spirited Away, a world you never want to leave."
+  },
+  {
+   "start": 24,
+   "end": 35.5,
+   "text": "Up, the first ten minutes alone."
+  },
+  {
+   "start": 36,
+   "end": 47.5,
+   "text": "Persepolis, a coming-of-age story in black and white."
+  }
+ ]
+}

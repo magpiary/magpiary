@@ -1,0 +1,76 @@
+{
+ "version": 1,
+ "category": "fashion",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "pieces": {
+   "text": "",
+   "items": [
+    {
+     "name": "Camel wool overcoat",
+     "detail": "Knee length, dropped shoulder",
+     "amount": "£40 thrifted"
+    },
+    {
+     "name": "Cream fisherman jumper",
+     "detail": "Chunky cable knit"
+    },
+    {
+     "name": "Straight-leg dark jeans",
+     "detail": "Raw denim, cuffed"
+    },
+    {
+     "name": "Brown suede Chelsea boots",
+     "detail": "Crepe sole",
+     "amount": "£95"
+    }
+   ]
+  },
+  "styling": {
+   "text": "",
+   "items": [
+    {
+     "name": "Long coat over a short jumper keeps the legs long",
+     "group": "How to wear"
+    },
+    {
+     "name": "Tuck only the front of the jumper",
+     "group": "How to wear"
+    },
+    {
+     "name": "Swap jeans for a wool skirt for dinners out",
+     "group": "Occasions"
+    },
+    {
+     "name": "Brush suede before the first rain",
+     "group": "Care"
+    }
+   ]
+  },
+  "palette": {
+   "text": "",
+   "items": [
+    {
+     "name": "Camel",
+     "value": "#c19a6b"
+    },
+    {
+     "name": "Cream",
+     "value": "#f3ead8"
+    },
+    {
+     "name": "Indigo denim",
+     "value": "#2c3e66"
+    },
+    {
+     "name": "Chocolate",
+     "value": "#5b3a29"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

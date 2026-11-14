@@ -1,0 +1,30 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 49.5,
+   "text": "I used Tallyleaf for a month."
+  },
+  {
+   "start": 50,
+   "end": 99.5,
+   "text": "The headline feature: any list becomes a table."
+  },
+  {
+   "start": 100,
+   "end": 149.5,
+   "text": "It's fully offline."
+  },
+  {
+   "start": 150,
+   "end": 199.5,
+   "text": "There's no web version, which hurt."
+  },
+  {
+   "start": 200,
+   "end": 249.5,
+   "text": "Pricing is a one-off payment."
+  }
+ ]
+}

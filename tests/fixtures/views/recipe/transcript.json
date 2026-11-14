@@ -1,0 +1,35 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 9.5,
+   "text": "One pan lemon garlic orzo, serves four."
+  },
+  {
+   "start": 10,
+   "end": 19.5,
+   "text": "Melt the butter and add the garlic."
+  },
+  {
+   "start": 20,
+   "end": 29.5,
+   "text": "Toast the orzo for two minutes."
+  },
+  {
+   "start": 30,
+   "end": 39.5,
+   "text": "Pour in the stock and simmer, stirring."
+  },
+  {
+   "start": 40,
+   "end": 49.5,
+   "text": "Spinach in at the end."
+  },
+  {
+   "start": 50,
+   "end": 59.5,
+   "text": "Off the heat, lemon and parmesan."
+  }
+ ]
+}

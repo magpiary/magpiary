@@ -1,0 +1,119 @@
+{
+ "version": 1,
+ "category": "food_places",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "spots": {
+   "text": "",
+   "items": [
+    {
+     "name": "Taquería La Ejemplar",
+     "detail": "Al pastor off the trompo",
+     "amount": "$",
+     "group": "Roma Norte"
+    },
+    {
+     "name": "Café Nube Ficticia",
+     "detail": "Cold brew and a quiet patio",
+     "amount": "$$",
+     "group": "Roma Norte"
+    },
+    {
+     "name": "Panadería Prueba",
+     "detail": "Conchas, sold out by noon",
+     "amount": "$",
+     "group": "Roma Norte"
+    },
+    {
+     "name": "Mercado Imaginario",
+     "detail": "Blue-corn quesadillas",
+     "amount": "$",
+     "group": "Roma Norte"
+    }
+   ]
+  },
+  "order": {
+   "text": "",
+   "items": [
+    {
+     "name": "Tacos al pastor",
+     "detail": "Taquería La Ejemplar",
+     "amount": "25 MXN each"
+    },
+    {
+     "name": "Cold brew",
+     "detail": "Café Nube Ficticia",
+     "amount": "65 MXN"
+    },
+    {
+     "name": "Chocolate concha",
+     "detail": "Panadería Prueba",
+     "amount": "30 MXN"
+    },
+    {
+     "name": "Quesadilla de flor de calabaza",
+     "detail": "Mercado Imaginario",
+     "amount": "55 MXN"
+    }
+   ]
+  },
+  "tips": {
+   "text": "",
+   "items": [
+    {
+     "name": "Bring cash; small stalls rarely take cards"
+    },
+    {
+     "name": "Go before 11 for the bakery"
+    }
+   ]
+  }
+ },
+ "lookups": {
+  "spots": {
+   "taquería la ejemplar": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=19.418&mlon=-99.162",
+     "title": "Taquería La Ejemplar",
+     "lat": 19.418,
+     "lon": -99.162
+    }
+   },
+   "café nube ficticia": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=19.421&mlon=-99.165",
+     "title": "Café Nube Ficticia",
+     "lat": 19.421,
+     "lon": -99.165
+    }
+   },
+   "panadería prueba": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=19.4135&mlon=-99.1695",
+     "title": "Panadería Prueba",
+     "lat": 19.4135,
+     "lon": -99.1695
+    }
+   },
+   "mercado imaginario": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=19.4165&mlon=-99.159",
+     "title": "Mercado Imaginario",
+     "lat": 19.4165,
+     "lon": -99.159
+    }
+   }
+  }
+ }
+}

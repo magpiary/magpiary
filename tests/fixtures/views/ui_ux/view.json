@@ -1,0 +1,103 @@
+{
+ "version": 1,
+ "category": "ui_ux",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "patterns": {
+   "text": "",
+   "items": [
+    {
+     "name": "Progressive disclosure",
+     "detail": "One control first, the rest after the first success",
+     "at": "0:48"
+    },
+    {
+     "name": "Sample project",
+     "detail": "Opens with a filled-in example the user can edit",
+     "at": "1:30"
+    },
+    {
+     "name": "Teaching empty state",
+     "detail": "Illustration plus one button that does the next step",
+     "at": "3:02"
+    },
+    {
+     "name": "Setup checklist",
+     "detail": "Four tasks, a confetti burst at the end",
+     "at": "4:15"
+    },
+    {
+     "name": "Deferred sign-up",
+     "detail": "Account asked for only when saving",
+     "at": "5:40"
+    }
+   ]
+  },
+  "motion": {
+   "text": "",
+   "items": [
+    {
+     "name": "Checklist tick",
+     "detail": "Spring, 300 ms, slight overshoot",
+     "at": "4:20"
+    },
+    {
+     "name": "Panel reveal",
+     "detail": "Height and fade together, 220 ms ease-out",
+     "at": "0:55"
+    }
+   ]
+  },
+  "borrow": {
+   "text": "",
+   "items": [
+    {
+     "name": "Ship a sample project with every new account"
+    },
+    {
+     "name": "Rewrite each empty state as an instruction"
+    },
+    {
+     "name": "Move the sign-up wall to the first save"
+    }
+   ]
+  },
+  "palette": {
+   "text": "",
+   "items": [
+    {
+     "name": "Mint",
+     "detail": "Success ticks",
+     "value": "#3ddc97"
+    },
+    {
+     "name": "Graphite",
+     "detail": "Text",
+     "value": "#2b2d42"
+    },
+    {
+     "name": "Cloud",
+     "detail": "Backgrounds",
+     "value": "#f8f9fb"
+    }
+   ]
+  },
+  "made_with": {
+   "text": "",
+   "items": [
+    {
+     "name": "Figma",
+     "detail": "Screens and prototype"
+    },
+    {
+     "name": "Framer",
+     "detail": "Spring timing tests"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

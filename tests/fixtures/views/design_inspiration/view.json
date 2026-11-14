@@ -1,0 +1,115 @@
+{
+ "version": 1,
+ "category": "design_inspiration",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "visual": {
+   "text": "Loud type, quiet colour: the type does the shouting.",
+   "items": [
+    {
+     "name": "Condensed grotesque, all caps",
+     "detail": "Headline set tight at -2% tracking",
+     "group": "Type"
+    },
+    {
+     "name": "Numbers as image",
+     "detail": "Huge dates double as the main graphic",
+     "group": "Type"
+    },
+    {
+     "name": "Grain overlay",
+     "detail": "A scanned paper texture at 20% multiply",
+     "group": "Imagery"
+    },
+    {
+     "name": "Halftone photo of a trumpet",
+     "detail": "Cropped hard against the top edge",
+     "group": "Imagery"
+    },
+    {
+     "name": "Confident and warm",
+     "group": "Mood"
+    }
+   ]
+  },
+  "palette": {
+   "text": "",
+   "items": [
+    {
+     "name": "Ink",
+     "detail": "Background and body text",
+     "value": "#14213d"
+    },
+    {
+     "name": "Saffron",
+     "detail": "Dates and one shape per poster",
+     "value": "#fca311"
+    },
+    {
+     "name": "Paper",
+     "detail": "Light posters and margins",
+     "value": "#e5e5e5"
+    },
+    {
+     "name": "Pure black",
+     "detail": "Halftone dots",
+     "value": "#000000"
+    }
+   ]
+  },
+  "structure": {
+   "text": "",
+   "items": [
+    {
+     "name": "6-column grid with 12 mm gutters",
+     "group": "Layout"
+    },
+    {
+     "name": "Date, then act, then venue",
+     "detail": "Three sizes only: 240 / 48 / 14 pt",
+     "group": "Hierarchy"
+    },
+    {
+     "name": "Venue strip along the bottom edge",
+     "group": "Components"
+    }
+   ]
+  },
+  "style": {
+   "text": "",
+   "items": [
+    {
+     "name": "International Typographic Style",
+     "detail": "1950s Swiss posters",
+     "group": "Style"
+    },
+    {
+     "name": "Blue Note record sleeves",
+     "detail": "Tinted photos and big type",
+     "group": "Influences"
+    }
+   ]
+  },
+  "borrow": {
+   "text": "",
+   "items": [
+    {
+     "name": "Pick one accent colour and use it only for the most important number"
+    },
+    {
+     "name": "Set the date as the hero, not the photo"
+    },
+    {
+     "name": "Add a scanned paper texture on multiply at 15–25%"
+    },
+    {
+     "name": "Limit the type scale to three sizes"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

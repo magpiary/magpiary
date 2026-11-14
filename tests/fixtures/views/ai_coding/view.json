@@ -1,0 +1,72 @@
+{
+ "version": 1,
+ "category": "ai_coding",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "snippets": {
+   "text": "",
+   "items": [
+    {
+     "name": "Review prompt",
+     "kind": "prompt",
+     "value": "You are a strict reviewer. Read this diff and list only real bugs, each with the file, the line and a one-line fix. If there are none, answer 'No findings'."
+    },
+    {
+     "name": "Run on the staged diff",
+     "kind": "command",
+     "value": "git diff --cached | uv run diff-reviewer --max-findings 5"
+    },
+    {
+     "name": "Hook script",
+     "kind": "code",
+     "value": "#!/bin/sh\ngit diff --cached | uv run diff-reviewer || exit 1"
+    }
+   ]
+  },
+  "setup": {
+   "text": "",
+   "items": [
+    {
+     "name": "Install uv",
+     "value": "brew install uv"
+    },
+    {
+     "name": "Clone the example reviewer",
+     "value": "git clone https://example.com/example-org/diff-reviewer"
+    },
+    {
+     "name": "Save the hook as .git/hooks/pre-commit and make it executable",
+     "value": "chmod +x .git/hooks/pre-commit"
+    }
+   ]
+  },
+  "repos": {
+   "text": "",
+   "items": [
+    {
+     "name": "example-org/diff-reviewer",
+     "detail": "The review script used in the post"
+    },
+    {
+     "name": "pre-commit",
+     "detail": "Framework for managing git hooks"
+    }
+   ]
+  },
+  "caveats": {
+   "text": "",
+   "items": [
+    {
+     "name": "Large diffs get truncated; review in smaller commits"
+    },
+    {
+     "name": "It can flag style nits as bugs; tune the prompt"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

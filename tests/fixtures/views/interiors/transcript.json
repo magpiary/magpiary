@@ -1,0 +1,30 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 9.5,
+   "text": "This is my rental living room before."
+  },
+  {
+   "start": 10,
+   "end": 19.5,
+   "text": "No drilling allowed, so everything here is renter friendly."
+  },
+  {
+   "start": 20,
+   "end": 29.5,
+   "text": "First, a rug that's bigger than you think."
+  },
+  {
+   "start": 30,
+   "end": 39.5,
+   "text": "Plug-in wall lights instead of the ceiling light."
+  },
+  {
+   "start": 40,
+   "end": 49.5,
+   "text": "A linen slipcover hides the old sofa."
+  }
+ ]
+}

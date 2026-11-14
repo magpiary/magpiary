@@ -1,0 +1,54 @@
+{
+ "title": "Three classics for a winter weekend",
+ "summary": "A carousel of three classic novels, each with why to read it and one underlined quote.",
+ "key_points": [],
+ "type": "other",
+ "entities": {
+  "tools": [],
+  "skills_code": [],
+  "products": [],
+  "books_media": [],
+  "places": [],
+  "people": [],
+  "links": []
+ },
+ "extras": {},
+ "suggested_tags": [
+  "books",
+  "reading",
+  "classics"
+ ],
+ "link_targets": [],
+ "list_items": [
+  {
+   "name": "The Hobbit",
+   "kind": "book",
+   "by": "J. R. R. Tolkien",
+   "note": "",
+   "slide": 1
+  },
+  {
+   "name": "Pride and Prejudice",
+   "kind": "book",
+   "by": "Jane Austen",
+   "note": "",
+   "slide": 2
+  },
+  {
+   "name": "Dune",
+   "kind": "book",
+   "by": "Frank Herbert",
+   "note": "",
+   "slide": 3
+  }
+ ],
+ "format": "list",
+ "topic": "classic novels",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "books",
+ "category2": ""
+}

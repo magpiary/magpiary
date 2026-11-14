@@ -1,0 +1,61 @@
+{
+ "title": "4 albums for late-night focus",
+ "summary": "A music-only reel listing four albums for focused late-night work, shown as record sleeves with the year on screen.",
+ "key_points": [],
+ "type": "other",
+ "entities": {
+  "tools": [],
+  "skills_code": [],
+  "products": [],
+  "books_media": [],
+  "places": [],
+  "people": [],
+  "links": []
+ },
+ "extras": {},
+ "suggested_tags": [
+  "music",
+  "albums",
+  "focus"
+ ],
+ "link_targets": [],
+ "list_items": [
+  {
+   "name": "Kind of Blue",
+   "kind": "music",
+   "by": "Miles Davis",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "Music for Airports",
+   "kind": "music",
+   "by": "Brian Eno",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "Selected Ambient Works 85–92",
+   "kind": "music",
+   "by": "Aphex Twin",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "Blue Lines",
+   "kind": "music",
+   "by": "Massive Attack",
+   "note": "",
+   "slide": 0
+  }
+ ],
+ "format": "list",
+ "topic": "focus music",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "music",
+ "category2": ""
+}

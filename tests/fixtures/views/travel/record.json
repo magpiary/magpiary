@@ -1,0 +1,77 @@
+{
+ "title": "3 days in Lisbon on a mid budget",
+ "summary": "A three-day Lisbon plan: Alfama and viewpoints on day one, Belém and LX Factory on day two, a food market and sunset on day three, with budget notes and two places to eat.",
+ "key_points": [],
+ "type": "place",
+ "entities": {
+  "tools": [],
+  "skills_code": [],
+  "products": [],
+  "books_media": [],
+  "places": [
+   "Belém Tower",
+   "LX Factory",
+   "Miradouro da Senhora do Monte",
+   "Time Out Market",
+   "Alfama"
+  ],
+  "people": [],
+  "links": []
+ },
+ "extras": {
+  "city": "Lisbon"
+ },
+ "suggested_tags": [
+  "travel",
+  "lisbon",
+  "itinerary",
+  "portugal"
+ ],
+ "link_targets": [],
+ "list_items": [
+  {
+   "name": "Belém Tower",
+   "kind": "place",
+   "by": "",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "LX Factory",
+   "kind": "place",
+   "by": "",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "Miradouro da Senhora do Monte",
+   "kind": "place",
+   "by": "",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "Time Out Market",
+   "kind": "place",
+   "by": "",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "Alfama",
+   "kind": "place",
+   "by": "",
+   "note": "",
+   "slide": 0
+  }
+ ],
+ "format": "list",
+ "topic": "lisbon",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "travel",
+ "category2": "food_places"
+}

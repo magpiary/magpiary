@@ -1,0 +1,109 @@
+{
+ "version": 1,
+ "category": "recipe",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "ingredients": {
+   "text": "Serves 4.",
+   "items": [
+    {
+     "name": "Orzo",
+     "amount": "300 g",
+     "group": "Base"
+    },
+    {
+     "name": "Chicken or veg stock",
+     "amount": "750 ml",
+     "group": "Base"
+    },
+    {
+     "name": "Butter",
+     "amount": "2 tbsp",
+     "group": "Base"
+    },
+    {
+     "name": "Garlic cloves",
+     "amount": "3",
+     "group": "Base"
+    },
+    {
+     "name": "Baby spinach",
+     "amount": "2 cups",
+     "group": "Finish"
+    },
+    {
+     "name": "Lemon, zest and juice",
+     "amount": "1",
+     "group": "Finish"
+    },
+    {
+     "name": "Parmesan, grated",
+     "amount": "1/2 cup",
+     "group": "Finish"
+    },
+    {
+     "name": "Black pepper",
+     "amount": "to taste",
+     "group": "Finish"
+    }
+   ]
+  },
+  "method": {
+   "text": "",
+   "items": [
+    {
+     "name": "Melt the butter and soften the garlic",
+     "at": "0:10",
+     "amount": "1 min"
+    },
+    {
+     "name": "Toast the orzo, stirring",
+     "at": "0:14",
+     "amount": "2 min"
+    },
+    {
+     "name": "Add the stock and simmer, stirring often",
+     "at": "0:24",
+     "amount": "10 min"
+    },
+    {
+     "name": "Stir in the spinach until wilted",
+     "at": "0:38",
+     "amount": "1 min"
+    },
+    {
+     "name": "Off the heat, add lemon and parmesan; season",
+     "at": "0:48"
+    }
+   ]
+  },
+  "swaps": {
+   "text": "",
+   "items": [
+    {
+     "name": "Use vegetable stock and a vegan hard cheese to make it vegetarian",
+     "kind": "swap"
+    },
+    {
+     "name": "Keeps 2 days in the fridge; loosen with a splash of water",
+     "kind": "storage"
+    }
+   ]
+  },
+  "equipment": {
+   "text": "",
+   "items": [
+    {
+     "name": "Wide sauté pan with lid"
+    },
+    {
+     "name": "Microplane"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

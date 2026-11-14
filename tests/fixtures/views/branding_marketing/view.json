@@ -1,0 +1,79 @@
+{
+ "version": 1,
+ "category": "branding_marketing",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "concept": {
+   "text": "",
+   "items": [
+    {
+     "name": "A cow that is annoyed you switched",
+     "group": "Idea"
+    },
+    {
+     "name": "Plant-milk drinkers who like a joke",
+     "group": "Audience"
+    },
+    {
+     "name": "It names the obvious tension and makes it charming",
+     "group": "Why it works"
+    }
+   ]
+  },
+  "copy": {
+   "text": "",
+   "items": [
+    {
+     "name": "Carton front",
+     "kind": "quote",
+     "value": "Fine. Drink oats. See if I care."
+    },
+    {
+     "name": "Carton side",
+     "kind": "quote",
+     "value": "No cows were consulted. They have opinions."
+    },
+    {
+     "name": "Tote bag",
+     "kind": "quote",
+     "value": "Moo-ved on."
+    }
+   ]
+  },
+  "tactics": {
+   "text": "",
+   "items": [
+    {
+     "name": "Write one new line per batch so people collect them"
+    },
+    {
+     "name": "Print a QR code that plays the cow's voice note"
+    },
+    {
+     "name": "Send cartons to five local cafés before launch"
+    }
+   ]
+  },
+  "palette": {
+   "text": "",
+   "items": [
+    {
+     "name": "Oat",
+     "value": "#e9dcc3"
+    },
+    {
+     "name": "Barn red",
+     "value": "#b23a48"
+    },
+    {
+     "name": "Grass",
+     "value": "#5c9e5c"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

@@ -1,0 +1,55 @@
+{
+ "version": 1,
+ "category": "events_deals",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "when": {
+   "text": "",
+   "items": [
+    {
+     "name": "Harbour Lights Night Market",
+     "detail": "Both evenings until 22:00",
+     "amount": "Free",
+     "group": "Pier 3, Exampleton",
+     "value": "2026-12-05T17:00"
+    },
+    {
+     "name": "Lantern-making workshop",
+     "detail": "Book ahead",
+     "amount": "£12",
+     "group": "Pier 3 tent B",
+     "value": "2026-12-06T18:30"
+    }
+   ]
+  },
+  "tickets": {
+   "text": "",
+   "items": [
+    {
+     "name": "Early-bird workshop ticket",
+     "detail": "Until 30 November",
+     "amount": "10% off",
+     "value": "LIGHTS10"
+    }
+   ]
+  },
+  "prep": {
+   "text": "",
+   "items": [
+    {
+     "name": "Bring cash for small stalls"
+    },
+    {
+     "name": "Warm layers; it's on the water"
+    },
+    {
+     "name": "Reusable cup for mulled cider"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

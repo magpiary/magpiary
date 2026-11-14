@@ -1,0 +1,180 @@
+{
+ "version": 1,
+ "category": "travel",
+ "category2": "food_places",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "places": {
+   "text": "",
+   "items": [
+    {
+     "name": "Alfama",
+     "detail": "Walk the lanes early before the crowds",
+     "group": "Old town"
+    },
+    {
+     "name": "Miradouro da Senhora do Monte",
+     "detail": "The best sunset view",
+     "group": "Graça"
+    },
+    {
+     "name": "Belém Tower",
+     "detail": "Go at opening time",
+     "amount": "€8",
+     "group": "Belém"
+    },
+    {
+     "name": "LX Factory",
+     "detail": "Bookshop in an old print works",
+     "group": "Alcântara"
+    },
+    {
+     "name": "Time Out Market",
+     "detail": "Lunch with many stalls",
+     "amount": "€€",
+     "group": "Cais do Sodré"
+    }
+   ]
+  },
+  "itinerary": {
+   "text": "",
+   "items": [
+    {
+     "name": "Alfama on foot",
+     "detail": "Wear grippy shoes",
+     "group": "Day 1"
+    },
+    {
+     "name": "Sunset at Senhora do Monte",
+     "group": "Day 1"
+    },
+    {
+     "name": "Tram to Belém",
+     "detail": "Buy a day pass",
+     "group": "Day 2"
+    },
+    {
+     "name": "Belém Tower and custard tarts",
+     "group": "Day 2"
+    },
+    {
+     "name": "LX Factory",
+     "group": "Day 2"
+    },
+    {
+     "name": "Time Out Market lunch",
+     "group": "Day 3"
+    },
+    {
+     "name": "River walk to Cais do Sodré",
+     "group": "Day 3"
+    }
+   ]
+  },
+  "plan": {
+   "text": "",
+   "items": [
+    {
+     "name": "Best time",
+     "detail": "April–June or September"
+    },
+    {
+     "name": "Budget",
+     "detail": "About €90 a day each"
+    },
+    {
+     "name": "Getting there",
+     "detail": "Metro from the airport to the centre in 25 minutes"
+    },
+    {
+     "name": "Stay",
+     "detail": "Baixa or Chiado"
+    }
+   ]
+  },
+  "tips": {
+   "text": "",
+   "items": [
+    {
+     "name": "Viewpoints are free; the trams are not, get a day pass"
+    },
+    {
+     "name": "Many restaurants close between lunch and dinner"
+    }
+   ]
+  },
+  "spots": {
+   "text": "",
+   "items": [
+    {
+     "name": "Tasca do Exemplo",
+     "detail": "Grilled sardines",
+     "amount": "€",
+     "group": "Alfama"
+    },
+    {
+     "name": "Pastelaria Ficção",
+     "detail": "Custard tarts still warm",
+     "amount": "€",
+     "group": "Belém"
+    }
+   ]
+  }
+ },
+ "lookups": {
+  "places": {
+   "belém tower": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=38.6916&mlon=-9.216",
+     "title": "Belém Tower",
+     "lat": 38.6916,
+     "lon": -9.216
+    }
+   },
+   "lx factory": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=38.7036&mlon=-9.1786",
+     "title": "LX Factory",
+     "lat": 38.7036,
+     "lon": -9.1786
+    }
+   },
+   "miradouro da senhora do monte": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=38.7192&mlon=-9.1328",
+     "title": "Miradouro da Senhora do Monte",
+     "lat": 38.7192,
+     "lon": -9.1328
+    }
+   },
+   "time out market": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=38.7069&mlon=-9.1459",
+     "title": "Time Out Market",
+     "lat": 38.7069,
+     "lon": -9.1459
+    }
+   },
+   "alfama": {
+    "nominatim": {
+     "status": "ok",
+     "at": "2026-11-14",
+     "url": "https://www.openstreetmap.org/?mlat=38.7118&mlon=-9.13",
+     "title": "Alfama",
+     "lat": 38.7118,
+     "lon": -9.13
+    }
+   }
+  }
+ }
+}

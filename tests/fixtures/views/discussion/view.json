@@ -1,0 +1,62 @@
+{
+ "version": 1,
+ "category": "discussion",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "positions": {
+   "text": "",
+   "items": [
+    {
+     "name": "Holds heat for searing",
+     "detail": "Most early replies",
+     "group": "Cast iron"
+    },
+    {
+     "name": "Cheap and nearly indestructible",
+     "group": "Cast iron"
+    },
+    {
+     "name": "Lighter and heats up faster",
+     "detail": "Several line cooks",
+     "group": "Carbon steel"
+    },
+    {
+     "name": "Better for eggs once seasoned",
+     "group": "Carbon steel"
+    }
+   ]
+  },
+  "best": {
+   "text": "",
+   "items": [
+    {
+     "name": "u/example_linecook",
+     "kind": "quote",
+     "value": "Carbon steel. It's what every restaurant I've worked in uses, and you can toss food."
+    },
+    {
+     "name": "u/sample_baker",
+     "kind": "quote",
+     "value": "Cast iron for cornbread and steak, carbon steel for everything else. Get both eventually."
+    }
+   ]
+  },
+  "consensus": {
+   "text": "",
+   "items": [
+    {
+     "name": "Both last a lifetime if seasoned",
+     "kind": "agree"
+    },
+    {
+     "name": "Which is better for a first pan",
+     "kind": "dispute"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

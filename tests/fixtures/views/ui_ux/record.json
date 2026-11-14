@@ -1,0 +1,55 @@
+{
+ "title": "5 onboarding patterns that don't feel like homework",
+ "summary": "A walk-through of five onboarding patterns: progressive disclosure, a sample project, an empty state that teaches, a checklist with a reward, and deferred sign-up. Each is rebuilt in Figma with timing notes for the transitions.",
+ "key_points": [
+  {
+   "text": "Let people do one real thing before asking for an account.",
+   "at": "1:10"
+  },
+  {
+   "text": "Empty states should teach the next step.",
+   "at": "3:02"
+  }
+ ],
+ "type": "design",
+ "entities": {
+  "tools": [
+   "Figma",
+   "Framer"
+  ],
+  "skills_code": [],
+  "products": [],
+  "books_media": [],
+  "places": [],
+  "people": [],
+  "links": []
+ },
+ "extras": {},
+ "suggested_tags": [
+  "onboarding",
+  "ux",
+  "figma",
+  "product design"
+ ],
+ "link_targets": [
+  {
+   "name": "Figma",
+   "kind": "tool",
+   "role": "central",
+   "what": "design tool",
+   "domain": "",
+   "open_source": false,
+   "maker": ""
+  }
+ ],
+ "list_items": [],
+ "format": "tutorial",
+ "topic": "onboarding",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "ui_ux",
+ "category2": ""
+}

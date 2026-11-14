@@ -1,0 +1,115 @@
+{
+ "version": 1,
+ "category": "fitness",
+ "category2": "wellbeing",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "exercises": {
+   "text": "",
+   "items": [
+    {
+     "name": "Jumping jacks",
+     "at": "0:05",
+     "amount": "2 × 30 s",
+     "group": "Warm-up"
+    },
+    {
+     "name": "Arm circles",
+     "amount": "30 s each way",
+     "group": "Warm-up"
+    },
+    {
+     "name": "Bodyweight squats",
+     "detail": "Rest 45 s",
+     "at": "0:14",
+     "amount": "3 × 15",
+     "group": "Main"
+    },
+    {
+     "name": "Push-ups",
+     "detail": "Knees down is fine",
+     "at": "0:21",
+     "amount": "3 × 10",
+     "group": "Main"
+    },
+    {
+     "name": "Reverse lunges",
+     "amount": "3 × 10 each leg",
+     "group": "Main"
+    },
+    {
+     "name": "Plank",
+     "at": "0:28",
+     "amount": "3 × 40 s",
+     "group": "Finisher"
+    }
+   ]
+  },
+  "routine": {
+   "text": "",
+   "items": [
+    {
+     "name": "Full body (this workout)",
+     "group": "Monday"
+    },
+    {
+     "name": "30-minute walk",
+     "group": "Tuesday"
+    },
+    {
+     "name": "Full body (this workout)",
+     "group": "Wednesday"
+    },
+    {
+     "name": "Rest or stretch",
+     "group": "Thursday"
+    },
+    {
+     "name": "Full body, add 2 reps",
+     "group": "Friday"
+    }
+   ]
+  },
+  "form": {
+   "text": "",
+   "items": [
+    {
+     "name": "Squats",
+     "detail": "Knees track over toes, chest up"
+    },
+    {
+     "name": "Push-ups",
+     "detail": "Body in one line, elbows at 45°"
+    },
+    {
+     "name": "Plank",
+     "detail": "Squeeze glutes so the lower back stays flat"
+    }
+   ]
+  },
+  "equipment": {
+   "text": "",
+   "items": [
+    {
+     "name": "Exercise mat (optional)"
+    }
+   ]
+  },
+  "habits": {
+   "text": "",
+   "items": [
+    {
+     "name": "Book workouts in your calendar like meetings",
+     "amount": "3× a week"
+    },
+    {
+     "name": "Lay out your kit the night before",
+     "amount": "daily"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

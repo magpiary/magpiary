@@ -1,0 +1,30 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 89.5,
+   "text": "This is the Keyflux K75."
+  },
+  {
+   "start": 90,
+   "end": 179.5,
+   "text": "Here's the sound test."
+  },
+  {
+   "start": 180,
+   "end": 269.5,
+   "text": "Battery lasted three weeks with the light off."
+  },
+  {
+   "start": 270,
+   "end": 359.5,
+   "text": "It weighs nearly two kilos."
+  },
+  {
+   "start": 360,
+   "end": 449.5,
+   "text": "At this price, here are two alternatives."
+  }
+ ]
+}

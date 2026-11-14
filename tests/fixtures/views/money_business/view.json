@@ -1,0 +1,68 @@
+{
+ "version": 1,
+ "category": "money_business",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "takeaways": {
+   "text": "",
+   "items": [
+    {
+     "name": "Charge from day one; free users gave the worst feedback"
+    },
+    {
+     "name": "A weekly changelog email was the best retention tool"
+    },
+    {
+     "name": "Say no to custom work, even when it pays"
+    }
+   ]
+  },
+  "numbers": {
+   "text": "",
+   "items": [
+    {
+     "name": "Monthly recurring revenue",
+     "detail": "£8,000 after 14 months"
+    },
+    {
+     "name": "Churn",
+     "detail": "3% a month"
+    },
+    {
+     "name": "Annual plans",
+     "detail": "40% of new customers"
+    }
+   ]
+  },
+  "playbook": {
+   "text": "",
+   "items": [
+    {
+     "name": "Pick one niche community and answer questions there weekly"
+    },
+    {
+     "name": "Launch a paid plan in week one"
+    },
+    {
+     "name": "Send a changelog every Friday"
+    },
+    {
+     "name": "Offer two months free on annual plans"
+    }
+   ]
+  },
+  "companies": {
+   "text": "",
+   "items": [
+    {
+     "name": "Tallyleaf",
+     "detail": "Their invented example product"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

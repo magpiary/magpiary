@@ -1,0 +1,83 @@
+{
+ "version": 1,
+ "category": "gadgets",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "specs": {
+   "text": "",
+   "items": [
+    {
+     "name": "Layout",
+     "detail": "75%, 82 keys"
+    },
+    {
+     "name": "Switches",
+     "detail": "Silent linear, hot-swap"
+    },
+    {
+     "name": "Battery",
+     "detail": "About 3 weeks, backlight off"
+    },
+    {
+     "name": "Weight",
+     "detail": "1.9 kg"
+    },
+    {
+     "name": "Price",
+     "detail": "£189"
+    }
+   ]
+  },
+  "proscons": {
+   "text": "",
+   "items": [
+    {
+     "name": "Quietest switches in its class",
+     "kind": "pro"
+    },
+    {
+     "name": "Solid aluminium case",
+     "kind": "pro"
+    },
+    {
+     "name": "Long battery life",
+     "kind": "pro"
+    },
+    {
+     "name": "Heavy to carry",
+     "kind": "con"
+    },
+    {
+     "name": "Pricey for a 75%",
+     "kind": "con"
+    }
+   ]
+  },
+  "buy": {
+   "text": "",
+   "items": [
+    {
+     "name": "Keyflux K75",
+     "amount": "£189"
+    }
+   ]
+  },
+  "alternatives": {
+   "text": "",
+   "items": [
+    {
+     "name": "Typemouse Lite",
+     "detail": "Half the price, louder"
+    },
+    {
+     "name": "Clackbox 65",
+     "detail": "Smaller and lighter"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

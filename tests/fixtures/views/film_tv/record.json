@@ -1,0 +1,54 @@
+{
+ "title": "3 animated films for adults",
+ "summary": "A watch list of three well-known animated films, with a one-line reason for each and the directors named.",
+ "key_points": [],
+ "type": "other",
+ "entities": {
+  "tools": [],
+  "skills_code": [],
+  "products": [],
+  "books_media": [],
+  "places": [],
+  "people": [],
+  "links": []
+ },
+ "extras": {},
+ "suggested_tags": [
+  "film",
+  "animation",
+  "watch list"
+ ],
+ "link_targets": [],
+ "list_items": [
+  {
+   "name": "Spirited Away",
+   "kind": "film",
+   "by": "Hayao Miyazaki",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "Up",
+   "kind": "film",
+   "by": "Pete Docter",
+   "note": "",
+   "slide": 0
+  },
+  {
+   "name": "Persepolis",
+   "kind": "film",
+   "by": "Marjane Satrapi",
+   "note": "",
+   "slide": 0
+  }
+ ],
+ "format": "list",
+ "topic": "animated films",
+ "alternatives_to": "",
+ "discussion_summary": "",
+ "language": "en",
+ "look": "",
+ "facets": {},
+ "category": "film_tv",
+ "category2": ""
+}

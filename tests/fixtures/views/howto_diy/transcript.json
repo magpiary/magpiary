@@ -1,0 +1,35 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 89.5,
+   "text": "A dripping tap wastes a lot of water."
+  },
+  {
+   "start": 90,
+   "end": 179.5,
+   "text": "First, turn off the water under the sink."
+  },
+  {
+   "start": 180,
+   "end": 269.5,
+   "text": "Open the tap to drain it."
+  },
+  {
+   "start": 270,
+   "end": 359.5,
+   "text": "Pop off the cap and unscrew the handle."
+  },
+  {
+   "start": 360,
+   "end": 449.5,
+   "text": "Unscrew the headgear with a spanner."
+  },
+  {
+   "start": 450,
+   "end": 539.5,
+   "text": "Swap the washer and rebuild."
+  }
+ ]
+}

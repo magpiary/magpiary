@@ -1,0 +1,64 @@
+{
+ "version": 1,
+ "category": "learning",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "ideas": {
+   "text": "",
+   "items": [
+    {
+     "name": "Sunlight contains every colour"
+    },
+    {
+     "name": "Shorter wavelengths scatter much more off air molecules"
+    },
+    {
+     "name": "At sunset, light crosses more air, so mostly red and orange reach you"
+    }
+   ]
+  },
+  "glossary": {
+   "text": "",
+   "items": [
+    {
+     "name": "Rayleigh scattering",
+     "detail": "Light bouncing off particles much smaller than its wavelength"
+    },
+    {
+     "name": "Wavelength",
+     "detail": "The distance between peaks of a light wave; blue is shorter than red"
+    }
+   ]
+  },
+  "quiz": {
+   "text": "",
+   "items": [
+    {
+     "name": "Which colour scatters most in the air?",
+     "detail": "Blue (short wavelengths)"
+    },
+    {
+     "name": "Why are sunsets red?",
+     "detail": "The light passes through more air and the blue is scattered away first"
+    },
+    {
+     "name": "What is the scattering called?",
+     "detail": "Rayleigh scattering"
+    }
+   ]
+  },
+  "deeper": {
+   "text": "",
+   "items": [
+    {
+     "name": "Rayleigh scattering",
+     "detail": "The physics in more depth"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

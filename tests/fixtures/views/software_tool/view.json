@@ -1,0 +1,75 @@
+{
+ "version": 1,
+ "category": "software_tool",
+ "category2": "",
+ "by": "ai",
+ "made_at": "2026-11-14T10:00:00",
+ "engine": "fixture:none",
+ "tabs": {
+  "does": {
+   "text": "",
+   "items": [
+    {
+     "name": "Turns any bulleted list into a sortable table",
+     "group": "Does"
+    },
+    {
+     "name": "Works fully offline, syncs over your own folder",
+     "group": "Does"
+    },
+    {
+     "name": "Quick capture for meeting notes",
+     "group": "Good for"
+    },
+    {
+     "name": "Team wikis",
+     "group": "Not for"
+    }
+   ]
+  },
+  "alternatives": {
+   "text": "",
+   "items": [
+    {
+     "name": "Obsidian",
+     "detail": "Plugins for everything, steeper learning curve"
+    },
+    {
+     "name": "Apple Notes",
+     "detail": "Free and simple, no tables from lists"
+    }
+   ]
+  },
+  "pricing": {
+   "text": "",
+   "items": [
+    {
+     "name": "Free",
+     "detail": "Up to 100 notes"
+    },
+    {
+     "name": "Pro",
+     "detail": "£29 once, all features"
+    }
+   ]
+  },
+  "start": {
+   "text": "",
+   "items": [
+    {
+     "name": "Import a folder of Markdown notes",
+     "at": "2:10"
+    },
+    {
+     "name": "Type a list and press ⌘T",
+     "at": "2:40"
+    },
+    {
+     "name": "Pin your daily note",
+     "at": "3:05"
+    }
+   ]
+  }
+ },
+ "lookups": {}
+}

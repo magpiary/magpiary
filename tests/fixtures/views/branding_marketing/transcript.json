@@ -1,0 +1,30 @@
+{
+ "language": "en",
+ "segments": [
+  {
+   "start": 0,
+   "end": 7.5,
+   "text": "This oat milk brand had no budget."
+  },
+  {
+   "start": 8,
+   "end": 15.5,
+   "text": "So they made the cow the villain."
+  },
+  {
+   "start": 16,
+   "end": 23.5,
+   "text": "Every carton has one dry line."
+  },
+  {
+   "start": 24,
+   "end": 31.5,
+   "text": "People started posting them."
+  },
+  {
+   "start": 32,
+   "end": 39.5,
+   "text": "Here are the three tactics they used."
+  }
+ ]
+}
