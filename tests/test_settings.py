@@ -37,7 +37,8 @@ def test_every_page_with_technical_settings_ends_in_a_folded_advanced_block(mac)
         body = page(mac, f"/settings/{path}")[2]
         assert 'class="adv" id="advanced" data-adv' in body, path
         assert body.index("Advanced settings") > body.index("sgroup"), path
-    assert 'class="adv"' not in page(mac, "/settings/appearance")[2]  # everything there stays visible
+    look = page(mac, "/settings/appearance")[2]  # everything there stays visible, except the per-category post tabs
+    assert look.count('class="adv"') == 1 and look.index('class="adv"') > look.index('id="betamap"')  # (owner decision 6, 14 Nov)
 
 
 def test_what_moved_into_advanced_is_inside_it_and_the_rest_is_outside(mac):

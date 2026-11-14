@@ -1325,7 +1325,7 @@ class Store(ChatStore, StatsStore):
                   attention: bool = False, limit: int = 300, compact: bool = False) -> list[dict]:
         # Ranking and filtering the wall need only descriptors. Full records are fetched for visible tiles.
         columns = ("id, canonical_url, source, status, shelf, created_at, last_shared_at, published_at, "
-                   "archive_dir, thumb, ai_status, ai_type, author") if compact else "rowid AS id, *"
+                   "archive_dir, thumb, ai_status, ai_type, author, category, category_by, view_status") if compact else "rowid AS id, *"
         if shelf == "kept":  # search: the library and the archive together
             sql, args = [f"SELECT {columns} FROM items WHERE shelf IN ('inbox', 'archive')"], []
         else:

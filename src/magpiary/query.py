@@ -14,6 +14,16 @@ SOURCES = {"instagram": "instagram", "insta": "instagram", "threads": "threads",
 TYPES = {"recipe": "recipe", "recipes": "recipe", "tutorial": "howto", "tutorials": "howto", "how-to": "howto",
          "howto": "howto", "place": "place", "places": "place", "tool": "tool", "tools": "tool",
          "design": "design", "news": "news_opinion", "explainer": "explainer"}
+# words that name a post's category (categories.py); a word that is a type above stays a type ("recipes")
+CATEGORY_WORDS = {"music": "music", "songs": "music", "playlists": "music", "albums": "music",
+                  "travel": "travel", "trips": "travel", "restaurants": "food_places", "cafes": "food_places", "cafés": "food_places",
+                  "films": "film_tv", "movies": "film_tv", "books": "books",
+                  "fashion": "fashion", "outfits": "fashion", "interiors": "interiors", "fitness": "fitness", "workouts": "fitness",
+                  "workout": "fitness", "exercises": "fitness", "wellbeing": "wellbeing", "diy": "howto_diy", "events": "events_deals",
+                  "deals": "events_deals", "gadgets": "gadgets", "apps": "software_tool", "software": "software_tool",
+                  "coding": "ai_coding", "prompts": "ai_coding", "ui": "ui_ux", "ux": "ui_ux", "branding": "branding_marketing",
+                  "marketing": "branding_marketing", "finance": "money_business", "money": "money_business",
+                  "business": "money_business", "discussions": "discussion", "explainers": "learning"}
 MONTHS = ("january february march april may june july august september october november december").split()
 FILLER = set("the a an one that this those of from in on about with by me my i saw saved post posts video videos reel reels "
              "thing something where there is was it and for to".split())
@@ -21,7 +31,7 @@ FILLER = set("the a an one that this those of from in on about with by me my i s
 
 @dataclass
 class Part:
-    kind: str    # date | source | type | facet
+    kind: str    # date | source | type | category | facet
     key: str     # what to filter on
     value: str
     label: str   # shown on the chip
@@ -73,7 +83,7 @@ DATE_PHRASES = re.compile(r"\b(today|yesterday|this week|last week|this month|la
 
 
 def understand(query: str, known_facets: dict[str, dict[str, int]], type_name=lambda t: t, source_name=lambda s: s,
-               today: date | None = None, no: set[str] | None = None) -> Understood:
+               today: date | None = None, no: set[str] | None = None, category_name=lambda c: c) -> Understood:
     """Read dates, sources, types and known facet values out of `query`. `known_facets` is {facet: {value: count}};
     only values the library really has are used. Parts named in `no` are left as plain words."""
     today = today or datetime.now().date()
@@ -98,6 +108,9 @@ def understand(query: str, known_facets: dict[str, dict[str, int]], type_name=la
             text = re.sub(rf"\b(?:on |from )?{re.escape(word)}\b", " ", text, 1)
         elif word in TYPES and take(Part("type", "type", TYPES[word], type_name(TYPES[word]), word)):
             text = re.sub(rf"\b{re.escape(word)}\b", " ", text, 1)
+        elif word in CATEGORY_WORDS and take(Part("category", "category", CATEGORY_WORDS[word],
+                                                  category_name(CATEGORY_WORDS[word]), word)):
+            text = re.sub(rf"\b{re.escape(word)}\b", " ", text, 1)  # the hub filters by category (keep() ignores it)
     for facet, values in known_facets.items():
         for value in sorted(values, key=len, reverse=True):  # longest first: "screen recording" before "screen"
             if len(value) > 2 and re.search(rf"\b{re.escape(value)}\b", text):

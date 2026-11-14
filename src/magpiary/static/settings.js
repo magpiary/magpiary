@@ -443,3 +443,27 @@
   };
   poll();
 })();
+
+// ---- Advanced > Post tabs by category: a pill turns one tab on or off, saved quietly (no reload, the pill says it) ------
+(() => {
+  document.addEventListener("click", async (ev) => {
+    const b = ev.target.closest?.(".ptpills .ptpill");
+    if (!b) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if (b.dataset.busy) return;
+    const form = b.closest("form"), tab = b.dataset.tab, show = !b.classList.contains("on");
+    const data = new FormData(form);
+    data.delete("next");
+    data.append("toggle", `${tab}:${show ? "1" : "0"}`);
+    b.dataset.busy = "1";
+    b.classList.toggle("on", show); b.setAttribute("aria-pressed", String(show));
+    b.value = `${tab}:${show ? "0" : "1"}`;  // what the next press (or a plain form post) asks for
+    try {
+      const r = await fetch(form.getAttribute("action"), { method: "POST", body: new URLSearchParams(data), credentials: "same-origin", redirect: "manual" });
+      if (r.type !== "opaqueredirect" && !r.ok) throw new Error(String(r.status));
+    } catch {
+      b.classList.toggle("on", !show); b.setAttribute("aria-pressed", String(!show));  // not saved: put it back
+      b.value = `${tab}:${show ? "1" : "0"}`;
+    } finally { delete b.dataset.busy; }
+  }, true);
+})();

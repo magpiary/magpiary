@@ -1,0 +1,42 @@
+/* Contextual post tabs outside the post view (owner decisions 6 and 11, 14 Nov 2026): the Category filter on the wall,
+   Change category in a post's ... menu, and Settings > Appearance > Advanced > Post tabs by category.
+   Focus rings come from hub.css (keyboard only). Popovers keep the hub's solid surfaces: no backdrop blur. */
+
+/* ---- Filters: categories under their group ---- */
+.fcats .fcatg + .fcatg { margin-top: 10px; }
+.fcats .fcatg > small { display: block; margin: 0 0 6px; padding: 0; font-size: 12px; font-weight: 600; color: var(--fg-3); }
+.fcats .fchips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---- Change category, inside the post's ... menu ---- */
+details.catpick > summary { list-style: none; cursor: pointer; }
+details.catpick > summary::-webkit-details-marker { display: none; }
+details.catpick > summary .catnow { margin-left: auto; padding-left: 12px; color: var(--fg-3); font-size: 12.5px; font-weight: 600; }
+details.catpick > summary::after { content: "›"; color: var(--fg-3); margin-left: 6px; transition: transform .2s; }
+details.catpick[open] > summary::after { transform: rotate(90deg); }
+details.catpick[open] > summary { background: var(--chip); }
+.catlist { max-height: min(52vh, 420px); overflow: auto; overscroll-behavior: contain; margin: 4px 0 2px; padding: 2px 2px 4px;
+  border-top: 1px solid var(--line); }
+.catlist .cathint { margin: 8px 10px 4px; font-size: 12.5px; color: var(--fg-3); white-space: normal; }
+.catlist .catg { padding: 4px 0; }
+.catlist .catg + .catg { border-top: 1px solid var(--line); }
+.catlist .catgh { display: block; padding: 6px 10px 2px; font: 700 10.5px var(--sans); text-transform: uppercase; letter-spacing: .08em;
+  color: var(--fg-3); }
+.pop .catlist button.catopt { padding: 6px 10px; font-size: 13.5px; }
+.pop .catlist button.catopt.on { font-weight: 700; }
+.pop .catlist button.catopt.on::after { content: "✓"; margin-left: auto; color: var(--fg-2); }
+
+/* ---- Settings: Post tabs by category ---- */
+.ptgroup .ptgh { margin: 0; padding: 14px 18px 4px; font: 700 11px var(--sans); text-transform: uppercase; letter-spacing: .08em;
+  color: var(--fg-3); }
+.ptgroup .ptgh + .srow { border-top: 0; }
+.srow.ptrow { min-height: 0; padding-top: 10px; padding-bottom: 10px; }
+.srow.ptrow .srl { flex: 1 1 180px; }
+.ptpills { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0; }
+.ptpill { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--fg) 24%, transparent);
+  background: transparent; color: var(--fg-3); font-size: 13px; font-weight: 600; cursor: pointer;
+  text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--fg) 35%, transparent);
+  transition: background .15s, color .15s, border-color .15s; }
+.ptpill.on { border: 1px solid transparent; background: var(--chip); color: var(--fg); text-decoration: none; }
+.ptpill:hover { border-color: color-mix(in srgb, var(--fg) 30%, transparent); }
+.ptpill[data-busy] { opacity: .7; }
+@media (max-width: 700px) { .ptpills { justify-content: flex-start; } }

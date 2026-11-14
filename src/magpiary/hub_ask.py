@@ -31,8 +31,30 @@ def _record(item: dict) -> dict:
         return {}
 
 
+def post_starters(item: dict, base: list[str]) -> list[str]:
+    """A post's starters with its category's own questions (categories.py `ask`, owner decision 11): the first, "research
+    this properly" question stays first (owner, 29 Oct); then two that fit the category, or, when the post names its own
+    tool, place or recipe, one category question between the post's own. No AI call."""
+    from magpiary import categories as cats
+    from magpiary.hub_wall import post_category
+
+    category = post_category(item)
+    ask = cats.CATEGORIES[category].ask if category in cats.CATEGORIES and category != "other" else ()
+    if len(ask) < 2 or len(base) < 3:
+        return base
+    if tuple(base[1:]) == GENERIC[1:]:
+        return base[:1] + list(ask[:2])
+    return [base[0], ask[0], base[2]]  # questions about the post's own tool or place stay; one category question joins
+
+
 def suggestions(kind: str, items: list[dict], label: str) -> list[str]:
     """Three starting questions that fit what you are looking at (no AI call: made from the post's own details)."""
+    if kind == "post" and items:
+        return post_starters(items[0], _suggestions(kind, items, label))
+    return _suggestions(kind, items, label)
+
+
+def _suggestions(kind: str, items: list[dict], label: str) -> list[str]:
     if kind == "library":
         return ["What should I try first from my saves?", "Which tools in my saves compare best?", "What is new on a topic I save a lot?"]
     if kind != "post" or not items:
@@ -61,8 +83,11 @@ def suggestions(kind: str, items: list[dict], label: str) -> list[str]:
     if tool:
         return [f"Research {tool} more deeply: who makes it, what does it cost, and what do people say?",
                 f"Is {tool} any good, and what are the real alternatives?", f"Walk me through getting started with {tool}."]
-    return ["The summary isn't enough: research this more deeply and tell me what it leaves out.",
-            "Find the original source and check whether the claims hold up.", "What should I do with this? Give me a short plan."]
+    return list(GENERIC)
+
+
+GENERIC = ("The summary isn't enough: research this more deeply and tell me what it leaves out.",
+           "Find the original source and check whether the claims hold up.", "What should I do with this? Give me a short plan.")
 
 
 MIC = ('<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" '

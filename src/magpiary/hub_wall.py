@@ -8,10 +8,12 @@ would look different, the video and where its first key moment is, the photos). 
 import json
 import re
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from urllib.parse import quote, urlencode
 
+from magpiary import categories as cats
 from magpiary import keys as keyring
-from magpiary import modes, spotlight, ui
+from magpiary import modes, spotlight, ui, views
 from magpiary import related as rel
 from magpiary.activity import STEPS
 from magpiary.brain import TYPE_NAMES
@@ -41,6 +43,95 @@ FEATURE_NEW = {"s": 10, "m": 6, "l": 6}  # newest saves in Featured, by tile siz
 BIG_EVERY = 12  # one big tile (2x2) about every this many posts, in the sections below Featured
 BIG_MIN = 12  # a section needs this many posts before it gets one
 FEATURE_PAST_DAYS = 7  # how old "from your past" means
+
+
+# ---- categories on the wall (contextual post tabs, owner decision 11, 14 Nov 2026) ---------------------------------
+# The wall needs every post's category for its labels and the Category filter. A stored category (AI, owner) is used
+# as is; otherwise the same rules the post view uses (views.category_of) run once per post and are kept in memory until
+# the post changes. views.scores takes about 3 ms a post, too slow for a few thousand tiles, so the word test below gives
+# the same scores from one tokenising pass (a test checks they agree).
+
+_TOKEN = re.compile(r"[a-z0-9]+")
+
+
+def _word_tests() -> dict[str, tuple[list[str], list]]:
+    out = {}
+    for c in cats.CATEGORIES.values():
+        simple, hard = [], []
+        for w in c.words:
+            w = w.strip()
+            if _TOKEN.fullmatch(w):
+                simple.append(w)  # a plain word matches exactly when it is one whole token of the text
+            else:
+                hard.append((w, re.compile(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])")))
+        out[c.id] = (simple, hard)
+    return out
+
+
+_WORDS = _word_tests()
+
+
+def fast_scores(record: dict | None, meta: dict | None = None, item: dict | None = None) -> dict[str, float]:
+    """views.scores, quicker: the same points for the old type, format, list kinds and words."""
+    from magpiary.brain import type_of
+
+    record = record or {}
+    kind = type_of(record) if record.get("type") else (item or {}).get("ai_type") or ""
+    fmt = record.get("format") or ""
+    kinds = [x.get("kind") for x in record.get("list_items") or [] if isinstance(x, dict)]
+    text = views._text(record, meta, item)
+    tokens = set(_TOKEN.findall(text))
+    out: dict[str, float] = {}
+    for c in cats.CATEGORIES.values():
+        s = 0.0
+        if kind and kind in c.types:
+            s += 2
+        if fmt and fmt in c.formats:
+            s += 1
+        s += min(6, 2 * sum(1 for k in kinds if k in c.list_kinds))
+        simple, hard = _WORDS[c.id]
+        s += min(4, sum(1 for w in simple if w in tokens) + sum(1 for w, rx in hard if w in text and rx.search(text)))
+        if s:
+            out[c.id] = s
+    return out
+
+
+def fast_guess(record: dict | None, meta: dict | None = None, item: dict | None = None) -> str:
+    """views.guess's first category, from fast_scores."""
+    ranked = sorted(fast_scores(record, meta, item).items(), key=lambda kv: -kv[1])
+    return ranked[0][0] if ranked and ranked[0][1] >= 2 else "other"
+
+
+def _json(path: Path) -> dict | None:
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def post_category(item: dict) -> str:
+    """The category the post view would show (views.category_of): the owner's, the built view's, the stored one, else
+    the rules from record.json and meta.json. "" for a post that is not saved yet."""
+    if item.get("category_by") == "owner" and item.get("category") in cats.CATEGORIES:
+        return item["category"]
+    if item.get("status", "archived") != "archived" or not item.get("archive_dir"):
+        return ""
+    folder = Path(item["archive_dir"])
+    view = views.load(folder)
+    if view:
+        return view["category"]
+    if item.get("category") in cats.CATEGORIES:
+        return item["category"]
+    return fast_guess(_json(folder / "record.json"), _json(folder / "meta.json"), item)
+
+
+def category_counts(found: dict[int, str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for c in found.values():
+        if c:
+            counts[c] = counts.get(c, 0) + 1
+    return counts
 
 
 def empty_state(title: str, line: str, action: str = "") -> str:
@@ -180,7 +271,9 @@ class WallPages:
         on = ctx.get("boards_of", {}).get(item["canonical_url"], [])
         version = (f'{item["status"]}.{item.get("ai_status")}.{lane["step"] if lane else ""}.{item.get("shelf")}.'
                    + ",".join(b[2] for b in on))
-        base = (f'data-id="{item["id"]}" data-flip-id="t{item["id"]}" data-v="{e(version)}" '
+        category = self.categories_for([item]).get(item["id"], "") if item["status"] == "archived" else ""
+        version += f".{category}"
+        base = (f'data-id="{item["id"]}" data-flip-id="t{item["id"]}" data-v="{e(version)}" data-cat="{category}" '
                 f'data-url="{e(item["canonical_url"])}" data-shelf="{item.get("shelf", "inbox")}"'
                 + (f' data-pile="{ctx["pile_of"][item["canonical_url"]]}"' if item["canonical_url"] in ctx.get("pile_of", {}) else ""))
         if item["status"] == "needs_attention":
@@ -223,11 +316,12 @@ class WallPages:
         elif done:
             kind = item.get("ai_type") or "other"
             colour = ui.type_colour(item.get("ai_type"))
-            kind_name = ui.type_name(item.get("ai_type"))
+            kind_name = cats.name(category) or ui.type_name(item.get("ai_type"))  # the category names it (owner decision 11)
             sub = item.get("author") or src
         elif ctx["private"] or not ctx["summaries"]:
             colour = ui.source_colour(item["source"])
             sub = item.get("author") or src
+            kind_name = cats.name(category) if category != "other" else ""  # Private: the rules' category (decision 13)
             if not ctx["private"]:
                 badge = '<span class="sumb">✦ Summarise</span>'
             if item.get("ai_status") == "needs_attention" and not ctx["private"]:
@@ -251,7 +345,7 @@ class WallPages:
                 f'<a class="cover" href="{href}" aria-label="{e(title[:120])}"></a>'
                 f'<div class="sq">{art}<span class="src"><i class="sd" style="background:{ui.source_colour(item["source"])}"></i>{f'<i class="kd2" style="background:{ui.type_colour(kind)}"></i>' if kind else ""}{e(src)}{lock}</span>{solo}{badge_top}{prog}{q_html}{extra}{onb}</div>'
                 f'<div class="label"{label_style}><div class="t">{ui.mark(title, words)}</div>'
-                f'<div class="m">{who}{f'<span class="kind"><i class="kd" style="background:{ui.type_colour(kind)}"></i>{e(kind_name)}</span>' if kind else ""}{badge}</div>{summary}</div>{over}</div>')
+                f'<div class="m">{who}{f'<span class="kind"><i class="kd" style="background:{ui.type_colour(kind)}"></i>{e(kind_name)}</span>' if kind_name else ""}{badge}</div>{summary}</div>{over}</div>')
 
     def grid(self, items: list[dict], ctx: dict, over=None, words=None, big: set | None = None) -> str:
         """`over(item)` gives what sits on a tile: buttons (top right), or (buttons, a badge inside the picture).
@@ -279,6 +373,41 @@ class WallPages:
     def select_button(self) -> str:
         return (f'<button type="button" class="tbtn ibtn selbtn" id="selbtn" aria-pressed="false" aria-label="Select" title="Select">'
                 f'{ui.icon("select")}</button>')
+
+    # ---- categories (contextual post tabs) ----------------------------------------------------------
+
+    def categories_for(self, items: list[dict]) -> dict[int, str]:
+        """{item id: category} for these posts ("" before a post is saved), cached until the post changes."""
+        cache = self.__dict__.setdefault("_cat_cache", {})
+        out = {}
+        for i in items:
+            key = (i.get("status"), i.get("archive_dir"), i.get("ai_status"), i.get("ai_type"), i.get("category"),
+                   i.get("category_by"), i.get("view_status"))
+            hit = cache.get(i["id"])
+            if hit is None or hit[0] != key:
+                hit = (key, post_category(i))
+                cache[i["id"]] = hit
+            out[i["id"]] = hit[1]
+        return out
+
+    def category_menu(self, item: dict, record: dict | None = None) -> str:
+        """Change category, inside the post's ... menu: a fold listing the categories by group; picking one posts to
+        /hub/pv/category, which rebuilds the post's tabs (owner decision 6)."""
+        if item.get("status") != "archived" or item.get("shelf") in ("trash", "board"):
+            return ""
+        now = self.categories_for([item]).get(item["id"]) or "other"
+        groups = []
+        for gid, gname in cats.GROUPS.items():
+            opts = "".join(
+                f'<button type="submit" name="category" value="{c.id}" class="catopt{" on" if c.id == now else ""}" '
+                f'aria-pressed="{str(c.id == now).lower()}">{e(c.name)}</button>'
+                for c in cats.CATEGORIES.values() if c.group == gid)
+            if opts:
+                groups.append(f'<div class="catg" role="group" aria-label="{e(gname)}"><b class="catgh">{e(gname)}</b>{opts}</div>')
+        return (f'<details class="catpick"><summary class="mi">Category<span class="catnow">{e(cats.name(now))}</span></summary>'
+                f'<form method="post" action="/hub/pv/category" class="catlist">'
+                f'{ui.hidden(self.csrf, id=item["id"], next=f"/item/{item['id']}")}'
+                f'<p class="cathint">What is this post? Its tabs follow the category.</p>{"".join(groups)}</form></details>')
 
     # ---- the wall ---------------------------------------------------------------------------
 
@@ -317,7 +446,7 @@ class WallPages:
             body, tabs = self.boards_view(q), self._views("boards", f'<div class="tools">{self.size_control()}</div>')
         else:
             body, tabs = self._everything(q, items, ctx)
-        if not items and view == "everything" and not any(q.get(k) for k in ("source", "tag", "type", "links", "attention", "author", "deep")):
+        if not items and view == "everything" and not any(q.get(k) for k in ("source", "tag", "type", "links", "attention", "author", "deep", "cat")):
             body = empty_state("Your library is empty", "Share a post from your iPhone with <b>Share → Magpiary</b>, or "
                                "paste a link.", '<a class="btn dark" href="/add">Add a post</a>'
                                '<a class="btn" href="/welcome">Open the setup guide</a>')
@@ -357,13 +486,14 @@ class WallPages:
 
     def _everything(self, q: dict, items: list[dict], ctx: dict, part: int = 0) -> tuple[str, str]:
         source, tag, kind = q.get("source", ""), q.get("tag", ""), q.get("type", "")
+        cat = q.get("cat", "") if q.get("cat", "") in cats.CATEGORIES else ""
         author = q.get("author", "")
         links, attention = q.get("links") == "1", q.get("attention") == "1"
         deep = q.get("deep") == "suggested"  # long videos that could use a deeper dive (Settings links here)
         trend = q.get("sort") == "trending"
         popular = q.get("sort") == "popular" or trend  # trending is a popularity order too: same layout, different ranking
         state = {"source": source, "tag": tag, "author": author, "type": kind, "links": "1" if links else "", "attention": "1" if attention else "",
-                 "deep": "suggested" if deep else "", "sort": "trending" if trend else "popular" if popular else ""}
+                 "deep": "suggested" if deep else "", "sort": "trending" if trend else "popular" if popular else "", "cat": cat}
 
         def link(**change) -> str:
             params = {k: v for k, v in {**state, **change}.items() if v}
@@ -377,10 +507,21 @@ class WallPages:
             if i.get("ai_status") == "done":
                 types[i.get("ai_type") or "other"] = types.get(i.get("ai_type") or "other", 0) + 1
 
-        def chip(href: str, on: bool, label: str, colour: str = "", n=None) -> str:
-            return (f'<a class="fchip{" on" if on else ""}" href="{e(href)}">'
+        def chip(href: str, on: bool, label: str, colour: str = "", n=None, extra: str = "") -> str:
+            return (f'<a class="fchip{" on" if on else ""}" href="{e(href)}"{extra}>'
                     + (f'<i style="background:{colour}"></i>' if colour else "") + f'{e(label)}'
                     + (f'<span class="n">{n}</span>' if n is not None else "") + "</a>")
+
+        cat_of = self.categories_for(items)
+        cat_n = category_counts(cat_of)
+        cat_groups = []  # the categories the library has, under their group (22 chips in one row would be a wall)
+        for gid, gname in cats.GROUPS.items():
+            here = sorted((c for c in cats.CATEGORIES.values() if c.group == gid and (cat_n.get(c.id) or c.id == cat)),
+                          key=lambda c: -cat_n.get(c.id, 0))
+            if here:
+                cat_groups.append(f'<div class="fcatg"><small>{e(gname)}</small><div class="fchips">'
+                                  + "".join(chip(link(cat="" if c.id == cat else c.id), c.id == cat, c.name, "", cat_n.get(c.id, 0),
+                                                 f' data-cat="{c.id}"') for c in here) + "</div></div>")
 
         src_chips = "".join(chip(link(source="" if s == source else s), s == source, ui.source_name(s), ui.source_colour(s), n)
                             for s, n in sorted(counts["sources"].items(), key=lambda kv: -kv[1]))
@@ -389,9 +530,10 @@ class WallPages:
         toggles = (chip(link(links="" if links else "1"), links, "Has links", "", n_links)
                    + (chip(link(attention="" if attention else "1"), attention, "Needs you", "var(--bad)", counts["attention"])
                       if counts["attention"] or attention else ""))
-        active = sum(bool(x) for x in (source, kind, links, attention, tag, author, deep))
+        active = sum(bool(x) for x in (source, kind, links, attention, tag, author, deep, cat))
         panel = (f'<div class="pop fpanel" role="dialog" aria-label="Filters"><div class="fgroup"><h5>Sources</h5>'
                  f'<div class="fchips">{src_chips}</div></div>'
+                 + (f'<div class="fgroup fcats"><h5>Categories</h5>{"".join(cat_groups)}</div>' if cat_groups else "")
                  + (f'<div class="fgroup"><h5>Types</h5><div class="fchips">{type_chips}</div></div>' if type_chips else "")
                  + f'<div class="fgroup"><h5>Show only</h5><div class="fchips">{toggles}</div></div>'
                  + f'<div class="fgroup"><h5>Order</h5><div class="fchips">{chip(link(sort=""), not popular, "Newest first")}'
@@ -405,6 +547,8 @@ class WallPages:
             actives.append(chip(link(sort=""), True, "Trending" if trend else "Most popular"))
         if source:
             actives.append(chip(link(source=""), True, ui.source_name(source), ui.source_colour(source)))
+        if cat:
+            actives.append(chip(link(cat=""), True, cats.name(cat)))
         if kind:
             actives.append(chip(link(type=""), True, TYPE_NAMES.get(kind, kind), ui.type_colour(kind)))
         if links:
@@ -432,10 +576,11 @@ class WallPages:
                  and (not attention or i["status"] == "needs_attention")
                  and (not tag or tag in i["tags"])
                  and (not author or i.get("author") == author)
-                 and (not deep or i["canonical_url"] in deep_urls)]
+                 and (not deep or i["canonical_url"] in deep_urls)
+                 and (not cat or cat_of.get(i["id"]) == cat)]
         controls = self._views("everything", filters) + chips + tag_on
         if not shown:
-            return (empty_state("Nothing matches these filters", "Try another source or type, or clear them all.",
+            return (empty_state("Nothing matches these filters", "Try another source, type or category, or clear them all.",
                                 '<a class="btn dark" href="/">Clear filters</a>'), controls)
         today = datetime.now().astimezone().date()
         stats_by = self.store.stats_all() if (popular or not (active or q.get("q"))) else {}
@@ -607,14 +752,19 @@ class WallPages:
 
     def find(self, query: str, no: set, words_only: bool = False):
         """The search itself: what was understood in the query, then the words and meaning left over, then the filters."""
-        got = understand(query, self.store.facet_counts(), ui.type_name, ui.source_name, no=no)
+        got = understand(query, self.store.facet_counts(), ui.type_name, ui.source_name, no=no, category_name=cats.name)
         words = re.findall(r"\w+", got.rest, flags=re.UNICODE)[:12]
         items = self.store.hub_items("kept", got.rest if words else "", limit=5000 if got.parts else 300)
         if words and not words_only:
             items = self._with_meaning(got.rest, items)
         wanted = [(p.key, p.value) for p in got.parts if p.kind == "facet"]
         with_facets = self.store.urls_with_facets(wanted) if wanted else None
-        return [i for i in items if keep(i, got, with_facets)], got, words
+        items = [i for i in items if keep(i, got, with_facets)]
+        wanted_cats = {p.value for p in got.parts if p.kind == "category"}
+        if wanted_cats:  # "music", "travel", "workouts": the post's category (query.CATEGORY_WORDS)
+            cat_of = self.categories_for(items)
+            items = [i for i in items if cat_of.get(i["id"]) in wanted_cats]
+        return items, got, words
 
     def search_page(self, query: str, flash: str = "", words_only: bool = False, no: set | None = None) -> Response:
         no = no or set()

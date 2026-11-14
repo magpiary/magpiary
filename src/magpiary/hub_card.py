@@ -383,6 +383,7 @@ class CardPages:
         if item["status"] == "archived":
             acts.append(f'<button type="button" class="mi" data-addboard="{item["id"]}">Add to board…</button>')
         acts.append(f'<button type="button" class="mi pmi" data-copylink="{e(item["canonical_url"])}">Copy link</button>')  # shown on a phone only (its toolbar has no room for the icon)
+        acts.append(self.category_menu(item, record))  # Change category (hub_wall.py, contextual tabs)
         acts.append(extra_menu)
         if item["shelf"] != "trash":
             acts.append(self._form("/hub/shelf", {"id": item["id"], "shelf": "trash", "next": "/"}, "Remove…", "mi bad",
