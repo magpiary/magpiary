@@ -23,15 +23,31 @@ SONGS = "https://www.instagram.com/reel/ExampleLibSongs/"
 CAT = "https://www.instagram.com/reel/ExampleLibCat/"
 
 
-# ---- the quick scorer agrees with views.scores ---------------------------------------------------------------------
+# ---- views.scores (one token pass) gives the points of the plain whole-word rule it replaced ----------------------
+
+def _reference_scores(record, meta=None):
+    """The first rules scorer: one whole-word regex per category word (about 3 ms a post). The oracle for views.scores."""
+    from magpiary.brain import type_of
+    kind = type_of(record) if record.get("type") else ""
+    kinds = [x.get("kind") for x in record.get("list_items") or [] if isinstance(x, dict)]
+    text = views._text(record, meta, None)
+    out = {}
+    for c in cats.CATEGORIES.values():
+        s = (2 if kind and kind in c.types else 0) + (1 if record.get("format") and record["format"] in c.formats else 0)
+        s += min(6, 2 * sum(1 for k in kinds if k in c.list_kinds))
+        s += min(4, sum(1 for w in c.words if re.search(r"(?<![a-z0-9])" + re.escape(w.strip()) + r"(?![a-z0-9])", text)))
+        if s:
+            out[c.id] = s
+    return out
+
 
 @pytest.mark.parametrize("want,record", GUESSES, ids=[g[0] for g in GUESSES])
-def test_fast_scores_match_the_rules(want, record):
-    assert hub_wall.fast_scores(record) == views.scores(record)
-    assert hub_wall.fast_guess(record) == views.guess(record)[0] == want
+def test_scores_match_the_reference_rule(want, record):
+    assert views.scores(record) == _reference_scores(record)
+    assert views.guess(record)[0] == want
 
 
-def test_fast_scores_match_on_every_category_word():
+def test_scores_match_on_every_category_word():
     words = [w for c in cats.CATEGORIES.values() for w in c.words]
     rng = random.Random(7)
     for _ in range(300):
@@ -39,7 +55,7 @@ def test_fast_scores_match_on_every_category_word():
         glue = rng.choice([" ", "-", ", ", "s ", "x"])
         record = {"title": glue.join(picked), "suggested_tags": rng.sample(words, 2), "type": rng.choice(["tool", "place", "other"])}
         meta = {"text": "Caption: " + " ".join(rng.sample(words, 4)) + " café!"}
-        assert hub_wall.fast_scores(record, meta) == views.scores(record, meta), record
+        assert views.scores(record, meta) == _reference_scores(record, meta), record
 
 
 # ---- a small library -------------------------------------------------------------------------------------------------
@@ -72,7 +88,7 @@ def _tile(body, item_id):
 
 
 def _kind(tile):
-    m = re.search(r'<span class="kind"><i class="kd"[^>]*></i>([^<]*)</span>', tile)
+    m = re.search(r'<span class="kind(?: long)?"><i class="kd"[^>]*></i><span class="kn">([^<]*)</span></span>', tile)
     return html.unescape(m.group(1)) if m else ""
 
 

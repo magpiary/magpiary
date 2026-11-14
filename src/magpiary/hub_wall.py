@@ -48,58 +48,9 @@ FEATURE_PAST_DAYS = 7  # how old "from your past" means
 # ---- categories on the wall (contextual post tabs, owner decision 11, 14 Nov 2026) ---------------------------------
 # The wall needs every post's category for its labels and the Category filter. A stored category (AI, owner) is used
 # as is; otherwise the same rules the post view uses (views.category_of) run once per post and are kept in memory until
-# the post changes. views.scores takes about 3 ms a post, too slow for a few thousand tiles, so the word test below gives
-# the same scores from one tokenising pass (a test checks they agree).
+# the post changes.
 
-_TOKEN = re.compile(r"[a-z0-9]+")
-
-
-def _word_tests() -> dict[str, tuple[list[str], list]]:
-    out = {}
-    for c in cats.CATEGORIES.values():
-        simple, hard = [], []
-        for w in c.words:
-            w = w.strip()
-            if _TOKEN.fullmatch(w):
-                simple.append(w)  # a plain word matches exactly when it is one whole token of the text
-            else:
-                hard.append((w, re.compile(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])")))
-        out[c.id] = (simple, hard)
-    return out
-
-
-_WORDS = _word_tests()
-
-
-def fast_scores(record: dict | None, meta: dict | None = None, item: dict | None = None) -> dict[str, float]:
-    """views.scores, quicker: the same points for the old type, format, list kinds and words."""
-    from magpiary.brain import type_of
-
-    record = record or {}
-    kind = type_of(record) if record.get("type") else (item or {}).get("ai_type") or ""
-    fmt = record.get("format") or ""
-    kinds = [x.get("kind") for x in record.get("list_items") or [] if isinstance(x, dict)]
-    text = views._text(record, meta, item)
-    tokens = set(_TOKEN.findall(text))
-    out: dict[str, float] = {}
-    for c in cats.CATEGORIES.values():
-        s = 0.0
-        if kind and kind in c.types:
-            s += 2
-        if fmt and fmt in c.formats:
-            s += 1
-        s += min(6, 2 * sum(1 for k in kinds if k in c.list_kinds))
-        simple, hard = _WORDS[c.id]
-        s += min(4, sum(1 for w in simple if w in tokens) + sum(1 for w, rx in hard if w in text and rx.search(text)))
-        if s:
-            out[c.id] = s
-    return out
-
-
-def fast_guess(record: dict | None, meta: dict | None = None, item: dict | None = None) -> str:
-    """views.guess's first category, from fast_scores."""
-    ranked = sorted(fast_scores(record, meta, item).items(), key=lambda kv: -kv[1])
-    return ranked[0][0] if ranked and ranked[0][1] >= 2 else "other"
+LONG_KIND = 11  # a category name longer than this ("Books & reading") leaves room on a tile for the author's avatar only
 
 
 def _json(path: Path) -> dict | None:
@@ -123,7 +74,7 @@ def post_category(item: dict) -> str:
         return view["category"]
     if item.get("category") in cats.CATEGORIES:
         return item["category"]
-    return fast_guess(_json(folder / "record.json"), _json(folder / "meta.json"), item)
+    return views.guess(_json(folder / "record.json"), _json(folder / "meta.json"), item)[0]
 
 
 def category_counts(found: dict[int, str]) -> dict[str, int]:
@@ -338,7 +289,7 @@ class WallPages:
         q_html = (f'<div class="quote"><small>{e(quote[0])}</small>{ui.mark(quote[1], words)}</div>' if quote else "")
         summary = (f'<div class="s"><span class="stxt">{e((item.get("summary") or "")[:300])}</span></div>'
                    if done and item.get("summary") else "")
-        who = (f'<a class="who" href="/?{urlencode({"author": item["author"]})}" title="All posts by {e(item["author"])}">'
+        who = (f'<a class="who" href="/?{urlencode({"author": item["author"]})}" title="All posts by {e(item["author"])}" aria-label="All posts by {e(item["author"])}">'
                f'{ui.avatar(item["author"], "rgba(255,255,255,.2)", "", "mini")}<span class="step">{e(sub)}</span></a>'
                if item.get("author") and not pend else f'<span class="step">{e(sub)}</span>')
         label_style = f' style="--lc:{ui.deep(colour)}"' if colour and not pend else ""  # used by the Coloured look only
@@ -346,7 +297,7 @@ class WallPages:
                 f'<a class="cover" href="{href}" aria-label="{e(title[:120])}"></a>'
                 f'<div class="sq">{art}<span class="src"><i class="sd" style="background:{ui.source_colour(item["source"])}"></i>{f'<i class="kd2" style="background:{dot}"></i>' if kind else ""}{e(src)}{lock}</span>{solo}{badge_top}{prog}{q_html}{extra}{onb}</div>'
                 f'<div class="label"{label_style}><div class="t">{ui.mark(title, words)}</div>'
-                f'<div class="m">{who}{f'<span class="kind"><i class="kd" style="background:{dot}"></i>{e(kind_name)}</span>' if kind_name else ""}{badge}</div>{summary}</div>{over}</div>')
+                f'<div class="m">{who}{f'<span class="kind{" long" if len(kind_name) > LONG_KIND else ""}"><i class="kd" style="background:{dot}"></i><span class="kn">{e(kind_name)}</span></span>' if kind_name else ""}{badge}</div>{summary}</div>{over}</div>')
 
     def grid(self, items: list[dict], ctx: dict, over=None, words=None, big: set | None = None) -> str:
         """`over(item)` gives what sits on a tile: buttons (top right), or (buttons, a badge inside the picture).

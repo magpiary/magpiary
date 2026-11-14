@@ -339,7 +339,7 @@ def _card(tab, it: dict, view: dict, item: dict, index: int, number: str = "") -
                  f'{e(urlsplit(url).hostname or "Link")}<span aria-hidden="true">↗</span></a>')
     links = _link_buttons(links_for(tab, it, view, item), it["name"])
     num = f'<span class="pvpin" aria-hidden="true">{e(number)}</span>' if number else ""
-    group = f'<small class="pvcardg">{e(it["group"])}</small>' if it.get("group") and tab.render == "cards" else ""
+    group = f'<small class="pvcardg">{e(it["group"])}</small>' if it.get("group") and tab.render in ("cards", "places") else ""
     return (f'<li class="pvcard" id="pvc-{e(tab.id)}-{index}" tabindex="-1"><div class="pvch">{num}<span class="pvname">'
             f'{e(it["name"])}</span>{_at(it)}</div>{group}'
             + (f'<div class="pvchips">{chips}</div>' if chips else "")
@@ -387,11 +387,11 @@ def _places(tab, body, view, state, item) -> str:
             numbers[i] = str(len(points))
     tab_maps = tab if any(p in tab.providers for p in ("google_maps", "apple_maps", "osm")) else cats.Tab(
         tab.id, tab.label, tab.render, tab.ai, providers=("google_maps", "apple_maps") + tuple(tab.providers))
-    parts = [map_svg(points, tab.id)] if points else []
-    for group, rows in _groups(items):
-        cards = "".join(_card(tab_maps, it, view, item, i, numbers.get(i, "")) for i, it in rows)
-        parts.append(_heading(group) + f'<ul class="pvcards pvplaces">{cards}</ul>')
-    return "".join(parts)
+    # one grid, each card naming its area: a heading per area left a column of lone half-width cards when most areas
+    # hold one place (polish round 1, 14 Nov)
+    cards = "".join(_card(tab_maps, it, view, item, i, numbers.get(i, "")) for i, it in enumerate(items))
+    return (map_svg(points, tab.id) if points else "") + f'<ul class="pvcards pvplaces">{cards}</ul>'
+
 
 
 def _ink(hex_: str) -> str:

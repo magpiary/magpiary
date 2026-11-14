@@ -152,3 +152,20 @@ def test_narrow_window_fixes_found_in_the_sandbox():
     assert ":not(.pvprov)" in rule
     # More menu items were --fg-3 (the row's quiet unselected tabs) and looked disabled; they are choices: --fg
     assert re.search(r"\.tabs\.pvtabs \.pvmorelist a \{[^}]*color: var\(--fg\);", css)
+
+
+def test_tiles_with_a_long_category_show_the_avatar_and_the_category(mac, loaded):
+    """Polish round 3: "Design inspiration" squeezed the author's name on a tile to two letters."""
+    body = page(mac, "/")[2]
+    assert '<span class="kind long"><i class="kd"' in body and ">Design inspiration</span>" in body
+    assert '<span class="kind"><i class="kd"' in body and ">Music</span>" in body  # a short name keeps the author
+    css = (Path(views.__file__).parent / "static" / "views-lib.css").read_text()
+    assert ".label .m:has(.kind.long) .who .step { display: none; }" in css
+
+
+def test_the_summary_does_not_repeat_what_a_tab_shows(mac, loaded):
+    """Polish round 1: the recipe's Summary listed Ingredients and Steps again under the Ingredients and Method tabs."""
+    body = page(mac, f"/item/{loaded['recipe']}")[2]
+    summary = body.split('data-pane="sum"')[1].split("</section>")[0]
+    assert "<h4>Ingredients</h4>" not in summary and "<h4>Steps</h4>" not in summary
+    assert 'data-tab="ingredients"' in body and 'data-tab="method"' in body

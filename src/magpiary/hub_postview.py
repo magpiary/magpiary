@@ -7,15 +7,15 @@ Three POST routes (all behind `_post`'s same-origin, CSRF and lock checks):
                                             free tabs follow at once (views.current builds them on every open).
 With a `next` field the reply is a redirect there (plain forms, no JavaScript); without one it is JSON.
 
-Also the parts of the post view the card needs: a category tab's pane (drawn by `hub_views.render_tab` when that
-module exists, else the plain list below) and the "Build this view" strip inside the Summary.
+Also the parts of the post view the card needs: a category tab's pane (drawn by `hub_views.render_tab`) and the
+"Build this view" strip inside the Summary.
 """
 
 import json
 import re
 
 from magpiary import categories as cats
-from magpiary import modes, ui, views
+from magpiary import hub_views, modes, ui, views
 from magpiary.web import Response, e
 
 KEY = re.compile(r"[A-Za-z0-9_.:-]{1,80}")
@@ -24,23 +24,6 @@ MAX_VALUE = 200
 
 def _safe(target: str) -> str:
     return target if target.startswith("/") and not target.startswith("//") else "/"
-
-
-def plain_tab(tab: cats.Tab, body: dict) -> str:
-    """The fallback for a category tab: its text and its items as a list, everything escaped (untrusted post/AI text)."""
-    rows = []
-    group = None
-    for it in body.get("items") or []:
-        if it.get("group") and it["group"] != group:
-            group = it["group"]
-            rows.append(f'<li class="pvgroup"><strong>{e(group)}</strong></li>')
-        extra = " · ".join(e(it[k]) for k in ("amount", "detail") if it.get(k))
-        at = f' <small class="pvat">{e(it["at"])}</small>' if it.get("at") else ""
-        value = f'<pre class="pvvalue">{e(it["value"])}</pre>' if it.get("value") else ""
-        rows.append(f'<li><span class="pvname">{e(it["name"])}</span>{" · " + extra if extra else ""}{at}{value}</li>')
-    text = f'<p class="it-sum sm">{e(body["text"])}</p>' if body.get("text") else ""
-    return (text + (f'<ul class="pvlist" data-render="{e(tab.render)}">{"".join(rows)}</ul>' if rows else "")
-            or f'<p class="muted">{e(tab.empty_text)}</p>')
 
 
 class PostViewPages:
@@ -94,15 +77,9 @@ class PostViewPages:
     # ---- parts of the post view ---------------------------------------------------------------------------------
 
     def category_pane(self, tab_id: str, view: dict, state: dict, item: dict) -> str:
-        """One category tab's pane. `state` is the post's whole view_state ({tab: {key: value}})."""
+        """One category tab's pane, drawn by hub_views. `state` is the post's whole view_state ({tab: {key: value}})."""
         tab, body = cats.TABS[tab_id], (view.get("tabs") or {}).get(tab_id) or {"text": "", "items": []}
-        try:
-            from magpiary import hub_views
-        except ImportError:
-            hub_views = None
-        if hub_views is not None and hasattr(hub_views, "render_tab"):
-            return hub_views.render_tab(tab, body, view, state.get(tab_id, {}), item)
-        return plain_tab(tab, body)
+        return hub_views.render_tab(tab, body, view, state.get(tab_id, {}), item)
 
     def build_strip(self, item: dict, view: dict) -> str:
         """Inside the Summary: offer to build this post's view (old posts; owner decision 2). Empty when there is
@@ -116,7 +93,7 @@ class PostViewPages:
             how = ("Turn on Smart mode to build them." if modes.current(self.store) == "private"
                    else "Add an AI key to build them.")  # Smart chosen, but nothing can write
             return (f'<p class="pvbuild pvhint" role="note"><span>This category’s tabs are written by AI. {how}</span>'
-                    '<a class="btn sm" href="/settings/ai">AI settings</a></p>')
+                    '<a class="btn sm dark" href="/settings/ai">AI settings</a></p>')
         name = cats.name(view.get("category", ""))
         status = item.get("view_status") or ""
         if status in ("queued", "working"):
@@ -126,4 +103,4 @@ class PostViewPages:
         return (f'<form class="pvbuild" method="post" action="/hub/pv/build" data-pvbuild="">'
                 f'{ui.hidden(self.csrf, id=item["id"], next=f"/item/{item['id']}")}'
                 f'<span>This looks like <strong>{e(name)}</strong>. {failed}Build its tabs with your AI (one call).</span>'
-                f'<button class="btn sm" type="submit">Build this view</button></form>')
+                f'<button class="btn sm dark" type="submit">Build this view</button></form>')

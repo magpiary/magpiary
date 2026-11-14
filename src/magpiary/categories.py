@@ -268,10 +268,6 @@ def name(category: str) -> str:
     return CATEGORIES[category].name if category in CATEGORIES else ""
 
 
-def tabs_for(category: str) -> list[Tab]:
-    return [TABS[t] for t in CATEGORIES[category].tabs] if category in CATEGORIES else []
-
-
 def check() -> list[str]:
     """Problems in the registry itself (a test runs this): unknown tabs, renders, sources, clashing ids."""
     problems = []

@@ -116,8 +116,30 @@ def _text(record: dict | None, meta: dict | None, item: dict | None) -> str:
     return " " + re.sub(r"\s+", " ", " ".join(str(p) for p in parts if p)).lower() + " "
 
 
+_TOKEN = re.compile(r"[a-z0-9]+")
+
+
+def _word_tests() -> dict[str, tuple[set[str], list]]:
+    """Per category: its plain words (each one whole token of the text) and its other words (phrases, "ad ", "café")
+    with a whole-word pattern. Built once: the wall scores every post that has no stored category."""
+    out = {}
+    for c in cats.CATEGORIES.values():
+        simple, hard = set(), []
+        for w in (w.strip() for w in c.words):
+            if _TOKEN.fullmatch(w):
+                simple.add(w)
+            else:
+                hard.append((w, re.compile(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])")))
+        out[c.id] = (simple, hard)
+    return out
+
+
+_WORDS = _word_tests()
+
+
 def scores(record: dict | None, meta: dict | None = None, item: dict | None = None) -> dict[str, float]:
-    """How strongly each category fits, from the old type and format, a list post's kinds and words. No AI."""
+    """How strongly each category fits, from the old type and format, a list post's kinds and words. No AI. One
+    tokenising pass for the plain words (about 0.2 ms a post, fast enough for a wall of a few thousand tiles)."""
     from magpiary.brain import type_of
 
     record = record or {}
@@ -125,6 +147,7 @@ def scores(record: dict | None, meta: dict | None = None, item: dict | None = No
     fmt = record.get("format") or ""
     kinds = [x.get("kind") for x in record.get("list_items") or [] if isinstance(x, dict)]
     text = _text(record, meta, item)
+    tokens = set(_TOKEN.findall(text))
     out: dict[str, float] = {}
     for c in cats.CATEGORIES.values():
         s = 0.0
@@ -133,7 +156,8 @@ def scores(record: dict | None, meta: dict | None = None, item: dict | None = No
         if fmt and fmt in c.formats:
             s += 1
         s += min(6, 2 * sum(1 for k in kinds if k in c.list_kinds))
-        s += min(4, sum(1 for w in c.words if re.search(r"(?<![a-z0-9])" + re.escape(w.strip()) + r"(?![a-z0-9])", text)))
+        simple, hard = _WORDS[c.id]
+        s += min(4, len(simple & tokens) + sum(1 for w, rx in hard if w in text and rx.search(text)))
         if s:
             out[c.id] = s
     return out
