@@ -169,17 +169,151 @@ def test_homebrew_installs_use_the_stable_opt_path_and_brew_upgrade(monkeypatch)
     assert update.from_homebrew() and "brew upgrade magpiary" in update.install("9.0.0")
 
 
-def test_the_mac_app_is_sent_to_the_release_page_not_uv(monkeypatch):
-    monkeypatch.setenv("MAGPIARY_PROGRAM", "/Applications/Magpiary.app/Contents/Resources/python/bin/magpiary")
+def _app(tmp_path, monkeypatch):
+    app = tmp_path / "Applications" / "Magpiary.app"
+    (app / "Contents").mkdir(parents=True)
+    monkeypatch.setenv("MAGPIARY_PROGRAM", f"{app}/Contents/Resources/python/bin/magpiary")
+    monkeypatch.setenv("MAGPIARY_HOME", str(tmp_path / "home"))
+    return app
 
-    def forbidden(cmd, timeout):
-        raise AssertionError("the app must not run an installer")
 
-    assert update.RELEASES_PAGE in update.install("9.0.0", run=forbidden)
+def _fake_download(dmg_bytes, sums_for=None, name="Magpiary-9.0.0.dmg", seen=None):
+    import hashlib
+    digest = hashlib.sha256(sums_for if sums_for is not None else dmg_bytes).hexdigest()
+
+    def download(url, to, limit=None):
+        if seen is not None:
+            seen.append((url, limit))
+        to.write_bytes(dmg_bytes if url.endswith(".dmg") else f"{digest}  {name}\n".encode())
+        return True
+    return download
 
 
-def test_the_banner_in_the_mac_app_links_to_the_download(mac, monkeypatch):
+def test_the_mac_app_downloads_the_offered_version_checks_it_and_hands_over_to_a_helper(tmp_path, monkeypatch):
+    app = _app(tmp_path, monkeypatch)
+    spawned, seen = [], []
+    assert update.install_app("9.0.0", _fake_download(b"disk image", seen=seen), spawned.append) is None
+    assert [u for u, _ in seen] == [f"{update.RELEASE_BASE}/v9.0.0/Magpiary-9.0.0.dmg", f"{update.RELEASE_BASE}/v9.0.0/SHA256SUMS"]
+    assert seen[0][1] == update.MAX_DMG and seen[1][1] == update.MAX_SUMS  # each download has its own size limit
+    command, = spawned
+    assert command[0] == "/bin/bash" and command[3] == str(app) and command[5] == "9.0.0"
+    assert command[6] == str(update.result_path())
+    helper = open(command[1]).read()
+    assert 'mkdir "$LOCK"' in helper and "CFBundleShortVersionString" in helper and "pkill" not in helper
+
+
+def test_no_update_for_an_older_or_same_version_or_while_one_runs(tmp_path, monkeypatch):
+    app = _app(tmp_path, monkeypatch)
+    for version in (update.__version__, "0.0.1", "nope"):
+        assert update.install_app(version, lambda *a: 1 / 0, lambda c: 1 / 0) == "There is no newer version."
+    (tmp_path / "Applications" / "Magpiary.app.updating").mkdir()
+    assert "already running" in update.install_app("9.0.0", lambda *a: 1 / 0, lambda c: 1 / 0) and app.exists()
+
+
+def test_a_bad_checksum_another_file_or_failed_download_changes_nothing(tmp_path, monkeypatch):
+    _app(tmp_path, monkeypatch)
+    spawned = []
+    assert "checksum" in update.install_app("9.0.0", _fake_download(b"tampered", sums_for=b"real"), spawned.append)
+    assert "checksum" in update.install_app("9.0.0", _fake_download(b"img", name="Magpiary-8.0.0.dmg"), spawned.append)
+    assert "could not be downloaded" in update.install_app("9.0.0", lambda url, to, limit=None: False, spawned.append)
+    assert spawned == []
+
+
+def test_downloads_stop_past_their_size_limit(tmp_path, monkeypatch):
+    import io
+
+    class Answer(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+    monkeypatch.setattr(update.urllib.request, "urlopen", lambda *a, **k: Answer(b"x" * 5000))
+    to = tmp_path / "f"
+    assert not update._download("https://example.invalid/f", to, limit=1000) and not to.exists()
+    assert update._download("https://example.invalid/f", to, limit=10_000) and to.stat().st_size == 5000
+
+
+def test_the_app_path_is_the_nearest_magpiary_bundle(monkeypatch):
+    monkeypatch.setenv("MAGPIARY_PROGRAM", "/Applications/Box.app/Contents/Apps/Magpiary.app/Contents/Resources/bin/magpiary")
+    assert str(update.app_path()) == "/Applications/Box.app/Contents/Apps/Magpiary.app"
+    monkeypatch.setenv("MAGPIARY_PROGRAM", "/Applications/Other.app/Contents/Resources/bin/magpiary")
+    assert update.app_path() is None
+
+
+def test_an_app_in_a_folder_it_cannot_write_to_falls_back_to_the_release_page(tmp_path, monkeypatch):
+    app = _app(tmp_path, monkeypatch)
+    monkeypatch.setattr(update.os, "access", lambda path, mode: False)
+    assert update.RELEASES_PAGE in update.install_app("9.0.0", lambda *a: 1 / 0, lambda c: 1 / 0) and app.exists()
+
+
+def test_the_helper_script_is_valid_shell():
+    assert subprocess.run(["/bin/bash", "-n"], input=update.HELPER, text=True).returncode == 0
+
+
+def _helper_world(tmp_path, version="9.0.0", bundle="org.magpiary.app", starts=True):
+    """A fake Mac for the helper: hdiutil, osascript, open and ps stand-ins on PATH, an installed app and a disk image."""
+    import os
+    import stat
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    vol = tmp_path / "Volumes" / "Magpiary"
+    src = vol / "Magpiary.app" / "Contents"
+    (src / "MacOS").mkdir(parents=True)
+    (src / "MacOS" / "Magpiary").write_text("#!/bin/sh\n")
+    (src / "MacOS" / "Magpiary").chmod(0o755)
+    (src / "NEWMARK").write_text("new")
+    (src / "Info.plist").write_text(f'<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>{bundle}</string>'
+                                    f'<key>CFBundleShortVersionString</key><string>{version}</string></dict></plist>')
+    app = tmp_path / "Applications" / "Magpiary.app"
+    (app / "Contents" / "MacOS").mkdir(parents=True)
+    (app / "Contents" / "OLDMARK").write_text("old")
+    running = tmp_path / "running"
+    scripts = {"hdiutil": f'[ "$1" = attach ] && printf "/dev/disk9\\tApple\\t{vol}\\n"; exit 0',
+               "osascript": f'rm -f "{running}"', "sleep": "exit 0",
+               "open": f'[ "{"1" if starts else ""}" = 1 ] && touch "{running}"; exit 0',
+               "ps": f'[ -e "{running}" ] && echo "  42 {app}/Contents/MacOS/Magpiary"; exit 0'}
+    for name, body in scripts.items():
+        f = bin_ / name
+        f.write_text("#!/bin/bash\n" + body + "\n")
+        f.chmod(f.stat().st_mode | stat.S_IXUSR)
+    work = tmp_path / "work"
+    work.mkdir()
+    script = work / "helper.sh"
+    script.write_text(update.HELPER)
+    result = tmp_path / "data" / "update-result.txt"
+    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}"}
+    run = lambda want="9.0.0": subprocess.run(["/bin/bash", str(script), str(work / "x.dmg"), str(app), str(work), want, str(result)],  # noqa: E731
+                                              env=env, capture_output=True, text=True, timeout=60)
+    return app, result, run
+
+
+def test_the_helper_swaps_the_app_and_reports_it(tmp_path):
+    app, result, run = _helper_world(tmp_path)
+    run()
+    assert (app / "Contents" / "NEWMARK").exists() and not (app / "Contents" / "OLDMARK").exists()
+    assert result.read_text().startswith("ok\t9.0.0\t") and not list(app.parent.glob("Magpiary.app.*"))
+
+
+def test_the_helper_keeps_the_old_app_for_a_wrong_version_or_bundle(tmp_path):
+    app, result, run = _helper_world(tmp_path, version="8.0.0")
+    run()
+    assert (app / "Contents" / "OLDMARK").exists() and result.read_text().startswith("failed\t9.0.0\t")
+
+
+def test_the_helper_puts_the_old_app_back_when_the_new_one_does_not_start(tmp_path):
+    app, result, run = _helper_world(tmp_path, starts=False)
+    run()
+    assert (app / "Contents" / "OLDMARK").exists() and "did not start" in result.read_text()
+    assert not list(app.parent.glob("Magpiary.app.*"))
+
+
+def test_the_banner_in_the_mac_app_offers_update_now(mac, monkeypatch):
     monkeypatch.setenv("MAGPIARY_PROGRAM", "/Applications/Magpiary.app/Contents/Resources/python/bin/magpiary")
     mac.store.set_setting(update.LATEST_SETTING, "9.0.0")
     body = page(mac, "/")[2]
-    assert update.RELEASES_PAGE in body and "/hub/update" not in body
+    assert "/hub/update" in body and "Update now" in body and "drag the new version" not in body
+    monkeypatch.setattr(update, "install", lambda version: None)
+    mac.server.hub.restart = lambda: (_ for _ in ()).throw(AssertionError("the helper restarts the app, not the hub"))
+    status, _, data = post(mac, "/hub/update", next="/")
+    assert status == 200 and b"close and open again" in data

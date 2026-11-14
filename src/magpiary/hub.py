@@ -743,6 +743,7 @@ class Hub(
 
     def _update(self) -> Response:
         from magpiary import update
+        from magpiary.tools import in_mac_app
 
         version = self.store.get_setting(update.LATEST_SETTING, "")
         problem = update.install(version) if update.newer(version) else "There is no newer version."
@@ -750,6 +751,12 @@ class Hub(
             return self.shell("Update", f'<div class="hero"><h1 class="mid">Update</h1></div>'
                               f'<div class="flash err">{e(problem)}</div><a class="link" href="/">Back to the library</a>',
                               "missing", 500)
+        if in_mac_app():  # the helper quits the app, swaps it and reopens it; the service is restarted by the new app
+            page = self.shell("Updating", f'<div class="hero"><h1 class="mid">Updating to Magpiary {e(version)}</h1>'
+                              '<p>Magpiary will close and open again in a few seconds. Nothing else is needed. If something '
+                              'goes wrong, the library says so here.</p></div>', "missing")
+            page.body = page.body.replace(b"</head>", b'<meta http-equiv="refresh" content="30;url=/"></head>', 1)
+            return page
         self.restart()
         page = self.shell("Updated", f'<div class="hero"><h1 class="mid">Updated to Magpiary {e(version)}</h1>'
                           '<p>Magpiary is restarting. This page reloads in about 20 seconds.</p></div>', "missing")
@@ -801,13 +808,17 @@ class Hub(
     def _update_banner(self) -> str:
         from magpiary import __version__
         from magpiary.tools import in_mac_app
-        from magpiary.update import LATEST_SETTING, RELEASES_PAGE, from_homebrew, newer
+        from magpiary.update import LATEST_SETTING, RELEASES_PAGE, from_homebrew, last_result, newer
 
         waiting = self.store.get_setting(LATEST_SETTING, "")
         if not newer(waiting):
             return ""
-        action = (f'<span>Quit Magpiary, then drag the new version to Applications.</span><a class="btn sm" href="{RELEASES_PAGE}" '
-                  'target="_blank" rel="noopener noreferrer">Download</a>' if in_mac_app()
+        failed = last_result() if in_mac_app() else None  # the helper's own report of the last try (update.py)
+        if failed and failed[0] == "failed" and failed[1] == waiting:
+            return (f'<div class="update err" role="status"><span>The update to Magpiary {e(waiting)} did not finish: '
+                    f'{e(failed[2])}</span>{self._form("/hub/update", {"next": "/"}, "Try again", "btn sm")}'
+                    f'<a class="btn sm" href="{RELEASES_PAGE}" target="_blank" rel="noopener noreferrer">Download</a></div>')
+        action = (self._form("/hub/update", {"next": "/"}, "Update now", "btn sm") if in_mac_app()
                   else "<span>Run <b>brew upgrade magpiary</b> in Terminal.</span>" if from_homebrew()
                   else self._form("/hub/update", {"next": "/"}, "Update now", "btn sm"))
         return (f'<div class="update" role="status"><span>Magpiary {e(waiting)} is available '
