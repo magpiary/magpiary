@@ -658,6 +658,9 @@ def process_loop(server: Server) -> None:
             dived = deep_due(server.store, data_dir() / "notes", activity=server.activity, log=log)
             if dived:
                 log(f"made {dived} deeper dive(s)")
+            from magpiary.worker import views_due  # post views the owner asked for (contextual tabs, part C)
+            if views_due(server.store, activity=server.activity, log=log):
+                log("built post view(s)")
             linked = links_due(server.store, activity=server.activity, log=log)
             if linked:
                 log(f"found links for {linked} item(s)")

@@ -263,10 +263,28 @@ def brain_due(store: Store, notes_dir: Path, pause: Callable[[str], None] = brai
             log(f"{url}: saved again while it was being summarised; that summary is dropped")
             continue
         store.brain_succeeded(url, record, transcript_text(Path(item["archive_dir"])), apply_tags)
+        _view_from_summary(store, item, record, log)
         done += 1
     return done
 
 
+
+
+def _view_from_summary(store: Store, item: dict, record: dict, log: Callable[[str], None]) -> None:
+    """The category and tabs the summary call answered (views_ai). The summary is already saved: nothing here can undo it."""
+    from magpiary import views_ai
+
+    try:
+        views_ai.apply_summary(store, item, record)
+    except Exception as err:  # a broken view leaves the post on its rules view
+        log(f"post view not saved: {type(err).__name__}")
+
+
+def views_due(store: Store, activity=None, log: Callable[[str], None] = lambda m: None, key_source=None, asker_for=None) -> int:
+    """"Build this view" and Change category: one AI request per queued post (views_ai.views_due). Never a bulk pass."""
+    from magpiary import views_ai
+
+    return views_ai.views_due(store, key_source=key_source, asker_for=asker_for, log=log, activity=activity)
 
 
 class _DeepStopped(Exception):
