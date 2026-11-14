@@ -269,20 +269,21 @@ def hidden_tabs(setting: str) -> dict[str, list[str]]:
 def tab_plan(view: dict, core: dict[str, bool], hidden: dict[str, list[str]] | None = None) -> tuple[list[str], list[str]]:
     """(visible tab ids, tab ids in More). `core` says which core panes have something (read, deep, links, rel, tr).
 
-    Order: read, sum, deep, the category's tabs with content, the second category's lent tab, links, rel, tr, det.
-    Summary and Details always show; up to VISIBLE - 2 others show in order; the rest go in More."""
+    Order: read, sum, the category's tabs with content, the second category's lent tab, then deep, links, rel, tr, det.
+    Summary and Details always show; up to VISIBLE - 2 others show in that order, so the category's own tabs come before
+    Deeper dive, Links, Related and Transcript, which fold into More, in that order, when there is no room. Read (a
+    saved page) is the post itself and keeps its place first."""
     hidden = hidden or {}
     category, second = view.get("category", "other"), view.get("category2", "")
     off = set(hidden.get(category, []))
     filled = {k for k, v in (view.get("tabs") or {}).items() if v.get("items") or v.get("text")}
     middle = [k for k in ("read",) if core.get(k)]
-    middle += [k for k in ("deep",) if core.get(k)]
     own = [t for t in (cats.CATEGORIES[category].tabs if category in cats.CATEGORIES else ()) if t in filled and t not in off]
     middle += own
     lent = cats.CATEGORIES[second].lend if second in cats.CATEGORIES else ""
     if lent and lent in filled and lent not in own and lent not in set(hidden.get(second, [])):
         middle.append(lent)
-    middle += [k for k in ("links", "rel", "tr") if core.get(k)]
+    middle += [k for k in ("deep", "links", "rel", "tr") if core.get(k)]
     room = VISIBLE - 2
     first, rest = middle[:room], middle[room:]
     visible = (["read"] if "read" in first else []) + ["sum"] + [k for k in first if k != "read"] + ["det"]
@@ -296,7 +297,7 @@ def needs_build(view: dict) -> bool:
             and bool(cats.CATEGORIES[view["category"]].tabs))
 
 
-# ---- the AI's part (used by brain.py for new posts and by the Build this view pass) --------------------------------
+# ---- the AI's schema (views_ai.py writes the prompt; brain.py and the Build this view pass use both) -----------------
 
 def ai_schema() -> dict:
     """Schema fragment (Gemini style, like brain.SCHEMA) for category, category2 and view."""
@@ -307,20 +308,3 @@ def ai_schema() -> dict:
             "view": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
                 "tab": {"type": "STRING", "enum": list(cats.TABS)}, "text": s,
                 "items": {"type": "ARRAY", "items": item}}, "required": ["tab", "items"]}}}
-
-
-def ai_prompt() -> str:
-    """The rules the AI follows to choose the category and fill its tabs (appended to the summary prompt)."""
-    lines = ["- category: the one category that best fits what the post is about (not its shape). category2: a second",
-             "  category only when the post is clearly also about it (a food crawl in Lisbon is travel + food_places), else \"\".",
-             "  Categories:"]
-    for c in cats.CATEGORIES.values():
-        lines.append(f"  {c.id}: {c.blurb}")
-    lines += ["- view: fill the tabs of the chosen category, and the second category's lent tab (named below), from the evidence",
-              "  only. One entry per tab: tab (its id), text (optional, one or two sentences), items. Each item has name and",
-              "  only the other fields that apply: detail, at (m:ss), amount, group, kind, value. Leave a tab out when the",
-              "  evidence has nothing for it; never invent places, songs, prices, dates or quotes. Tabs per category:"]
-    for c in cats.CATEGORIES.values():
-        if c.tabs:
-            lines.append(f"  {c.id} (lends {c.lend}): " + "; ".join(f"{t} ({cats.TABS[t].ai})" for t in c.tabs))
-    return "\n".join(lines)

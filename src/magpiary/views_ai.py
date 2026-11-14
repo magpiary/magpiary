@@ -29,6 +29,15 @@ _VIEW_RULE = ("- view: from the evidence only, fill {which}. One entry per tab: 
               "two sentences), items (name, plus only the fields that apply: detail, at (m:ss), amount, group, kind, "
               "value). Leave a tab out when the evidence has nothing for it; never invent places, songs, prices, dates "
               "or quotes.")
+# Fixes from the 10-real-post test (14 Nov 2026): value misused for genres and sources, round-ups that kept 1 of 11
+# items, one "fact" from a 27-minute talk, prices in Specs and again in Buy, a restore video filed as gadgets.
+_FILL_RULES = (
+    "- Fill every tab the evidence supports, and put EVERY item the evidence lists into it (a round-up of 11 gets 11). "
+    "A long video gets 3 to 10 claims, key ideas or takeaways. One item goes in one tab only.\n"
+    "- value: only literal text worth copying exactly (code, prompt, command, hex colour, ISO date, a URL that appears "
+    "in the post); never a genre, a source, a label or a repeat of name or detail.\n"
+    "- Claim kind is claim or opinion (or prediction); fact only when the post itself cites evidence for it.\n"
+    "- A mixed post: the category with the most items is category, the next is category2.")
 
 
 def prompt(category: str = "") -> str:
@@ -40,13 +49,13 @@ def prompt(category: str = "") -> str:
         lines = [f"- category: given by the owner: {c.id} ({c.blurb}). Answer it as category.",
                  "- category2: a second category only when the post is clearly also about it, else \"\". Choose from: "
                  + ", ".join(f"{o.id} (lends {o.lend})" for o in cats.CATEGORIES.values() if o.tabs and o.id != c.id) + ".",
-                 _VIEW_RULE.format(which=f"these tabs of {c.id}, plus category2's lent tab")]
+                 _VIEW_RULE.format(which=f"these tabs of {c.id}, plus category2's lent tab"), _FILL_RULES]
         wanted = list(c.tabs) + [o.lend for o in cats.CATEGORIES.values() if o.lend and o.lend not in c.tabs]
     else:
         lines = ["- category: the one category below that best fits what the post is about (not its shape). category2: "
                  "a second category only when the post is clearly also about it (a food crawl in Lisbon: travel + "
                  "food_places), else \"\".",
-                 _VIEW_RULE.format(which="the chosen category's tabs, plus category2's lent tab (marked *)"),
+                 _VIEW_RULE.format(which="the chosen category's tabs, plus category2's lent tab (marked *)"), _FILL_RULES,
                  "  Categories (id: what belongs [its tabs]):"]
         for c in cats.CATEGORIES.values():
             tabs = ", ".join(("*" if t == c.lend else "") + t for t in c.tabs)

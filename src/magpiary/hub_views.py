@@ -12,55 +12,16 @@ Ticks are keyed by a hash of the item's name and group, so a rebuilt view keeps 
 import hashlib
 import math
 import re
-import unicodedata
 from datetime import datetime, timedelta
 from fractions import Fraction
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlsplit
 
 from magpiary import categories as cats
+from magpiary import lookups
 from magpiary.web import e
 
-# The search links a card needs when lookups.py is missing (session B's version replaces this at merge). {q} is the
-# URL-encoded query. Patterns from the research notes, 14 Nov 2026.
-FALLBACK = {
-    "google": ("Google", "https://www.google.com/search?q={q}"),
-    "official": ("Official site", "https://www.google.com/search?q={q}%20official%20site"),
-    "wikipedia": ("Wikipedia", "https://en.wikipedia.org/w/index.php?search={q}"),
-    "google_maps": ("Google Maps", "https://www.google.com/maps/search/?api=1&query={q}"),
-    "apple_maps": ("Apple Maps", "https://maps.apple.com/?q={q}"),
-    "osm": ("OpenStreetMap", "https://www.openstreetmap.org/search?query={q}"),
-    "maps_reviews": ("Reviews", "https://www.google.com/search?q={q}%20reviews"),
-    "opentable": ("OpenTable", "https://www.opentable.com/s?term={q}"),
-    "google_shopping": ("Shopping", "https://www.google.com/search?tbm=shop&q={q}"),
-    "amazon": ("Amazon", "https://www.amazon.com/s?k={q}"),
-    "pinterest": ("Pinterest", "https://www.pinterest.com/search/pins/?q={q}"),
-    "rtings": ("RTINGS", "https://www.rtings.com/search?q={q}"),
-    "spotify": ("Spotify", "https://open.spotify.com/search/{q}"),
-    "apple_music": ("Apple Music", "https://music.apple.com/search?term={q}"),
-    "youtube_music": ("YouTube Music", "https://music.youtube.com/search?q={q}"),
-    "youtube": ("YouTube", "https://www.youtube.com/results?search_query={q}"),
-    "youtube_trailer": ("Trailer", "https://www.youtube.com/results?search_query={q}%20trailer"),
-    "bandcamp": ("Bandcamp", "https://bandcamp.com/search?q={q}"),
-    "justwatch": ("JustWatch", "https://www.justwatch.com/us/search?q={q}"),
-    "letterboxd": ("Letterboxd", "https://letterboxd.com/search/{q}/"),
-    "imdb": ("IMDb", "https://www.imdb.com/find/?q={q}"),
-    "goodreads": ("Goodreads", "https://www.goodreads.com/search?q={q}"),
-    "storygraph": ("StoryGraph", "https://app.thestorygraph.com/browse?search_term={q}"),
-    "openlibrary": ("Open Library", "https://openlibrary.org/search?q={q}"),
-    "bookshop": ("Bookshop", "https://bookshop.org/search?keywords={q}"),
-    "github": ("GitHub", "https://github.com/search?q={q}"),
-    "npm": ("npm", "https://www.npmjs.com/search?q={q}"),
-    "pypi": ("PyPI", "https://pypi.org/search/?q={q}"),
-    "huggingface": ("Hugging Face", "https://huggingface.co/models?search={q}"),
-    "alternativeto": ("AlternativeTo", "https://alternativeto.net/browse/search/?q={q}"),
-    "producthunt": ("Product Hunt", "https://www.producthunt.com/search?q={q}"),
-    "google_scholar": ("Scholar", "https://scholar.google.com/scholar?q={q}"),
-    "google_news": ("News", "https://news.google.com/search?q={q}"),
-}
-DETAIL_IN_QUERY = {"tracks", "similar_music", "books"}       # the artist or author makes the search exact
-GROUP_IN_QUERY = {"places", "spots"}                         # the city or area
-AMOUNT_IN_QUERY = {"titles", "similar_watch"}               # the year
 CODE_KINDS = {"code", "prompt", "command"}
+COPY_TABS = {"snippets", "setup", "tickets", "copy", "quotes", "best"}  # tabs whose `value` is text to copy (palette: its hex)
 AT = re.compile(r"\d{1,2}(?::\d{2}){1,2}")
 HEX = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z])")
 WHEN = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?")
@@ -107,6 +68,38 @@ def in_post(url: str, item: dict) -> bool:
     """A URL from a view's `value` becomes a link only when the post itself contains it (never one an AI made up)."""
     text = " ".join(str(item.get(k) or "") for k in ("canonical_url", "caption", "title", "summary"))
     return bool(url) and url in text
+
+
+def _plain(text) -> str:
+    return " ".join(str(text or "").lower().split()).strip(" .,:;!?-–—\"'“”‘’")
+
+
+def literal(it: dict) -> str:
+    """The item's `value` when it adds something; "" when it only repeats the name or the detail (the real-post test
+    found genres and sources there, shown as copy boxes)."""
+    value = _plain(it.get("value"))
+    if not value:
+        return ""
+    for field in ("name", "detail"):
+        other = _plain(it.get(field))
+        if other and (value == other or (len(value) >= 3 and value in other)):
+            return ""
+    return str(it["value"]).strip()
+
+
+def copyable(tab: cats.Tab, it: dict) -> bool:
+    """A copy button only where copying makes sense: prompts, code, commands, quotes, ticket codes (and palette hexes)."""
+    return tab.id in COPY_TABS or it.get("kind", "").strip().lower() in CODE_KINDS
+
+
+def _value_block(tab: cats.Tab, it: dict, what: str) -> str:
+    """A literal to copy (code box + Copy), else the value as one more plain line, else nothing."""
+    value = literal(it)
+    if not value or http_url(value):
+        return ""
+    if copyable(tab, it):
+        return f'<div class="pvcode"><pre><code>{e(value)}</code></pre>{_copy_button(value, what)}</div>'
+    return f'<small class="pvdetail pvval">{e(value)}</small>'
 
 
 def _at(it: dict) -> str:
@@ -210,35 +203,9 @@ def _servings(body: dict, state: dict, item: dict) -> tuple[int, int]:
 # ---- links for cards -----------------------------------------------------------------------------------------------------
 
 
-def _tidy(text) -> str:
-    return " ".join(re.sub(r"[\x00-\x1f\x7f]+", " ", unicodedata.normalize("NFC", str(text or ""))).split())
-
-
-def _query(tab: cats.Tab, it: dict) -> str:
-    it = {k: _tidy(v) for k, v in it.items()}
-    bits = [it.get("name", "")]
-    if tab.id in DETAIL_IN_QUERY and it.get("detail"):
-        bits.append(it["detail"])
-    if tab.id in GROUP_IN_QUERY and it.get("group"):
-        bits.append(it["group"])
-    if tab.id in AMOUNT_IN_QUERY and re.fullmatch(r"\d{4}", it.get("amount", "")):
-        bits.append(it["amount"])
-    return " ".join(b.strip() for b in bits if b.strip())[:300]
-
-
 API_LABELS = {"musicbrainz": "MusicBrainz", "nominatim": "OpenStreetMap", "openlibrary": "Open Library",
               "tvmaze": "TVmaze", "wikidata": "Wikidata", "wikipedia": "Wikipedia"}
 API_REPLACES = {"nominatim": "osm", "openlibrary": "openlibrary", "wikipedia": "wikipedia"}  # exact page beats that search
-
-
-def lookup_key(name) -> str:
-    """The key lookups.py files an item under (lookups.key): NFC, no control characters, single spaces, lower case."""
-    try:
-        from magpiary import lookups
-        return lookups.key(name)
-    except Exception:  # module missing (or older): the same normalisation, copied
-        text = unicodedata.normalize("NFC", str(name or ""))
-        return " ".join(re.sub(r"[\x00-\x1f\x7f]+", " ", text).split()).lower()
 
 
 def lookup_for(view: dict, tab_id: str, it: dict) -> dict:
@@ -246,65 +213,30 @@ def lookup_for(view: dict, tab_id: str, it: dict) -> dict:
     is "ok". Thumbnails are remote images and are never shown (opening a post must not contact other sites)."""
     found = (view.get("lookups") or {}) if isinstance(view.get("lookups"), dict) else {}
     found = found.get(tab_id) if isinstance(found.get(tab_id), dict) else {}
-    hit = found.get(lookup_key(it.get("name", "")))
+    hit = found.get(lookups.key(it.get("name", "")))
     if not isinstance(hit, dict):
         return {}
     return {k: v for k, v in hit.items() if isinstance(v, dict) and v.get("status", "ok") == "ok"}
 
 
-def _fallback_links(provider_ids, it: dict, tab: cats.Tab) -> list[dict]:
-    q = quote(_query(tab, it), safe="")
-    out = []
-    for pid in provider_ids:
-        if pid in FALLBACK and q:
-            label, pattern = FALLBACK[pid]
-            out.append({"id": pid, "label": label, "url": pattern.replace("{q}", q)})
-    return out
-
-
-def _normalise(found) -> list[dict]:
-    """lookups.search_links may answer with dicts ({id|provider, label|name|title, url}) or tuples; keep the good ones."""
-    out = []
-    for row in found or []:
-        if isinstance(row, dict):
-            pid = str(row.get("provider") or row.get("id") or "")
-            label = str(row.get("label") or row.get("name") or row.get("title") or FALLBACK.get(pid, (pid,))[0] or "")
-            url = row.get("url")
-        elif isinstance(row, (tuple, list)) and len(row) in (2, 3):
-            pid, label, url = (("",) + tuple(row))[-3:] if len(row) == 2 else tuple(row)
-            pid, label = str(pid), str(label)
-        else:
-            continue
-        if http_url(url) and label:
-            out.append({"id": pid, "label": label, "url": url})
-    return out
-
-
-def links_for(tab: cats.Tab, it: dict, view: dict) -> list[dict]:
+def links_for(tab: cats.Tab, it: dict, view: dict, post: dict | None = None) -> list[dict]:
     """The buttons on a card: lookups' exact pages first (MusicBrainz, Open Library, TVmaze…), then a search link for each
-    of the tab's providers (lookups.search_links when session B's module is there, else FALLBACK). An exact entry keyed
-    by a provider id replaces that provider's search."""
-    providers = tab.providers or ("google",)
-    found = []
+    of the tab's providers (lookups.search_links). An exact page replaces the same site's search. A URL in `value` makes
+    an "Official site" button only when the post itself contains it (`post`), never one the AI made up."""
+    value = http_url(it.get("value", "").strip())
+    if value and not in_post(value, post or {}):
+        it = {k: v for k, v in it.items() if k != "value"}
     try:
-        from magpiary import lookups
-    except ImportError:
-        lookups = None
-    if lookups is not None and hasattr(lookups, "search_links"):
-        try:
-            found = _normalise(lookups.search_links(providers, it, tab))
-        except Exception:  # a lookups bug must not break the post view; the plain search links still work
-            found = []
-    if not found:
-        found = _fallback_links(providers, it, tab)
-    exact = lookup_for(view, tab.id, it)
+        found = lookups.search_links(tab.providers or ("google",), it, tab)
+    except Exception:  # a lookups bug must not break the post view
+        found = []
     out, seen = [], set()
-    for pid, data in exact.items():
+    for pid, data in lookup_for(view, tab.id, it).items():
         url = http_url(data.get("url"))
         if url:
-            out.append({"id": pid, "label": API_LABELS.get(pid) or FALLBACK.get(pid, ("Page",))[0], "url": url, "exact": True})
+            out.append({"provider": pid, "label": API_LABELS.get(pid) or "Page", "url": url, "exact": True})
             seen.update((pid, API_REPLACES.get(pid, pid)))
-    out += [row for row in found if row["id"] not in seen]
+    out += [row for row in found if row["provider"] not in seen and http_url(row.get("url"))]
     return out[:7]
 
 
@@ -382,13 +314,13 @@ def _steps(tab, body, view, state, item) -> str:
     for n, it in enumerate(items, 1):
         key, on = item_key(it), state.get(item_key(it)) == "1"
         amount = _chip(it.get("amount", ""), "pvtime")
-        value = (f'<div class="pvcode"><pre><code>{e(it["value"])}</code></pre>{_copy_button(it["value"], "Command")}</div>'
-                 if it.get("value") else "")
+        value = _value_block(tab, it, "Command")
+        plain, value = (value, "") if value.startswith("<small") else ("", value)  # a plain value reads as a detail line
         group = f'<small class="pvstepg">{e(it["group"])}</small>' if it.get("group") else ""
         lis.append(f'<li class="pvstep{" on" if on else ""}"><label><input type="checkbox" data-pvkey="{key}"'
                    f'{" checked" if on else ""}><span class="pvnum" aria-hidden="true">{n}</span>'
                    f'<span class="pvtxt">{group}<span class="pvname">{e(it["name"])}</span>'
-                   + (f'<small class="pvdetail">{e(it["detail"])}</small>' if it.get("detail") else "")
+                   + (f'<small class="pvdetail">{e(it["detail"])}</small>' if it.get("detail") else "") + plain
                    + f'</span></label><span class="pvside">{amount}{_at(it)}</span>{value}</li>')
     bar = (f'<div class="pvbar2"><p class="pvprog" data-pvprog data-total="{len(items)}"><span data-pvdone>{done}</span> of '
            f'{len(items)} done</p></div>')
@@ -400,16 +332,12 @@ def _card(tab, it: dict, view: dict, item: dict, index: int, number: str = "") -
     year = _year(exact)
     amount = it.get("amount", "")
     chips = _chip(it.get("kind", ""), "pvkind") + _chip(year if year and year != amount else "", "pvyear") + _chip(amount)
-    value = it.get("value", "")
-    extra = ""
-    if value:
-        url = http_url(value.strip())
-        if url and in_post(url, item):
-            extra = (f'<a class="pvprov pvown" href="{e(url)}" target="_blank" rel="noopener noreferrer">'
-                     f'{e(urlsplit(url).hostname or "Link")}<span aria-hidden="true">↗</span></a>')
-        elif not url:
-            extra = f'<div class="pvcode"><code>{e(value)}</code>{_copy_button(value, "Code")}</div>'
-    links = _link_buttons(links_for(tab, it, view), it["name"])
+    url = http_url(literal(it))
+    extra = _value_block(tab, it, "Code")
+    if url and in_post(url, item):
+        extra = (f'<a class="pvprov pvown" href="{e(url)}" target="_blank" rel="noopener noreferrer">'
+                 f'{e(urlsplit(url).hostname or "Link")}<span aria-hidden="true">↗</span></a>')
+    links = _link_buttons(links_for(tab, it, view, item), it["name"])
     num = f'<span class="pvpin" aria-hidden="true">{e(number)}</span>' if number else ""
     group = f'<small class="pvcardg">{e(it["group"])}</small>' if it.get("group") and tab.render == "cards" else ""
     return (f'<li class="pvcard" id="pvc-{e(tab.id)}-{index}" tabindex="-1"><div class="pvch">{num}<span class="pvname">'
@@ -529,12 +457,13 @@ def _quotes(tab, body, view, state, item) -> str:
     out = []
     for it in body.get("items") or []:
         kind = it.get("kind", "").strip().lower()
-        text = it.get("value") or it.get("detail") or it.get("name")
-        who = it["name"] if it.get("value") or it.get("detail") else ""
+        value = literal(it)
+        text = value or it.get("detail") or it.get("name")
+        who = it["name"] if text != it["name"] else ""
         what = {"prompt": "Prompt", "code": "Code", "command": "Command"}.get(kind, "Quote")
         inner = (f'<pre><code>{e(text)}</code></pre>' if kind in CODE_KINDS
                  else f'<blockquote>{e(text)}</blockquote>')
-        note = f'<small class="pvdetail">{e(it["detail"])}</small>' if it.get("value") and it.get("detail") else ""
+        note = f'<small class="pvdetail">{e(it["detail"])}</small>' if value and it.get("detail") else ""
         out.append(f'<figure class="pvquote{" code" if kind in CODE_KINDS else ""}">{inner}<figcaption>'
                    f'{_chip(kind, "pvkind") if kind and kind != "quote" else ""}<span class="pvwho">{e(who)}</span>{note}'
                    f'<span class="pvqa">{_at(it)}{_copy_button(text, what)}</span></figcaption></figure>')
@@ -548,7 +477,7 @@ def _notes(tab, body, view, state, item) -> str:
         for _, it in rows:
             detail = f' <span class="pvdetail">{e(it["detail"])}</span>' if it.get("detail") else ""
             extra = _chip(it.get("kind", ""), "pvkind") + _chip(it.get("amount", ""))
-            value = f'<pre class="pvvalue">{e(it["value"])}</pre>' if it.get("value") else ""
+            value = _value_block(tab, it, "Code")
             lis.append(f'<li><span class="pvname">{e(it["name"])}</span>{detail}{extra}{_at(it)}{value}</li>')
         parts.append(_heading(group) + f'<ul class="pvnotes">{"".join(lis)}</ul>')
     return "".join(parts)
@@ -603,7 +532,8 @@ def _event(tab, body, view, state, item) -> str:
             date = (f'<div class="pvdate" aria-hidden="true"><small>{start:%b}</small><b>{start.day}</b>'
                     f'<small>{start:%a}</small></div>')
         else:
-            shown, cal = (it.get("value", "") if it.get("value") and not http_url(it["value"]) else ""), ""
+            value = literal(it)
+            shown, cal = (value if value and not http_url(value) else ""), ""
             date = '<div class="pvdate none" aria-hidden="true"><b>?</b><small>date</small></div>'
         lines = "".join(f'<li>{icon}<span>{text}</span></li>' for icon, text in (
             (ICONS["cal"], e(shown) if shown else "Date not given in the post"),

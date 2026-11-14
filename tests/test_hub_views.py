@@ -4,7 +4,6 @@ search links without lookups.py, lookups' exact links, and whole fictional posts
 import json
 import os
 import re
-import sys
 from fractions import Fraction
 from pathlib import Path
 
@@ -19,13 +18,6 @@ from test_hub import archive, page, post
 EVIL = '<img src=x onerror="alert(1)">'
 ITEM = {"id": 7, "canonical_url": "https://www.instagram.com/reel/ExampleViews1/",
         "caption": "Serves 4. Tickets at https://tickets.example.org/show and more."}
-
-
-def hide_lookups(monkeypatch):
-    """As if session B's lookups.py were not there (before the merge)."""
-    import magpiary
-    monkeypatch.setitem(sys.modules, "magpiary.lookups", None)
-    monkeypatch.delattr(magpiary, "lookups", raising=False)
 
 
 def render(tab_id, items, text="", state=None, view=None, item=None):
@@ -140,14 +132,16 @@ def test_steps_are_numbered_tickable_and_jump_the_video():
     assert '<span class="pvnum" aria-hidden="true">1</span>' in html and '<span class="pvnum" aria-hidden="true">3</span>' in html
     assert 'data-t="0:05"' in html and html.count("data-t=") == 1  # "soon" is not a time: no jump button
     assert "<span data-pvdone>1</span> of 3 done" in html
-    assert "<code>echo &lt;b&gt;</code>" in html and 'data-pvcopy="echo &lt;b&gt;"' in html
+    assert '<small class="pvdetail pvval">echo &lt;b&gt;</small>' in html
+    assert 'data-pvcopy="echo &lt;b&gt;"' not in html  # a method step is not a command to copy
+    setup = render("setup", [{"name": "Install it", "value": "echo <b>"}])
+    assert "<code>echo &lt;b&gt;</code>" in setup and 'data-pvcopy="echo &lt;b&gt;"' in setup
     assert 'class="tline' not in html  # the transcript's highlighter must not pick these up
 
 
 # ---- cards, links, lookups ---------------------------------------------------------------------------------------------
 
-def test_cards_fall_back_to_search_links_without_lookups(monkeypatch):
-    hide_lookups(monkeypatch)  # as if session B's module were missing
+def test_cards_fall_back_to_search_links_without_lookups(monkeypatch):  # as if session B's module were missing
     html = render("tracks", [{"name": "Night Drive", "detail": "The Example Band", "kind": "song"}])
     assert "https://open.spotify.com/search/Night%20Drive%20The%20Example%20Band" in html
     assert "https://music.apple.com/search?term=Night%20Drive%20The%20Example%20Band" in html
@@ -157,29 +151,22 @@ def test_cards_fall_back_to_search_links_without_lookups(monkeypatch):
             assert hv.links_for(tab, {"name": "Example"}, {}), tab.id
 
 
-def test_card_links_use_lookups_module_when_present_and_survive_its_bugs(monkeypatch):
+def test_card_links_come_from_lookups_and_survive_its_bugs(monkeypatch):
     class Fake:
         @staticmethod
         def search_links(providers, item, tab):
             return [{"provider": "spotify", "label": "Spotify", "url": "https://open.spotify.com/search/x"},
-                    {"id": "bad", "label": "Bad", "url": "javascript:alert(1)"}, ("google", "Google", "https://www.google.com/search?q=x")]
-    import magpiary
-    monkeypatch.setattr(magpiary, "lookups", Fake, raising=False)
-    monkeypatch.setitem(sys.modules, "magpiary.lookups", Fake)
-    links = hv.links_for(cats.TABS["tracks"], {"name": "x"}, {})
-    assert [r["id"] for r in links] == ["spotify", "google"]
+                    {"provider": "bad", "label": "Bad", "url": "javascript:alert(1)"}]
+    monkeypatch.setattr(hv.lookups, "search_links", Fake.search_links)
+    assert [r["provider"] for r in hv.links_for(cats.TABS["tracks"], {"name": "x"}, {})] == ["spotify"]
 
-    class Broken:
-        @staticmethod
-        def search_links(*a):
-            raise RuntimeError("boom")
-    monkeypatch.setattr(magpiary, "lookups", Broken)
-    monkeypatch.setitem(sys.modules, "magpiary.lookups", Broken)
-    assert hv.links_for(cats.TABS["tracks"], {"name": "x"}, {})[0]["id"] == "spotify"  # fallback
+    def broken(*a):
+        raise RuntimeError("boom")
+    monkeypatch.setattr(hv.lookups, "search_links", broken)
+    assert hv.links_for(cats.TABS["tracks"], {"name": "x"}, {}) == []  # no buttons, but the post view still draws
 
 
 def test_cards_show_lookup_year_and_exact_url_and_refuse_bad_ones(monkeypatch):
-    hide_lookups(monkeypatch)
     view = {"lookups": {"titles": {"the example  film": {  # lookups.key: one space, lower case; this key is not it
         "tvmaze": {"status": "ok", "url": "https://www.tvmaze.com/shows/1/x", "year": "1999"}},
         "the example film": {
@@ -195,22 +182,30 @@ def test_cards_show_lookup_year_and_exact_url_and_refuse_bad_ones(monkeypatch):
     assert "static.tvmaze.com" not in html and "<img" not in html  # remote thumbnails are never loaded
 
 
-def test_lookup_key_matches_lookups_module_when_present():
-    assert hv.lookup_key("  Caf\u0065\u0301  Ole\n") == "caf\u00e9 ole"
-    try:
-        from magpiary import lookups
-    except ImportError:
-        return
-    for name in ("Café  Olé", "Night\tDrive", "東京 タワー"):
-        assert hv.lookup_key(name) == lookups.key(name)
-
-
 def test_a_value_url_is_a_link_only_when_the_post_contains_it(monkeypatch):
-    hide_lookups(monkeypatch)
     html = render("tickets", [{"name": "Show", "value": "https://tickets.example.org/show"},
                               {"name": "Other", "value": "https://made-up.example.com/x"}, {"name": "Code", "value": "SAVE10"}])
-    assert 'href="https://tickets.example.org/show"' in html and 'href="https://made-up.example.com' not in html
+    assert 'href="https://tickets.example.org/show"' in html and 'made-up.example.com' not in html  # nor as "Official site"
     assert 'data-pvcopy="SAVE10"' in html
+
+
+def test_a_value_that_repeats_the_name_or_detail_is_not_shown_and_copy_boxes_only_where_copying_fits():
+    # real-post test, 14 Nov: a genre and a source sat in `value` and were drawn as copy boxes
+    html = render("artists", [{"name": "Example Trio", "detail": "Jazz trio", "value": "jazz"},
+                              {"name": "The Example Band", "detail": "Indie", "value": "The Example Band"},
+                              {"name": "Solo Example", "detail": "Folk", "value": "Signed in 2021"}])
+    assert "data-pvcopy" not in html and "pvcode" not in html
+    assert '<small class="pvdetail pvval">Signed in 2021</small>' in html and "pvval\">jazz" not in html
+    assert html.count("pvval") == 1
+    notes = render("claims", [{"name": "Prices will fall", "kind": "prediction", "value": "Prices will fall."}])
+    assert "pvval" not in notes and "data-pvcopy" not in notes
+    code = render("caveats", [{"name": "Pin the version", "kind": "command", "value": "pip install example==1.2"}])
+    assert 'data-pvcopy="pip install example==1.2"' in code
+    tickets = render("tickets", [{"name": "Early bird", "value": "EARLY20"}])
+    assert 'data-pvcopy="EARLY20"' in tickets
+    quote = render("quotes", [{"name": "Ada Example", "value": "Ada Example"}])
+    assert quote.count("Ada Example") == 2 and "pvwho\"></span>" in quote  # the text once, plus its copy button; no "— Ada"
+    assert hv.literal({"name": "A", "value": "  "}) == "" and hv.literal({"name": "Sea", "value": "#1a2b3c"}) == "#1a2b3c"
 
 
 def test_http_url():
@@ -220,7 +215,6 @@ def test_http_url():
 
 
 def test_places_draw_a_map_when_lookups_have_coordinates(monkeypatch):
-    hide_lookups(monkeypatch)
     items = [{"name": "Harbour Café", "group": "Old Town"}, {"name": "Hill Park", "group": "Old Town"}, {"name": "Nowhere"},
              {"name": "Gone"}]
     plain = render("places", items)
@@ -315,7 +309,6 @@ POSTS = {
 
 @pytest.mark.parametrize("category", sorted(POSTS))
 def test_fictional_posts_render_through_the_hub(mac, tmp_path, category, monkeypatch):
-    hide_lookups(monkeypatch)
     url, tabs = POSTS[category]
     item_id, folder = archive(mac, tmp_path, url, "instagram", {"text": f"An example {category} post", "author": "Example Maker", "duration": 30.0},
                               {"record.json": json.dumps({"title": f"Example {category}", "summary": "A fictional post.", "key_points": [],
@@ -341,7 +334,6 @@ def test_fictional_posts_render_through_the_hub(mac, tmp_path, category, monkeyp
 
 
 def test_ingredients_servings_round_trip_through_the_route(mac, tmp_path, monkeypatch):
-    hide_lookups(monkeypatch)
     url, tabs = POSTS["recipe"]
     item_id, folder = archive(mac, tmp_path, url, "instagram", {"text": "Pasta", "author": "Example Maker", "duration": 30.0})
     views.save(folder, {"version": 1, "category": "recipe", "by": "ai", "engine": "test:model", "tabs": tabs, "lookups": {}})

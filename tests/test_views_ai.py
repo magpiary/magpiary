@@ -84,7 +84,20 @@ def test_the_summary_prompt_and_schema_ask_for_category_second_and_view():
     assert props["category"]["enum"] == list(cats.IDS) and "view" in props and "category2" in props
     assert "category" in brain.SCHEMA["required"] and "view" not in brain.SCHEMA["required"]
     assert set(brain.BASE_SCHEMA["properties"]) <= set(props)
-    assert len(views_ai.prompt()) < len(views.ai_prompt())  # each tab described once
+    assert len(views_ai.prompt()) < 11_000 and len(views_ai.build_system("recipe")) < 5_200  # kept short (chars)
+
+
+def test_the_prompt_carries_the_real_post_rules():
+    # 10-real-post test, 14 Nov 2026: value misused, round-ups cut short, one "fact" from a long talk, prices twice
+    for prompt in (views_ai.prompt(), views_ai.build_system(), views_ai.build_system("news_opinion")):
+        assert "EVERY item" in prompt and "3 to 10 claims" in prompt and "One item goes in one tab only" in prompt
+        assert "value: only literal text" in prompt and "never a genre" in prompt
+        assert "fact only when the post itself cites evidence" in prompt
+        assert "most items is category, the next is category2" in prompt
+    assert "restoring" in cats.CATEGORIES["howto_diy"].blurb and "fixing one is howto_diy" in cats.CATEGORIES["gadgets"].blurb
+    assert "Price" not in cats.TABS["specs"].ai and "every price goes here" in cats.TABS["buy"].ai
+    assert "frames clearly show" in cats.TABS["equipment"].ai
+    assert "fact only when" in cats.TABS["claims"].ai
 
 
 def _depth(schema, d=0):
