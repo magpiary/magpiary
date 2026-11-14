@@ -31,7 +31,8 @@ STATIC_FILES = {"hub.css": "text/css; charset=utf-8", "hub.js": "text/javascript
                 "lock.js": "text/javascript; charset=utf-8", "settings.js": "text/javascript; charset=utf-8",
                 "pwa.js": "text/javascript; charset=utf-8", "icon-192.png": "image/png", "icon-512.png": "image/png",
                 "maskable-512.png": "image/png", "map.js": "text/javascript; charset=utf-8", "map.css": "text/css; charset=utf-8",
-                "views.css": "text/css; charset=utf-8", "views.js": "text/javascript; charset=utf-8"}  # every emoji (Unicode names and keywords, MIT: emoji.LICENSE.txt)
+                "views.css": "text/css; charset=utf-8", "views.js": "text/javascript; charset=utf-8",
+                "views-lib.css": "text/css; charset=utf-8"}  # every emoji (Unicode names and keywords, MIT: emoji.LICENSE.txt)
 
 SIZES = {"s": "Small tiles", "m": "Medium tiles", "l": "Large tiles"}
 # Looks the owner kept as choices in Settings → Appearance (24 Oct); the first of each is the default.
@@ -140,7 +141,7 @@ def document(title: str, body: str, look: dict, csrf: str, page: str, status: in
            f'<meta name="apple-mobile-web-app-title" content="Magpiary">'
            f'<link rel="stylesheet" href="/static/hub.css?v={v}">'
            f'<link rel="stylesheet" href="/static/indigo.css?v={v}"><link rel="stylesheet" href="/static/map.css?v={v}">'
-           f'<link rel="stylesheet" href="/static/views.css?v={v}">'
+           f'<link rel="stylesheet" href="/static/views.css?v={v}"><link rel="stylesheet" href="/static/views-lib.css?v={v}">'
            f'<link rel="stylesheet" href="/static/phone.css?v={v}">'
            f'<link rel="preload" href="/static/fonts/quicksand.woff2" as="font" type="font/woff2" crossorigin>'
            f'<link rel="preload" href="/static/fonts/dm-sans.woff2" as="font" type="font/woff2" crossorigin>'

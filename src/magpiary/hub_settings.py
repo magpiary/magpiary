@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import quote, urlencode
 
 from magpiary import boardsync, identity
+from magpiary import categories as cats
 from magpiary import keys as keyring
 from magpiary import claude_code, login, modes, settings_art, ui
 from magpiary.protocol import DEFAULT_PORT, DEFAULT_RETRY_WAIT
@@ -107,6 +108,7 @@ SEARCH_INDEX = [
     ("Digest on or off", "digest on off switch written by who writes claude codex key", "ai", "digest-on"),
     ("Deeper dive", "deeper dive deep long video podcast minutes suggest sections chapters takeaways quotes engine model claude code codex", "ai", "deepdive"),
     ("Connections map (beta)", "beta map graph connections try early", "appearance", "betamap"),
+    ("Post tabs by category", "category tabs hide show ingredients method tracks places more recipe music travel", "appearance", "posttabs"),
     ("Interface size", "scale zoom smaller bigger laptop 14 inch size text", "appearance", "scale"),
     ("Your library folders", "storage media notes models size finder", "storage", "library"),
     ("Back up now", "backup copy export database", "storage", "backup"),
@@ -1370,7 +1372,37 @@ class SettingsPages:
                                                '<button type="button" class="btn sm dark" data-pwa-install hidden>Install</button>',
                                                info="The app is this same page, still served by the Magpiary service on this Mac. Nothing is stored in the browser "
                                                     "and nothing is sent anywhere.", sid="installrow"), gid="installapp")
-                + self._beta_group())
+                + self._beta_group()
+                + self._post_tabs_adv())
+
+    def _post_tabs_adv(self) -> str:
+        """Advanced: which of each category's tabs show on its posts (owner decision 6). Summary and Details always show and
+        are not listed; a hidden tab is also not lent when the category is a post's second one."""
+        hidden = self.store.hidden_tabs()
+        n_off = sum(len(v) for v in hidden.values())
+        groups = []
+        for gid, gname in cats.GROUPS.items():
+            rows = "".join(_row(e(c.name), "", self._tab_pills(c, set(hidden.get(c.id, []))), cls="ptrow", sid=f"pt-{c.id}")
+                           for c in cats.CATEGORIES.values() if c.group == gid and c.tabs)
+            if rows:
+                groups.append(f'<h4 class="ptgh">{e(gname)}</h4>{rows}')
+        reset = (f'<form method="post" action="/hub/views/tabs">{ui.hidden(self.csrf, reset="1", next="/settings/appearance#posttabs")}'
+                 f'<button type="submit" class="btn sm">Show all tabs</button></form>' if n_off else "")
+        status = _status(f'{n_off} tab{"" if n_off == 1 else "s"} hidden' if n_off else "Every category shows all its tabs")
+        body = _group("Post tabs by category", "".join(groups), gid="posttabs", cls="ptgroup", action=reset, status=status,
+                      desc="Each kind of post gets its own tabs between Summary and Details. Turn off the ones you do not "
+                           "use. Summary and Details always show; at most five tabs show, the rest wait under More.")
+        return _adv(body, "Which tabs each kind of post shows", gid="advanced", label="Advanced settings") if body else ""
+
+    def _tab_pills(self, category, off: set) -> str:
+        """One pill per tab: pressed means it shows. Each posts on its own (settings.js saves it without a reload)."""
+        pills = "".join(
+            f'<button type="submit" name="toggle" value="{t}:{"1" if t in off else "0"}" class="ptpill{"" if t in off else " on"}" '
+            f'aria-pressed="{str(t not in off).lower()}" data-tab="{t}">{e(cats.TABS[t].label)}</button>'
+            for t in category.tabs)
+        return (f'<form method="post" action="/hub/views/tabs" class="ptpills" data-ptcat="{category.id}" '
+                f'aria-label="{e(category.name)} tabs">{ui.hidden(self.csrf, category=category.id, next=f"/settings/appearance#pt-{category.id}")}'
+                f'{pills}</form>')
 
     def _beta_group(self) -> str:
         """Features still being tried: off unless the owner turns them on."""
@@ -1453,6 +1485,15 @@ class SettingsPages:
 
     def settings_post(self, path: str, form: dict) -> bool:
         """Settings changes that end with a plain redirect to `next`. False for a path this does not handle."""
+        if path == "/hub/views/tabs":  # Advanced > Post tabs by category: one tab on or off, or all back on
+            hidden = {} if form.get("reset") == "1" else self.store.hidden_tabs()
+            category, (tab, _, on) = form.get("category", ""), form.get("toggle", "").partition(":")
+            if category in cats.CATEGORIES and tab in cats.CATEGORIES[category].tabs and on in ("0", "1"):
+                off = set(hidden.get(category, []))
+                (off.discard if on == "1" else off.add)(tab)
+                hidden[category] = sorted(off)
+            self.store.set_hidden_tabs(hidden)
+            return True
         if path == "/hub/ui":
             for name, allowed in (("size", ui.SIZES), ("theme", ui.THEMES), ("layout", ui.LAYOUTS),
                                   *ui.CHOICES.items()):
