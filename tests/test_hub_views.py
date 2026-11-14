@@ -356,6 +356,10 @@ def test_an_ai_written_url_never_becomes_an_official_site_but_a_found_link_does(
     told = {**ITEM, "summary": "Try https://attacker.example/ for more.", "caption": "See https://attacker.example/x"}
     assert "attacker.example" not in render("alternatives", items, item=told)
     assert hv.in_post("https://tickets.example.org/show", ITEM) and not hv.in_post("https://tickets.example.org/sh", ITEM)
+    # second verify pass: a malformed URL (a space) failed http_url, kept its value, and official_url read its host
+    bad = [{"name": "Paletteer", "detail": "lighter", "value": "https://attacker.example/private page"}]
+    html = render("alternatives", bad)
+    assert "Official site" not in html and 'href="https://attacker.example' not in html  # shown only as inert text
     assert hv.in_post("https://tickets.example.org/show", {"caption": "at https://tickets.example.org/show."})
 
 

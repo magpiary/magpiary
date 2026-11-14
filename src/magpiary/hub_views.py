@@ -230,8 +230,9 @@ def links_for(tab: cats.Tab, it: dict, view: dict, post: dict | None = None) -> 
     """The buttons on a card: lookups' exact pages first (MusicBrainz, Open Library, TVmaze…), then a search link for each
     of the tab's providers (lookups.search_links). An exact page replaces the same site's search. A URL in `value` makes
     an "Official site" button only when the post itself contains it (`post`), never one the AI made up."""
-    value = http_url(it.get("value", "").strip())
-    if value and not in_post(value, post or {}):
+    raw = it.get("value", "").strip()
+    value = http_url(raw)
+    if raw and not (value and in_post(value, post or {})):  # a malformed URL too: official_url would still read its host
         it = {k: v for k, v in it.items() if k != "value"}
     try:
         found = lookups.search_links(tab.providers or ("google",), it, tab, (post or {}).get("link_rows") or ())
