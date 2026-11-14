@@ -334,9 +334,13 @@ def test_only_names_the_post_itself_contains_are_looked_up_and_never_the_note(tm
     queries = [unquote(url) for _, url, _ in net.calls]
     assert len(queries) == 1 and "Fictional Band" in queries[0]
     assert not any("SECRET" in q or "Invented" in q for q in queries)
-    # grounding reads caption, transcript, on-screen text, and the summary's names when there is no note
+    # verify pass: deleting the note must not let the summary's copy of it through (no AI-written text grounds a name)
+    store._db.execute("UPDATE items SET note='' WHERE canonical_url=?", (POST,))
+    lookups._quiet.clear()
+    lookups.lookups_due(store, get=net, pacer=lookups.Pacer(clock.time, clock.sleep), today="2026-11-15")
+    assert not any("SECRET" in unquote(url) for _, url, _ in net.calls)
     text = lookups.post_text(folder, {"note": "", "screen_text": "Glass Meadow"})
-    assert lookups.grounded({"name": "SECRET-MARKER plans"}, "tracks", text)  # an entity, no note: allowed
+    assert not lookups.grounded({"name": "SECRET-MARKER plans"}, "tracks", text)
     assert lookups.grounded({"name": "glass meadow"}, "titles", text)
     assert not lookups.grounded({"name": "Midnight"}, "tracks", " midnightlantern ")
 

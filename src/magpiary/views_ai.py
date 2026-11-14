@@ -98,7 +98,8 @@ def keep_tabs(raw, category: str, category2: str) -> dict:
 def usable_tabs(raw) -> bool:
     """The answer's `view` has the schema's shape: a list of tab objects (an empty list is a real answer: nothing to
     fill). A string, an object or a list of anything else is a broken answer, never a built view (review 14 Nov)."""
-    return isinstance(raw, list) and all(isinstance(t, dict) for t in raw)
+    return isinstance(raw, list) and all(isinstance(t, dict) and isinstance(t.get("tab"), str) and t["tab"]
+                                         and isinstance(t.get("items"), list) for t in raw)
 
 
 def make_view(raw_tabs, category: str, category2: str, by: str, engine: str, record: dict | None,
@@ -224,6 +225,22 @@ def build_one(store, item: dict, ask: Callable[[list[dict], list], str], engine:
     return make_view(answer.get("view"), category, second, "owner" if forced else "ai", engine, record, meta, folder)
 
 
+def _end(store, item: dict, status: str, detail: str, log) -> bool:
+    """Finish a build as done or failed, only if the post is as it was when the build began. Otherwise: the owner
+    changed the category meanwhile (same capture) -> queued, so that category is built next; the post was captured
+    again, trashed or is gone -> failed, Build this view asks again. Returns True when `status` was recorded."""
+    if store.finish_view(item["id"], item.get("view_rev") or 0, item.get("archived_at"), status, detail):
+        return True
+    now = store.get_item(item["canonical_url"]) or {}
+    if now.get("status") == "archived" and now.get("shelf") != "trash" and now.get("archived_at") == item.get("archived_at"):
+        store.set_view_status(item["id"], "queued")
+        log("view build dropped: the category changed meanwhile; built again next")
+    else:
+        store.set_view_status(item["id"], "failed", "The post changed while its tabs were built: build it again.")
+        log("view build dropped: the post changed meanwhile")
+    return False
+
+
 def views_due(store, key_source=None, asker_for=None, log: Callable[[str], None] = lambda m: None, activity=None,
               limit: int = 5) -> int:
     """Build the views the owner asked for (only queued posts, never a bulk pass). `asker_for(key, system, schema)`
@@ -299,27 +316,22 @@ def views_due(store, key_source=None, asker_for=None, log: Callable[[str], None]
             if activity:
                 activity.end("process")
         if view is None:
-            store.set_view_status(item_id, "failed", ("Could not build it. " + "; ".join(problems))[:200])
-            log("view build failed")
+            _end(store, item, "failed", ("Could not build it. " + "; ".join(problems))[:200], log)
             continue
         # Committed only when nothing changed since the build began: the owner's category (view_rev), a new capture
-        # (archived_at) or the Trash. Checked and marked done in one step, then the file is written.
-        if not store.finish_view(item_id, item.get("view_rev") or 0, item.get("archived_at")):
-            now = store.get_item(item["canonical_url"]) or {}
-            if now.get("status") == "archived" and now.get("shelf") != "trash" and now.get("archived_at") == item.get("archived_at"):
-                store.set_view_status(item_id, "queued")  # the owner changed the category meanwhile: build that one next
-            else:
-                store.set_view_status(item_id, "failed", "The post changed while its tabs were built: build it again.")
-            log("view build dropped: the post changed meanwhile")
-            continue
-        try:
-            views.save(folder, view)
-        except Exception as err:  # disk full, folder gone: failed, never "working" (that would ask the AI again by itself)
-            store.set_view_status(item_id, "failed", f"The tabs were built but could not be saved ({type(err).__name__}).")
-            log(f"view not saved: {type(err).__name__}")
-            continue
-        if view["by"] == "ai":
-            store.set_category(item_id, view["category"], view["category2"], "ai")
-        store.view_changed(item_id)
+        # (archived_at) or the Trash. The check, the file and the category are one step under the store's lock, which
+        # every capture and category change also takes.
+        with store._lock:
+            if not _end(store, item, "done", "", log):
+                continue
+            try:
+                views.save(folder, view)
+            except Exception as err:  # disk full, folder gone: failed, never "working" (that would ask the AI again)
+                store.set_view_status(item_id, "failed", f"The tabs were built but could not be saved ({type(err).__name__}).")
+                log(f"view not saved: {type(err).__name__}")
+                continue
+            if view["by"] == "ai":
+                store.set_category(item_id, view["category"], view["category2"], "ai")
+            store.view_changed(item_id)
         done += 1
     return done

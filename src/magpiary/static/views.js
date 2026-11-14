@@ -83,9 +83,12 @@
     const name = row?.querySelector(".pvname")?.textContent || "Item";
     const seq = (box._pvseq = (box._pvseq || 0) + 1);
     const ok = await saveInOrder(root, box.dataset.pvkey, on ? "1" : "");
+    if (ok) box._pvsaved = on;  // what the hub now holds for this box
     if (seq !== box._pvseq) return;  // a later click owns the box now; its save runs after this one
     if (ok) { say(root, `${name} ${on ? "ticked" : "unticked"}`); return; }
-    box.checked = !on; row?.classList.toggle("on", !on); count(root);  // not saved: put it back and say so
+    // not saved: show what the hub really holds (the last saved value, else the page's own), and say so
+    const kept = box._pvsaved ?? box.defaultChecked;
+    box.checked = kept; row?.classList.toggle("on", kept); count(root);
     row?.classList.add("pvfail"); setTimeout(() => row?.classList.remove("pvfail"), 1600);
     say(root, "Couldn't save that tick. If the hub is locked, unlock it and try again.");
     flag(root, "Couldn't save that tick. If the hub is locked, unlock it and try again.");

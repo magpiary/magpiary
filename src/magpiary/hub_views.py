@@ -64,10 +64,17 @@ def http_url(url) -> str:
     return url if parts.scheme in ("http", "https") and parts.hostname else ""
 
 
+POST_URL = re.compile(r"https?://[^\s<>\"'`]+")
+
+
 def in_post(url: str, item: dict) -> bool:
-    """A URL from a view's `value` becomes a link only when the post itself contains it (never one an AI made up)."""
-    text = " ".join(str(item.get(k) or "") for k in ("canonical_url", "caption", "title", "summary"))
-    return bool(url) and url in text
+    """A URL from a view's `value` becomes a link only when the post itself contains exactly that URL: its address, its
+    caption or its title. Never the summary or anything else an AI wrote (an AI could repeat its own invention there)."""
+    if not url:
+        return False
+    text = " ".join(str(item.get(k) or "") for k in ("canonical_url", "caption", "title"))
+    found = {u.rstrip(".,;:!?)]}'\"") for u in POST_URL.findall(text)}
+    return url.rstrip("/") in {u.rstrip("/") for u in found}
 
 
 def _plain(text) -> str:

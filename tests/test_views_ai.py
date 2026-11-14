@@ -420,7 +420,8 @@ def test_a_post_captured_again_during_a_build_drops_the_old_view(store, tmp_path
     assert item["status"] == "queued" and item["view_status"] == "failed" and not (folder / "view.json").exists()
 
 
-@pytest.mark.parametrize("bad", ["not tabs", {"ingredients": {"items": ["x"]}}, ["x", 3], None])
+@pytest.mark.parametrize("bad", ["not tabs", {"ingredients": {"items": ["x"]}}, ["x", 3], None, [{}],
+                                 [{"tab": "ingredients", "items": "broken"}], [{"tab": ["ingredients"], "items": []}]])
 def test_a_malformed_view_container_is_a_failure_not_a_built_view(store, tmp_path, bad):
     """Correctness 5: {"view": "not tabs"} used to become an empty view with an engine, marked done."""
     item_id, folder = saved_post(store, tmp_path)
@@ -510,3 +511,45 @@ def test_the_guard_runs_before_every_request_of_each_provider():
     finally:
         providers.http_request = monkey
     assert len(sent) == 1
+
+
+
+# ---- verify pass, 15 Nov 2026 (reports/3-verify.md) -------------------------------------------------------------------
+
+def test_a_failed_request_during_a_category_change_queues_the_new_category(store, tmp_path):
+    """Verify 3: the old build failed and was marked failed, losing the owner's new category."""
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+
+    def asker_for(k, system, schema, guard=None):
+        def ask(parts, history):
+            store.set_category(item_id, "music", "", "owner")
+            assert not store.queue_view(item_id)
+            return "not json"
+        return ask
+    views_ai.views_due(store, key_source=Keys([key()]), asker_for=asker_for)
+    item = store.get_item(URL)
+    assert (item["category"], item["view_status"]) == ("music", "queued")
+
+
+def test_a_recapture_cannot_land_between_the_check_and_the_file(store, tmp_path, monkeypatch):
+    """Verify 4: finish_view released the lock before views.save, so a recapture in between left a stale view done."""
+    import threading
+
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+    real_save, seen = views.save, {}
+
+    def save(folder_, view):
+        t = threading.Thread(target=lambda: seen.setdefault("recaptured", store.recaptured(URL)))
+        t.start()
+        t.join(0.3)
+        seen["blocked"] = t.is_alive()  # the capture waits for the build to finish committing
+        real_save(folder_, view)
+        seen["thread"] = t
+    monkeypatch.setattr(views, "save", save)
+    assert views_ai.views_due(store, key_source=Keys([key()]), asker_for=recorder(
+        json.dumps({"category": "recipe", "view": VIEW}), [])) == 1
+    seen["thread"].join(5)
+    assert seen["blocked"] and seen["recaptured"]
+    assert store.get_item(URL)["status"] == "queued"  # the new capture is read and summarised next

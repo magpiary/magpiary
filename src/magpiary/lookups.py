@@ -527,9 +527,9 @@ def _candidates(store):
 
 
 def post_text(folder: Path, row: dict) -> str:
-    """What the post itself says, folded for matching: its title and caption, the transcript, the text read off the
-    screen, and the names its summary found (only when the owner wrote no note: the summary reads the note too). The
-    owner's note is never part of it: a lookup must not carry his own words to another service (review 14 Nov 2026)."""
+    """What the post itself says, folded for matching: its title and caption, the transcript and the text read off the
+    screen. Nothing an AI wrote (the summary's names could repeat the owner's note, even after he deletes it) and never
+    the note itself: a lookup must not carry his own words to another service (reviews 14 Nov 2026)."""
     from magpiary.config import load_json
 
     meta = load_json(folder / "meta.json") or {}
@@ -540,10 +540,6 @@ def post_text(folder: Path, row: dict) -> str:
     screen = load_json(folder / "ocr.json") or []
     parts += [line.get("text") for line in screen if isinstance(line, dict)] if isinstance(screen, list) else []
     parts.append(row.get("screen_text"))
-    record = load_json(folder / "record.json") or {}
-    if isinstance(record, dict) and not str(row.get("note") or "").strip():
-        ents = record.get("entities") if isinstance(record.get("entities"), dict) else {}
-        parts += [v for values in ents.values() if isinstance(values, list) for v in values]
     return " " + _fold(" ".join(str(p) for p in parts if isinstance(p, (str, int, float)))) + " "
 
 

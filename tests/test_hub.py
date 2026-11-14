@@ -404,7 +404,7 @@ def test_a_post_opens_as_a_card_over_the_wall_or_as_a_page(mac, lib):
     assert status == 200 and not data.startswith(b"<!doctype") and b'class="it-h"' in data and b"<video" in data
     for tab in ("Summary", "Related", "Details"):
         assert f">{tab}<" in data.decode()
-    assert ">Links<" not in data.decode()  # contextual tabs (14 Nov 2026): Links shows only once it has links
+    assert data.decode().index(">Links<") > data.decode().index('class="pvmorelist"')  # no links yet: Links waits in More
     assert "data-standalone" in page(mac, f"/item/{lib['ig']}")[2]
     assert request(mac, "GET", "/item/999?frag=1")[0] == 404
 

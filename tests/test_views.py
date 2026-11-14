@@ -318,7 +318,8 @@ def test_a_recipe_post_shows_its_tabs_in_order_with_more(mac, recipe):
     assert order == sorted(order)
     more = nav[nav.index('<details class="pvmore'):]
     assert "Equipment" in more and "Related" in more
-    assert "Transcript" not in nav and ">Links<" not in nav  # no speech, no links: hidden, not greyed
+    assert "Transcript" not in nav  # no speech: hidden, not greyed
+    assert nav.index(">Links<") > nav.index('<details class="pvmore')  # no links yet: last in More, for its Add form
     assert 'data-pane="equipment"' in body and "Large pot" in body
     assert "&lt;b&gt;Lemon&lt;/b&gt;" in body and "<b>Lemon</b>" not in body  # AI text is escaped
     assert "Build this view" not in body

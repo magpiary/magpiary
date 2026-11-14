@@ -812,6 +812,8 @@ class CardPages:
             for k in visible + more:
                 if k in cats.TABS:
                     panes[k] = (cats.TABS[k].label, "", self.category_pane(k, view, state, item))
+        if saved and item.get("shelf") != "board" and "links" not in visible + more:
+            more.append("links")  # no links yet: Links waits in More with its Add form (as 0.1.8 always showed it)
         if tab == "rel" and "rel" not in visible + more:
             more.append("rel")  # asked for by the lazy loader: the pane must be there
         order = visible + more

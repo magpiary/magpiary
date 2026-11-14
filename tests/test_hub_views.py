@@ -352,6 +352,11 @@ def test_an_ai_written_url_never_becomes_an_official_site_but_a_found_link_does(
     rows = [{"name": "Paletteer", "url": "https://paletteer.example/app"}]
     html = hv.render_tab(cats.TABS["alternatives"], {"text": "", "items": items}, {}, {}, ITEM, rows)
     assert 'href="https://paletteer.example/app"' in html and "Official site" in html and "attacker.example" not in html
+    # verify pass: the AI-written summary repeating its invention proves nothing; only the post's own text, exactly
+    told = {**ITEM, "summary": "Try https://attacker.example/ for more.", "caption": "See https://attacker.example/x"}
+    assert "attacker.example" not in render("alternatives", items, item=told)
+    assert hv.in_post("https://tickets.example.org/show", ITEM) and not hv.in_post("https://tickets.example.org/sh", ITEM)
+    assert hv.in_post("https://tickets.example.org/show", {"caption": "at https://tickets.example.org/show."})
 
 
 def test_an_event_at_the_end_of_the_calendar_still_renders():
@@ -370,11 +375,17 @@ def test_links_keeps_an_add_link_entry_point_when_empty(mac, tmp_path):
                                                           "suggested_tags": []}).encode()})
     mac.store.set_setting("ai_mode", "private")
     body = page(mac, f"/item/{item_id}")[2]
-    assert 'data-pane="links"' not in body
+    assert 'data-tab="links"' in body.split('class="pvmorelist">')[1].split("</div>")[0]  # in More while empty
     add = re.search(r'<a class="pvprimary find" href="([^"]+)" data-tabto="links">', body)
     assert add and add.group(1).replace("&amp;", "&") == f"/item/{item_id}?tab=links#links"
     asked = page(mac, f"/item/{item_id}?tab=links")[2]
     assert 'data-pane="links"' in asked and 'data-tab="links" class="on"' in asked
+    # verify pass: any saved post (not only tools) reaches Links and its Add form, from More
+    other_id, _ = archive(mac, tmp_path, "https://www.instagram.com/reel/ExampleNoLinks2/", "instagram",
+                          {"text": "A fictional pasta", "author": "Example Maker", "duration": 30.0})
+    body = page(mac, f"/item/{other_id}")[2]
+    more = body.split('class="pvmorelist">')[1].split("</div>")[0]
+    assert 'data-tab="links"' in more and 'data-pane="links"' in body and "/hub/links/add" in body.split('data-pane="links"')[1]
 
 
 JS_HARNESS = r"""
@@ -386,17 +397,21 @@ class HTMLDetailsElement extends Element {}
 const server = {};  // what the hub stored, in the order requests finished
 let n = 0;
 const delays = [60, 5];  // the first request (tick) is slow, the second (untick) fast
+const refuse = process.argv[3] === "refuse";  // the hub is locked: every save is refused
 async function fetch(url, opts) {
   const p = new URLSearchParams(opts.body), wait = delays[n++] ?? 1;
   await new Promise((r) => setTimeout(r, wait));
+  if (refuse) return { ok: false, json: async () => ({ ok: false }) };
   server[p.get("key")] = p.get("value");
   return { ok: true, json: async () => ({ ok: true }) };
 }
 const root = { dataset: { pvid: "7", pvtab: "ingredients" }, querySelector: () => null, querySelectorAll: () => [] };
 const row = { classList: { toggle() {}, add() {}, remove() {} }, querySelector: () => null, animate() {} };
-const box = Object.assign(new HTMLInputElement(), { checked: false, dataset: { pvkey: "i.abc" },
+root.prepend = () => {};
+const box = Object.assign(new HTMLInputElement(), { checked: false, defaultChecked: false, dataset: { pvkey: "i.abc" },
   matches: () => true, closest: (sel) => (sel === "li" ? row : root) });
 const document = { addEventListener: (t, f) => { (handlers[t] ||= []).push(f); }, querySelector: () => null,
+                   createElement: () => ({ setAttribute() {}, remove() {} }),
                    querySelectorAll: () => [] };
 const ctx = { window: {}, document, fetch, URLSearchParams, setTimeout, clearTimeout, console, Element, HTMLInputElement,
               HTMLDetailsElement, matchMedia: () => ({ matches: true }), addEventListener() {}, innerWidth: 1000,
@@ -423,7 +438,7 @@ def test_quick_tick_then_untick_is_stored_as_unticked(tmp_path):
     script = tmp_path / "harness.js"
     script.write_text(JS_HARNESS)
     js = Path(hv.__file__).parent / "static" / "views.js"
-    done = subprocess.run([node, str(script), str(js)], capture_output=True, text=True, timeout=60)
-    assert done.returncode == 0, done.stderr[-2000:]
-    out = json.loads(done.stdout.strip().splitlines()[-1])
-    assert out == {"stored": "", "shown": False}
+    for mode, want in (("ok", {"stored": "", "shown": False}), ("refuse", {"stored": None, "shown": False})):
+        done = subprocess.run([node, str(script), str(js), mode], capture_output=True, text=True, timeout=60)
+        assert done.returncode == 0, done.stderr[-2000:]
+        assert json.loads(done.stdout.strip().splitlines()[-1]) == want, mode  # verify pass: two refusals show unticked
