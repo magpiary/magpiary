@@ -216,10 +216,10 @@ def check_chat(provider: str, secret: str, request: Request = http_request) -> s
 
 # ---- Claude (Anthropic's library) -------------------------------------------------------------
 
-def _claude_client(secret: str):
+def _claude_client(secret: str, retries: int = 2):
     import anthropic
 
-    return anthropic.Anthropic(api_key=secret, max_retries=2, timeout=300)
+    return anthropic.Anthropic(api_key=secret, max_retries=retries, timeout=300)
 
 
 def _claude_failure(err: Exception) -> BrainFailed:

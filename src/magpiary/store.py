@@ -101,7 +101,10 @@ MIGRATIONS = ["ALTER TABLE items ADD COLUMN archive_dir TEXT", "ALTER TABLE item
               # it (ai, rules, owner), and the view build: NULL (none), queued, working, done or failed
               "ALTER TABLE items ADD COLUMN category TEXT", "ALTER TABLE items ADD COLUMN category2 TEXT",
               "ALTER TABLE items ADD COLUMN category_by TEXT", "ALTER TABLE items ADD COLUMN view_status TEXT",
-              "ALTER TABLE items ADD COLUMN view_detail TEXT NOT NULL DEFAULT ''"]
+              "ALTER TABLE items ADD COLUMN view_detail TEXT NOT NULL DEFAULT ''",
+              # bumped whenever what the post's tabs show changes (a view saved, lookups found, the owner's category):
+              # in the post and wall signatures, and a build commits only if the owner changed nothing meanwhile
+              "ALTER TABLE items ADD COLUMN view_rev INTEGER NOT NULL DEFAULT 0"]
 
 HUB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS agent_usage (day TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, kind));
@@ -243,6 +246,8 @@ class Store(ChatStore, StatsStore):
         self._db.executescript(BOARD_SCHEMA)
         self._db.executescript(ASK_SCHEMA)
         self._db.executescript(STATS_SCHEMA)
+        # ticks and servings of posts deleted for good before purge_trash cleared them too (review 14 Nov 2026)
+        self._db.execute("DELETE FROM view_state WHERE canonical_url NOT IN (SELECT canonical_url FROM items)")
         self._migrate_item_ids()
         if "pinned" not in {r["name"] for r in self._db.execute("PRAGMA table_info(ask_sessions)")}:
             self._db.execute("ALTER TABLE ask_sessions ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
@@ -1003,7 +1008,7 @@ class Store(ChatStore, StatsStore):
                             (link.url, link.source, link.kind, now, short_url))
                     for table, column in (("deliveries", "canonical_url"), ("tags", "canonical_url"), ("search", "url"),
                                           ("timings", "canonical_url"), ("links", "canonical_url"),
-                                          ("agent_note_history", "canonical_url")):
+                                          ("agent_note_history", "canonical_url"), ("view_state", "canonical_url")):
                         self._db.execute(f"UPDATE OR IGNORE {table} SET {column}=? WHERE {column}=?", (link.url, short_url))
                     if link.url != short_url:
                         self._db.execute("UPDATE OR IGNORE board_pending SET canonical_url=? WHERE canonical_url=?", (link.url, short_url))
@@ -1375,7 +1380,7 @@ class Store(ChatStore, StatsStore):
                 "SELECT COUNT(*), SUM(status='archived'), SUM(ai_status='done'), SUM(status='needs_attention'), "
                 "SUM(ai_status='needs_attention'), SUM(senses_status='done'), SUM(links_status IS NOT NULL), "
                 "MAX(created_at), MAX(processed_at), (SELECT COUNT(*) FROM board_events), SUM(shelf='inbox'), "
-                "(SELECT COUNT(*) || '-' || IFNULL(MAX(created_at), '') FROM board_pending) FROM items").fetchone()
+                "(SELECT COUNT(*) || '-' || IFNULL(MAX(created_at), '') FROM board_pending), SUM(view_rev) FROM items").fetchone()
         return ":".join(str(v or 0) for v in row)
 
     def item_signature(self, item_id: int) -> str:
@@ -1384,7 +1389,7 @@ class Store(ChatStore, StatsStore):
         with self._lock:
             row = self._db.execute(
                 "SELECT status, ai_status, senses_status, links_status, screen_text IS NULL, processed_at, shelf, updated_at, deep_status, "
-                "(SELECT COUNT(*) FROM board_events) FROM items WHERE rowid=?", (item_id,)).fetchone()
+                "(SELECT COUNT(*) FROM board_events), view_status, view_rev FROM items WHERE rowid=?", (item_id,)).fetchone()
             tags = self._db.execute("SELECT COUNT(*) FROM tags t JOIN items i ON i.canonical_url=t.canonical_url WHERE i.rowid=?",
                                     (item_id,)).fetchone()[0]
         return ":".join(str(v or 0) for v in (*(row or ()), tags))
@@ -1527,7 +1532,7 @@ class Store(ChatStore, StatsStore):
             for r in rows:
                 for table, column in (("items", "canonical_url"), ("tags", "canonical_url"), ("search", "url"),
                                       ("timings", "canonical_url"), ("links", "canonical_url"),
-                                      ("agent_note_history", "canonical_url")):
+                                      ("agent_note_history", "canonical_url"), ("view_state", "canonical_url")):
                     self._db.execute(f"DELETE FROM {table} WHERE {column}=?", (r["canonical_url"],))
         return [r["archive_dir"] for r in rows if r["archive_dir"]]
 
@@ -2145,8 +2150,23 @@ class Store(ChatStore, StatsStore):
         category2 = category2 if category2 in cats.CATEGORIES and category2 not in (category, "other") else ""
         guard = "" if by == "owner" else " AND COALESCE(category_by, '') != 'owner'"
         with self._lock:
-            cur = self._db.execute(f"UPDATE items SET category=?, category2=?, category_by=? WHERE rowid=?{guard}",
-                                   (category, category2, by, item_id))
+            cur = self._db.execute(f"UPDATE items SET category=?, category2=?, category_by=?, view_rev=view_rev+1 "
+                                   f"WHERE rowid=?{guard}", (category, category2, by, item_id))
+        return cur.rowcount > 0
+
+    def view_changed(self, item_id: int) -> None:
+        """The post's tabs show something new (a view or lookups saved): an open post and the wall redraw."""
+        with self._lock:
+            self._db.execute("UPDATE items SET view_rev=view_rev+1 WHERE rowid=?", (item_id,))
+
+    def finish_view(self, item_id: int, rev: int, archived_at, status: str = "done", detail: str = "") -> bool:
+        """End a build that started at view revision `rev` on the capture `archived_at`, in one step: False (nothing
+        changed) when the owner changed the category, the post was captured again, trashed or is no longer saved since
+        it started. The caller then queues it again or drops its result."""
+        with self._lock:
+            cur = self._db.execute(
+                "UPDATE items SET view_status=?, view_detail=?, view_rev=view_rev+1 WHERE rowid=? AND view_rev=? "
+                "AND status='archived' AND shelf != 'trash' AND archived_at IS ?", (status, detail[:200], item_id, rev, archived_at))
         return cur.rowcount > 0
 
     def view_state(self, url: str) -> dict[str, dict[str, str]]:

@@ -109,8 +109,14 @@ def test_free_view_fills_what_it_can_without_ai():
     assert [i["name"] for i in view["tabs"]["method"]["items"]] == ["Boil", "Toss"]
     assert view["tabs"]["tracks"]["items"] == [{"name": "Song X", "detail": "Band Y", "kind": "music"}]
     assert view["by"] == "rules" and views.needs_build(view)
-    chapters = views.free_view("howto_diy", "", {}, {"chapters": [{"title": "Prep", "start_time": 75}]})
-    assert chapters["tabs"]["steps"]["items"] == [{"name": "Prep", "at": "1:15"}]
+    # the real meta shape, from the source adapter (review 14 Nov 2026: the test used yt-dlp's start_time and hid it)
+    from magpiary.sources import _from_info
+
+    meta = _from_info({"title": "t", "chapters": [{"start_time": 75.0, "end_time": 90, "title": "Prep"},
+                                                  {"start_time": 0, "title": "Intro"}]})
+    assert meta["chapters"][0] == {"start": 75.0, "title": "Prep"}
+    chapters = views.free_view("howto_diy", "", {}, meta)
+    assert chapters["tabs"]["steps"]["items"] == [{"name": "Prep", "at": "1:15"}, {"name": "Intro", "at": "0:00"}]
     places = views.free_view("travel", "", {"link_targets": [{"name": "Lighthouse", "kind": "place"}],
                                             "entities": {"places": ["Lighthouse", "Harbour"]}}, {})
     assert [i["name"] for i in places["tabs"]["places"]["items"]] == ["Lighthouse", "Harbour"]
@@ -123,6 +129,38 @@ def test_needs_build_until_an_ai_built_the_view():
     assert not views.needs_build({"category": "recipe", "by": "owner", "engine": "gemini:x"})
     assert not views.needs_build({"category": "recipe", "by": "ai", "engine": "gemini:x"})
     assert not views.needs_build({"category": "other", "by": "rules"})
+    # review 14 Nov: a free view under a category the summary chose (by "ai") was built by nobody
+    assert views.needs_build({"category": "recipe", "by": "ai", "engine": ""})
+
+
+def test_tidy_items_keeps_distinct_items_that_share_a_name():
+    """Review 14 Nov: Hello by Adele and Hello by Lionel Richie were merged into one song."""
+    items = views.tidy_items([{"name": "Hello", "detail": "Adele"}, {"name": "Hello", "detail": "Lionel Richie"},
+                              {"name": "Hello", "detail": "adele"}, {"name": "Tea", "amount": "1 tsp"},
+                              {"name": "Tea", "amount": "2 tsp"}, {"name": "Hello", "detail": "Adele"}])
+    assert [(i["name"], i.get("detail") or i.get("amount")) for i in items] == [
+        ("Hello", "Adele"), ("Hello", "Lionel Richie"), ("Tea", "1 tsp"), ("Tea", "2 tsp")]
+
+
+@pytest.mark.parametrize("broken", [
+    {"category": ["recipe"]}, {"category2": {"x": 1}}, {"by": ["ai"]},
+    {"tabs": [{"tab": ["ingredients"], "items": [{"name": "x"}]}, {"tab": 5}]},
+    {"lookups": {"tracks": ["invalid"]}}, {"lookups": {"tracks": {"hello": ["x"], "bye": {"musicbrainz": "ok"}}}},
+    {"lookups": ["x"]}, {"tabs": {"ingredients": {"items": "flour", "text": ["x"]}}}])
+def test_a_malformed_view_file_never_breaks_loading(tmp_path, broken):
+    """Review 14 Nov: a list as category or tab id raised TypeError in load (the wall); a list in lookups broke the worker."""
+    (tmp_path / views.FILE).write_text(json.dumps({"version": 1, "category": "recipe", "engine": "e",
+                                                   "tabs": {"ingredients": {"items": [{"name": "salt"}]}}} | broken))
+    view = views.load(tmp_path)
+    assert view is not None and isinstance(view["category"], str) and isinstance(view["by"], str)
+    assert all(isinstance(t, str) and isinstance(b, dict) for t, b in view["tabs"].items())
+    for keys in view["lookups"].values():
+        assert all(isinstance(k, str) and all(isinstance(e, dict) for e in apis.values()) for k, apis in keys.items())
+    from magpiary import lookups
+
+    lookups.wanted(view, "2026-11-14")  # the worker's planning step
+    item = {"id": 1, "category": None, "category_by": None}
+    assert views.current(item, {}, {}, tmp_path)["category"]
 
 
 # ---- tab order -------------------------------------------------------------------------------------------------------
@@ -224,6 +262,25 @@ def test_store_category_state_queue_and_hidden_tabs(tmp_path):
     assert store.hidden_tabs() == {}
     assert store.set_hidden_tabs({"recipe": ["swaps", "swaps", "bogus"], "x": ["y"]}) == {"recipe": ["swaps"]}
     assert store.hidden_tabs() == {"recipe": ["swaps"]}
+    store.close()
+
+
+def test_deleting_for_good_removes_ticks_and_old_orphans_are_cleaned(tmp_path):
+    """Review 14 Nov: purge_trash left view_state rows (the URL and ticks) after the post was deleted for good."""
+    path = tmp_path / "m.db"
+    store = Store(path)
+    url, other = "https://example.com/p/3", "https://example.com/p/4"
+    store.add_link(url)
+    store.add_link(other)
+    store.set_view_state(url, "ingredients", "i.abc", "1")
+    store.set_view_state(other, "ingredients", "i.abc", "1")
+    store.set_shelf(store.id_for(url), "trash")
+    store.purge_trash(everything=True)
+    assert store.view_state(url) == {} and store.view_state(other) == {"ingredients": {"i.abc": "1"}}
+    store._db.execute("INSERT INTO view_state VALUES ('https://example.com/gone', 'method', 'i.x', '1', '')")
+    store.close()
+    store = Store(path)  # opening cleans rows left by an older version
+    assert store.view_state("https://example.com/gone") == {} and store.view_state(other)
     store.close()
 
 

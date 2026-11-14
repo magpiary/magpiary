@@ -430,22 +430,39 @@ def summarise(parts: list[dict], key: str, model: str, call: Call = http_call, w
     raise BrainFailed("invalid", f"{name}'s answer did not match the record format twice: " + "; ".join(problems))
 
 
-def _asker(provider: str, key: str, model: str, call: Call, wait, system: str = PROMPT, schema: dict = SCHEMA):
+def _guarded(send, guard):
+    """`send` (one HTTP request) with `guard()` called right before each use: it raises to stop a retry from going out."""
+    if guard is None:
+        return send
+
+    def run(*args, **kwargs):
+        guard()
+        return send(*args, **kwargs)
+    return run
+
+
+def _asker(provider: str, key: str, model: str, call: Call, wait, system: str = PROMPT, schema: dict = SCHEMA, guard=None):
     if provider in ("claude_code", "codex"):
-        return local_asker(provider, model, system=system, schema=schema)
+        return local_asker(provider, model, system=system, schema=schema, guard=guard)
     if provider == "gemini":
+        call = _guarded(call, guard)  # a busy Gemini is asked again after a wait: each try is checked
         ask = lambda parts, history, system, schema: ask_gemini(parts, history, key, model, call, wait, system, schema)  # noqa: E731
     else:
         from magpiary import providers
 
         if provider == "claude":
-            ask = lambda parts, history, system, schema: providers.ask_claude(parts, history, key, model, system=system, schema=schema)  # noqa: E731
+            # the SDK's own retries would go out unchecked: with a guard there are none (a failure is shown, retried by hand)
+            ask = lambda parts, history, system, schema: _guarded(providers.ask_claude, guard)(  # noqa: E731
+                parts, history, key, model, client=providers._claude_client(key, retries=0) if guard else None,
+                system=system, schema=schema)
         else:
-            ask = lambda parts, history, system, schema: providers.ask_chat(provider, parts, history, key, model, system=system, schema=schema)  # noqa: E731
-    return _schema_fallback(ask, system, schema)
+            request = _guarded(providers.http_request, guard)  # each response format it tries is one request
+            ask = lambda parts, history, system, schema: providers.ask_chat(  # noqa: E731
+                provider, parts, history, key, model, request=request, system=system, schema=schema)
+    return _schema_fallback(ask, system, schema, guard)
 
 
-def _schema_fallback(ask, system: str, schema: dict):
+def _schema_fallback(ask, system: str, schema: dict, guard=None):
     """A service that rejects the summary's schema with view tabs (HTTP 400: too large or complex for it) is asked once
     more with the plain summary: the summary must never fail because of the view (rejected requests cost no quota)."""
     def run(parts, history):
@@ -454,19 +471,23 @@ def _schema_fallback(ask, system: str, schema: dict):
         except BrainFailed as err:
             if schema is not SCHEMA or err.reason != "unknown" or "HTTP 400" not in err.detail:
                 raise
+            if guard:
+                guard()
             return ask(parts, history, BASE_PROMPT, BASE_SCHEMA)
     return run
 
 
-def asker_for(key, system: str = PROMPT, schema: dict = SCHEMA, call: Call = http_call, wait=None):
-    """`ask(parts, history) -> text` for a summariser (a keys.Key or an engines.LocalEngine) with this prompt and schema."""
+def asker_for(key, system: str = PROMPT, schema: dict = SCHEMA, call: Call = http_call, wait=None, guard=None):
+    """`ask(parts, history) -> text` for a summariser (a keys.Key or an engines.LocalEngine) with this prompt and schema.
+    `guard()`, when given, runs right before every request this asker makes, retries and fallbacks included, and raises
+    to stop it (Private mode chosen, the engine stopped: review lesson 2)."""
     if key.provider == "claude_code":
-        return local_asker("claude_code", key.model, getattr(key, "effort", "low"), system=system, schema=schema)
-    return _asker(key.provider, key.secret, key.model, call, wait, system, schema)
+        return local_asker("claude_code", key.model, getattr(key, "effort", "low"), system=system, schema=schema, guard=guard)
+    return _asker(key.provider, key.secret, key.model, call, wait, system, schema, guard)
 
 
 def local_asker(provider: str, model: str, effort: str = "low", used: dict | None = None,
-                system: str = PROMPT, schema: dict = SCHEMA):
+                system: str = PROMPT, schema: dict = SCHEMA, guard=None):
     """Claude Code or Codex writing a summary: the evidence's pictures become files for it to read; the instructions and
     answer format are the summary's own. Claude Code with the owner's model and effort: when that fails (not on the plan, a
     CLI that does not know it, overloaded) it is tried once more on the old default, never blocking the item. `used` is filled
@@ -495,6 +516,8 @@ def local_asker(provider: str, model: str, effort: str = "low", used: dict | Non
                     path.write_bytes(base64.b64decode(p["inline_data"]["data"]))
                     images.append(path)
             texts += [{"text": f"{'YOUR EARLIER ANSWER' if r == 'model' else 'NOTE'}: {t}"} for r, t in history]
+            if guard:
+                guard()
             if provider != "claude_code":
                 return deepdive.codex_asker(model, "low")(system, schema, texts, images)
             try:
@@ -503,6 +526,8 @@ def local_asker(provider: str, model: str, effort: str = "low", used: dict | Non
                 fallback = askconfig.SUMMARY_FALLBACK
                 if (model, effort) == fallback:
                     raise
+                if guard:
+                    guard()
                 used.update(model=fallback[0], effort=fallback[1], fell_back=True, why=err.detail[:120])
                 return deepdive.claude_code_asker(*fallback)(system, schema, texts, images)
         finally:

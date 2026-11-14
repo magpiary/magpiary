@@ -45,10 +45,12 @@ def tidy_item(raw) -> dict | None:
 
 
 def tidy_items(raw) -> list[dict]:
+    """Known items, each once: a repeat is the same item in every field (Hello by Adele and Hello by Lionel Richie
+    are two songs; review 14 Nov 2026)."""
     out, seen = [], set()
     for r in raw if isinstance(raw, list) else []:
         item = tidy_item(r)
-        key = item and (item.get("group", "").lower(), item["name"].lower(), item.get("value", "")[:80])
+        key = item and tuple(item.get(k, "").casefold() for k in ITEM_FIELDS)
         if item and key not in seen:
             seen.add(key)
             out.append(item)
@@ -57,8 +59,8 @@ def tidy_items(raw) -> list[dict]:
 
 def tidy_tabs(raw) -> dict[str, dict]:
     """Tabs keyed by known tab id. Accepts the AI's list shape [{tab, text, items}] or the file's dict shape."""
-    if isinstance(raw, list):
-        raw = {t.get("tab"): t for t in raw if isinstance(t, dict)}
+    if isinstance(raw, list):  # a tab id that is not a string (a list, a number) is junk, never a crash
+        raw = {t.get("tab"): t for t in raw if isinstance(t, dict) and isinstance(t.get("tab"), str)}
     out: dict[str, dict] = {}
     for tab_id, body in (raw or {}).items() if isinstance(raw, dict) else []:
         if tab_id not in cats.TABS or not isinstance(body, dict) or len(out) >= MAX_TABS:
@@ -72,16 +74,33 @@ def tidy_tabs(raw) -> dict[str, dict]:
 def tidy_view(raw, *, category: str = "", category2: str = "", by: str = "ai", engine: str = "") -> dict:
     """A whole view in the file's shape. Unknown categories become other; a second category equal to the first is dropped."""
     raw = raw if isinstance(raw, dict) else {}
-    category = category or raw.get("category") or ""
+    category = category or _str(raw.get("category"))
     category = category if category in cats.CATEGORIES else "other"
-    second = category2 or raw.get("category2") or ""
+    second = category2 or _str(raw.get("category2"))
     second = second if second in cats.CATEGORIES and second not in (category, "other") else ""
-    lookups = raw.get("lookups") if isinstance(raw.get("lookups"), dict) else {}
+    by, old_by = _str(by), _str(raw.get("by"))
     return {"version": VERSION, "category": category, "category2": second,
-            "by": by if by in BY else (raw.get("by") if raw.get("by") in BY else "ai"),
+            "by": by if by in BY else (old_by if old_by in BY else "ai"),
             "made_at": _clean(raw.get("made_at"), 30) or datetime.now().isoformat(timespec="seconds"),
             "engine": _clean(engine or raw.get("engine"), 80),
-            "tabs": tidy_tabs(raw.get("tabs") if "tabs" in raw else raw.get("view")), "lookups": lookups}
+            "tabs": tidy_tabs(raw.get("tabs") if "tabs" in raw else raw.get("view")), "lookups": tidy_lookups(raw.get("lookups"))}
+
+
+def _str(value) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def tidy_lookups(raw) -> dict:
+    """lookups.py's results in their only shape, {tab: {key: {api: {field: value}}}}; anything else in a file that was
+    edited or broken is dropped, so the wall, the post and the worker never trip over it."""
+    out: dict = {}
+    for tab_id, keys in raw.items() if isinstance(raw, dict) else ():
+        if not isinstance(tab_id, str) or not isinstance(keys, dict):
+            continue
+        tab = {k: {api: dict(entry) for api, entry in apis.items() if isinstance(api, str) and isinstance(entry, dict)}
+               for k, apis in keys.items() if isinstance(k, str) and isinstance(apis, dict)}
+        out[tab_id] = {k: v for k, v in tab.items() if v}
+    return out
 
 
 # ---- file -------------------------------------------------------------------------------------------------------
@@ -90,7 +109,12 @@ def load(folder: Path | None) -> dict | None:
     if not folder:
         return None
     raw = load_json(Path(folder) / FILE)
-    return tidy_view(raw, by=raw.get("by", "ai")) if isinstance(raw, dict) and raw.get("version") == VERSION else None
+    if not isinstance(raw, dict) or raw.get("version") != VERSION:
+        return None
+    try:
+        return tidy_view(raw, by=_str(raw.get("by")) or "ai")
+    except Exception:  # a broken file shows the post's free view, never an error page or a stopped worker
+        return None
 
 
 def save(folder: Path, view: dict) -> None:
@@ -209,7 +233,8 @@ def _free_items(source: str, tab: cats.Tab, record: dict, meta: dict) -> list[di
             return tidy_items(extras.get("steps"))
         source = "chapters"
     if source == "chapters":
-        return tidy_items([{"name": c.get("title"), "at": _clock(c.get("start_time"))}
+        # sources.py saves a chapter as {"start", "title"} (yt-dlp's start_time, renamed): the free tab reads that
+        return tidy_items([{"name": c.get("title"), "at": _clock(c.get("start", c.get("start_time")))}
                            for c in meta.get("chapters") or [] if isinstance(c, dict)])
     if source == "list_items":
         want = {"tracks": ("music",)}.get(tab.id, ())
@@ -317,7 +342,9 @@ def tab_plan(view: dict, core: dict[str, bool], hidden: dict[str, list[str]] | N
 def needs_build(view: dict) -> bool:
     """True when the category has tabs an AI would fill and no AI has built this view yet (an AI-built view always
     names its engine, also when the owner chose the category). The caller also checks Private mode."""
-    return (view.get("by") != "ai" and not view.get("engine") and view.get("category") in cats.CATEGORIES
+    # only a view an AI built and saved names an engine: who chose the category (category_by "ai" from a summary
+    # whose view was missing or broken) says nothing about whether the tabs were built (review 14 Nov 2026)
+    return (not view.get("engine") and view.get("category") in cats.CATEGORIES
             and bool(cats.CATEGORIES[view["category"]].tabs))
 
 

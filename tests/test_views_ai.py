@@ -218,7 +218,7 @@ def test_the_owners_category_is_never_overwritten_by_a_summary(store, tmp_path):
 # ---- old posts: Build this view --------------------------------------------------------------------------------------
 
 def recorder(text, calls, before=None):
-    def asker_for(k, system, schema):
+    def asker_for(k, system, schema, guard=None):
         def ask(parts, history):
             calls.append({"key": k.id, "system": system, "schema": schema, "parts": parts})
             if isinstance(text, Exception):
@@ -257,13 +257,13 @@ def test_only_queued_posts_are_built(store, tmp_path):
 
 def test_the_free_tabs_fill_what_the_ai_left_out_and_lookups_are_kept(store, tmp_path):
     item_id, folder = saved_post(store, tmp_path)
-    (folder / "view.json").write_text(json.dumps({"version": 1, "category": "recipe", "lookups": {"spots": {"x": {}}}}))
+    (folder / "view.json").write_text(json.dumps({"version": 1, "category": "recipe", "lookups": {"spots": {"x": {"nominatim": {"status": "none"}}}}}))
     store.queue_view(item_id)
     views_ai.views_due(store, key_source=Keys([key()]), asker_for=recorder(json.dumps(
         {"category": "recipe", "view": [{"tab": "method", "items": ["Boil"]}]}), []))
     view = views.load(folder)
     assert view["tabs"]["ingredients"]["items"] == [{"name": "200 g ricotta"}, {"name": "1 lemon"}]  # from the summary
-    assert view["lookups"] == {"spots": {"x": {}}}
+    assert view["lookups"] == {"spots": {"x": {"nominatim": {"status": "none"}}}}
 
 
 def test_a_busy_engine_hands_over_to_the_next_and_an_unreadable_answer_fails_plainly(store, tmp_path):
@@ -271,7 +271,7 @@ def test_a_busy_engine_hands_over_to_the_next_and_an_unreadable_answer_fails_pla
     store.queue_view(item_id)
     keys, calls = Keys([key(1), key(2)]), []
 
-    def asker_for(k, system, schema):
+    def asker_for(k, system, schema, guard=None):
         def ask(parts, history):
             calls.append(k.id)
             if k.id == "k1":
@@ -323,7 +323,7 @@ def test_a_category_changed_while_building_is_built_again(store, tmp_path):
     item_id, folder = saved_post(store, tmp_path)
     store.queue_view(item_id)
 
-    def asker_for(k, system, schema):
+    def asker_for(k, system, schema, guard=None):
         def ask(parts, history):
             store.set_category(item_id, "music", "", "owner")  # the owner picks another one meanwhile
             return json.dumps({"category": "recipe", "view": VIEW})
@@ -370,3 +370,143 @@ def test_the_worker_step_is_wired(store, tmp_path):
     item_id, _ = saved_post(store, tmp_path)
     store.queue_view(item_id)
     assert views_due(store, key_source=Keys([key()]), asker_for=recorder(json.dumps({"category": "recipe", "view": VIEW}), [])) == 1
+
+
+# ---- review 14 Nov 2026 (Codex, reports/1-correctness.md and 2-security.md) ------------------------------------------
+
+def test_a_view_that_cannot_be_saved_fails_and_is_not_asked_again(store, tmp_path, monkeypatch):
+    """Correctness 1: a save error used to leave 'working', so the next pass paid for another request."""
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+    calls = []
+    monkeypatch.setattr(views, "save", lambda *a: (_ for _ in ()).throw(OSError("disk full")))
+    answer = recorder(json.dumps({"category": "recipe", "view": VIEW}), calls)
+    assert views_ai.views_due(store, key_source=Keys([key()]), asker_for=answer) == 0
+    item = store.get_item(URL)
+    assert item["view_status"] == "failed" and "could not be saved" in item["view_detail"]
+    assert views_ai.views_due(store, key_source=Keys([key()]), asker_for=answer) == 0 and len(calls) == 1
+    assert store.queue_view(item_id)  # Build this view again: the owner's explicit retry
+
+
+def test_a_category_changed_after_the_last_check_is_not_lost(store, tmp_path, monkeypatch):
+    """Correctness 2: the owner's edit landing between the worker's final read and its save queues another build."""
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+    real_finish = store.finish_view
+
+    def finish_view(*args, **kwargs):  # the owner picks music at the last moment before the commit
+        store.set_category(item_id, "music", "", "owner")
+        assert not store.queue_view(item_id)  # refused while working, as the route does
+        return real_finish(*args, **kwargs)
+    monkeypatch.setattr(store, "finish_view", finish_view)
+    views_ai.views_due(store, key_source=Keys([key()]), asker_for=recorder(json.dumps({"category": "recipe", "view": VIEW}), []))
+    item = store.get_item(URL)
+    assert (item["category"], item["category_by"], item["view_status"]) == ("music", "owner", "queued")
+    assert not (folder / "view.json").exists()
+
+
+def test_a_post_captured_again_during_a_build_drops_the_old_view(store, tmp_path):
+    """Correctness 3: a recapture replaces the evidence; the old answer must not be saved as done."""
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+
+    def asker_for(k, system, schema, guard=None):
+        def ask(parts, history):
+            store.recaptured(URL)
+            return json.dumps({"category": "recipe", "view": VIEW})
+        return ask
+    assert views_ai.views_due(store, key_source=Keys([key()]), asker_for=asker_for) == 0
+    item = store.get_item(URL)
+    assert item["status"] == "queued" and item["view_status"] == "failed" and not (folder / "view.json").exists()
+
+
+@pytest.mark.parametrize("bad", ["not tabs", {"ingredients": {"items": ["x"]}}, ["x", 3], None])
+def test_a_malformed_view_container_is_a_failure_not_a_built_view(store, tmp_path, bad):
+    """Correctness 5: {"view": "not tabs"} used to become an empty view with an engine, marked done."""
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+    assert views_ai.views_due(store, key_source=Keys([key()]), asker_for=recorder(
+        json.dumps({"category": "recipe", "view": bad}), [])) == 0
+    item = store.get_item(URL)
+    assert item["view_status"] == "failed" and not (folder / "view.json").exists()
+    assert views.needs_build(views.current(item, RECORD, {}, folder))
+
+
+def test_an_empty_list_of_tabs_is_a_real_answer(store, tmp_path):
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+    assert views_ai.views_due(store, key_source=Keys([key()]), asker_for=recorder(
+        json.dumps({"category": "recipe", "view": []}), [])) == 1
+    assert store.get_item(URL)["view_status"] == "done" and views.load(folder)["engine"]
+
+
+def test_a_summary_with_a_category_but_no_view_still_offers_build(store, tmp_path):
+    """Correctness 4: category_by='ai' without view.json used to hide "Build this view"."""
+    _, folder = saved_post(store, tmp_path)
+    run_summary(store, tmp_path, json.dumps({**RECORD, "category": "recipe", "view": "not tabs"}))
+    item = store.get_item(URL)
+    assert item["category_by"] == "ai" and not (folder / "view.json").exists()
+    view = views.current(item, RECORD, {}, folder)
+    assert views.needs_build(view)
+
+
+def test_a_finished_build_changes_the_post_and_wall_signatures(store, tmp_path):
+    """Correctness 9: an open post waiting on "Building…" refreshes when the build lands."""
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+    before, wall = store.item_signature(item_id), store.progress_signature()
+    views_ai.views_due(store, key_source=Keys([key()]), asker_for=recorder(json.dumps({"category": "recipe", "view": VIEW}), []))
+    assert store.item_signature(item_id) != before and store.progress_signature() != wall
+    before, wall = store.item_signature(item_id), store.progress_signature()
+    store.set_category(item_id, "music", "", "owner")
+    assert store.item_signature(item_id) != before and store.progress_signature() != wall
+
+
+def test_private_mode_chosen_during_a_gemini_retry_stops_the_retry(store, tmp_path):
+    """Security 1: Gemini's busy retry waited, then sent again after Private was chosen."""
+    item_id, folder = saved_post(store, tmp_path)
+    store.queue_view(item_id)
+    sent = []
+
+    def call(method, url, k, body):
+        sent.append(modes.current(store))
+        return 503, {}
+
+    def wait(seconds):
+        store.set_setting(modes.SETTING, "private")  # chosen while it waits
+
+    def asker_for(k, system, schema, guard=None):
+        return brain.asker_for(k, system, schema, call=call, wait=wait, guard=guard)
+    assert views_ai.views_due(store, key_source=Keys([key()]), asker_for=asker_for) == 0
+    assert len(sent) == 1 and sent[0] != "private"
+    item = store.get_item(URL)
+    assert item["view_status"] == "queued" and not (folder / "view.json").exists()
+
+
+def test_the_guard_runs_before_every_request_of_each_provider():
+    stops = []
+
+    def guard():
+        stops.append(1)
+        if len(stops) > 1:
+            raise views_ai.Stopped
+
+    # Gemini: first try busy, the retry is stopped
+    calls = []
+    ask = brain.asker_for(key(), "s", {"type": "OBJECT"}, call=lambda *a: calls.append(a) or (503, {}), wait=lambda s: None,
+                          guard=guard)
+    with pytest.raises(views_ai.Stopped):
+        ask([{"text": "e"}], [])
+    assert len(calls) == 1
+    # OpenAI-style: a rejected schema is asked again in another format; the second try is stopped
+    stops.clear()
+    sent = []
+    monkey = providers.http_request
+    try:
+        providers.http_request = lambda *a, **k: sent.append(a) or (400, {"error": {"message": "schema"}})
+        ask = brain.asker_for(key(provider="openai"), "s", {"type": "OBJECT"}, guard=guard)
+        with pytest.raises(views_ai.Stopped):
+            ask([{"text": "e"}], [])
+    finally:
+        providers.http_request = monkey
+    assert len(sent) == 1

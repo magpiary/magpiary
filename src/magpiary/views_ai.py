@@ -95,6 +95,12 @@ def keep_tabs(raw, category: str, category2: str) -> dict:
     return {k: v for k, v in tabs.items() if k in wanted}
 
 
+def usable_tabs(raw) -> bool:
+    """The answer's `view` has the schema's shape: a list of tab objects (an empty list is a real answer: nothing to
+    fill). A string, an object or a list of anything else is a broken answer, never a built view (review 14 Nov)."""
+    return isinstance(raw, list) and all(isinstance(t, dict) for t in raw)
+
+
 def make_view(raw_tabs, category: str, category2: str, by: str, engine: str, record: dict | None,
               meta: dict | None, folder: Path | None) -> dict:
     """A view to save: the AI's tabs, the tabs it left empty filled the free way (ingredients the summary already holds,
@@ -142,13 +148,14 @@ def apply_summary(store, item: dict, record: dict) -> str:
     owner = now.get("category") if now.get("category_by") == "owner" else ""
     if owner and owner != category:
         return "the owner chose another category: the AI's view is not used"
-    if not folder or not raw:
+    if not folder or not raw or not isinstance(raw, dict):  # brain.tidy kept only known, non-empty tabs (a dict)
         return "no view in the answer: rules view"
     engine = str((record.get("engine") or {}).get("brain") or "") if isinstance(record.get("engine"), dict) else ""
     meta = load_json(folder / "meta.json") or {}
     view = make_view(raw, category, second, "owner" if owner else "ai", engine, record, meta, folder)
     views.save(folder, view)
     store.set_view_status(item["id"], "done")
+    store.view_changed(item["id"])
     return f"view saved ({len(view['tabs'])} tabs)"
 
 
@@ -209,7 +216,9 @@ def build_one(store, item: dict, ask: Callable[[list[dict], list], str], engine:
     category = forced or answer.get("category")
     if not isinstance(category, str) or category not in cats.CATEGORIES:
         raise ValueError("the AI did not name a known category")
-    second = str(answer.get("category2") or "")
+    if not usable_tabs(answer.get("view")):
+        raise ValueError("the AI's answer had no tabs in the expected shape")
+    second = answer.get("category2") if isinstance(answer.get("category2"), str) else ""
     record = load_json(folder / "record.json") or {}
     meta = load_json(folder / "meta.json") or {}
     return make_view(answer.get("view"), category, second, "owner" if forced else "ai", engine, record, meta, folder)
@@ -253,12 +262,15 @@ def views_due(store, key_source=None, asker_for=None, log: Callable[[str], None]
         try:
             progress.step("summary")  # activity has no "view" label; the nearest one
             for key in engines:
-                real = asker_for(key, system, answer_schema)
-
-                def ask(parts, history, real=real, key=key):
-                    # checked again right before the request: Private chosen, or this engine stopped, since the pass began
+                def check(key=key):
+                    # before every request, retries and fallbacks included (a Gemini 503 waits and asks again): Private
+                    # chosen, or this engine stopped, since the pass began sends nothing more (review 14 Nov 2026)
                     if modes.current(store) == "private" or key.id not in {k.id for k in modes.summarisers(store, key_source)}:
                         raise Stopped
+                real = asker_for(key, system, answer_schema, guard=check)
+
+                def ask(parts, history, real=real, check=check):
+                    check()
                     return real(parts, history)
                 try:
                     view = build_one(store, item, ask, _engine_name(key))
@@ -290,13 +302,24 @@ def views_due(store, key_source=None, asker_for=None, log: Callable[[str], None]
             store.set_view_status(item_id, "failed", ("Could not build it. " + "; ".join(problems))[:200])
             log("view build failed")
             continue
-        now = store.get_item(item["canonical_url"]) or {}
-        if now.get("category_by") == "owner" and now.get("category") != view["category"]:
-            store.set_view_status(item_id, "queued")  # the owner changed the category meanwhile: build that one next
+        # Committed only when nothing changed since the build began: the owner's category (view_rev), a new capture
+        # (archived_at) or the Trash. Checked and marked done in one step, then the file is written.
+        if not store.finish_view(item_id, item.get("view_rev") or 0, item.get("archived_at")):
+            now = store.get_item(item["canonical_url"]) or {}
+            if now.get("status") == "archived" and now.get("shelf") != "trash" and now.get("archived_at") == item.get("archived_at"):
+                store.set_view_status(item_id, "queued")  # the owner changed the category meanwhile: build that one next
+            else:
+                store.set_view_status(item_id, "failed", "The post changed while its tabs were built: build it again.")
+            log("view build dropped: the post changed meanwhile")
             continue
-        views.save(folder, view)
+        try:
+            views.save(folder, view)
+        except Exception as err:  # disk full, folder gone: failed, never "working" (that would ask the AI again by itself)
+            store.set_view_status(item_id, "failed", f"The tabs were built but could not be saved ({type(err).__name__}).")
+            log(f"view not saved: {type(err).__name__}")
+            continue
         if view["by"] == "ai":
             store.set_category(item_id, view["category"], view["category2"], "ai")
-        store.set_view_status(item_id, "done")
+        store.view_changed(item_id)
         done += 1
     return done
