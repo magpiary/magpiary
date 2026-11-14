@@ -2,6 +2,19 @@
 
 Newest first. Plain words; the same notes are on each GitHub release.
 
+## 0.1.9 (14 November 2026)
+
+- **Posts get tabs that fit what they are.** Each post now has a category, one of 22 (Recipes, Travel, Music, Film & TV, Books, Fitness, AI & code, Design inspiration and more, plus Other), and its own tabs between Summary and Details: a recipe gets Ingredients and Method, a trip gets Places and an Itinerary, a music post gets Tracks and Artists. At most five tabs show; the rest wait in a More menu. A post that is clearly about two things borrows one tab from its second category.
+- **The tabs do things.** Tick ingredients and steps (ticks are remembered), change the servings and the amounts follow, copy a list, a prompt, a command or a colour, jump the video to the moment an item is mentioned, flip flashcards, and add an event to your calendar. Places with known coordinates are drawn on a small map, with no map downloaded.
+- **New posts get their tabs with their summary, in the same AI call.** For older posts, a post shows "Build this view": one AI call, only when you click it. In Private mode the tabs fill only from what the Mac already knows (ingredients and steps the summary listed, chapters, places and products the post names).
+- **Search links and free lookups.** Every card has search links (Spotify, Apple Music, Google Maps, Amazon, Goodreads, IMDb and others for its kind). In Smart mode, a few free public directories (MusicBrainz, OpenStreetMap, Open Library, TVmaze, Wikidata, Wikipedia) check names the post itself mentions and add a year, an exact page or map coordinates. Your notes are never sent, nothing is looked up in Private mode or while link finding is paused, and no pictures are loaded from those sites.
+- **Category on tiles, a Category filter and chips.** Tiles show the post's category, Filters has a Categories group, and searching "recipes", "travel", "songs" or "books" adds a removable category chip.
+- **Change category.** A post's ... menu has Change category. The post's tabs follow (rebuilt with one AI call in Smart mode).
+- **Choose the tabs per category.** Settings, Appearance, Advanced: Post tabs by category turns single tabs off.
+- **Ask suggests questions for the kind of post.** Ask's starter questions now fit the post's category.
+- **Fixed: no link searches in Private mode.** Find the link, Find it and Find more links are hidden in Private mode, and a link search asked for earlier waits, so nothing about a post is searched for online. Only links the post itself contains show.
+- **Fixed after an outside code review.** A build that fails to save stops (no second AI call by itself); changing a post's category or saving it again during a build is no longer lost; Private mode is checked again before every retry to an AI service; the same name in two cities, or one song by two artists, keeps its own lookup; a quick tick-untick is saved as the last click; deleting a post for good also deletes its ticks; an open post refreshes when its tabs are built; Add a link yourself works on a post with no links yet.
+
 ## 0.1.8 (10 November 2026)
 
 - **Install Magpiary as an app.** Settings, Appearance has Install as app: in Chrome, Edge or Brave, Magpiary opens in its own window with its own Dock icon, no tabs or address bar (Safari: File > Add to Dock). It works on the first Mac account's address (localhost:8765) only. The installed app stores nothing of your library; if the Magpiary service is off, it shows a short "isn't running" page with a Start Magpiary button, and the Mac app's Dock icon opens the installed app when you made one.
