@@ -40,6 +40,7 @@ from magpiary.web import Response, local_only
 from magpiary.store import TRASH_DAYS, ItemResult, Store
 from magpiary import phone_video, update
 from magpiary.tools import update_ytdlp
+from magpiary.lookups import lookups_due
 from magpiary.worker import brain_due, deep_due, fetch_due, jitter_pause, links_due, process_due, related_due, screen_due, icons_due
 
 MAX_BODY = 1_000_000  # bytes
@@ -661,6 +662,8 @@ def process_loop(server: Server) -> None:
             if linked:
                 log(f"found links for {linked} item(s)")
             icons_due(server.store, log=log)
+            if lookups_due(server.store, log=log):  # free directories for the post-view cards (lookups.py)
+                log("looked up cards for the post views")
             read = screen_due(server.store, activity=server.activity, log=log)
             if read:
                 log(f"read the on-screen text of {read} item(s)")
