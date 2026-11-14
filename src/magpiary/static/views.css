@@ -1,8 +1,238 @@
-/* Contextual post tabs (views.py, hub_views.py). Session A owns this file; the foundation only styles the More menu. */
-.pvtabs .pvmore{position:relative;display:inline-block}
-.pvtabs .pvmore>summary{cursor:pointer;list-style:none}
-.pvtabs .pvmore>summary::-webkit-details-marker{display:none}
-.pvtabs .pvmore>summary small{margin-left:4px;opacity:.7}
-.pvtabs .pvmorelist{position:absolute;right:0;top:100%;z-index:5;display:flex;flex-direction:column;min-width:160px;
-  padding:6px;border-radius:10px;background:var(--card,#1d1b26);border:1px solid rgba(255,255,255,.12)}
-.pvbuild{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+/* Contextual post tabs (views.py, hub_views.py, views.js). Built on hub.css tokens (--fg, --fg-2, --fg-3, --line, --chip,
+   --card, --dlg*, --ok, --bad-t, --tc = the post's tint). Focus rings come from hub.css (keyboard only, html[data-kb]). */
+
+/* ---- the More menu in the tab row: a floating surface (edged, lighter, no blur) ---------------------------------- */
+.pvtabs .pvmore { position: relative; display: inline-block; }
+.pvtabs .pvmore > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px; }
+.pvtabs .pvmore > summary::-webkit-details-marker { display: none; }
+.pvtabs .pvmore > summary::after { content: ""; width: 6px; height: 6px; margin-left: 4px; border: solid currentColor; border-width: 0 1.6px 1.6px 0; transform: translateY(-2px) rotate(45deg); opacity: .6; transition: transform .18s; }
+.pvtabs .pvmore[open] > summary::after { transform: translateY(1px) rotate(-135deg); }
+.pvtabs .pvmore > summary small { margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 11.5px; font-weight: 700; line-height: 18px; }
+.pvtabs .pvmore.on > summary { color: var(--fg); }
+/* fixed, placed by views.js: the tab row scrolls sideways (overflow:auto), which would clip an absolute menu */
+.pvtabs .pvmorelist { position: fixed; right: auto; top: 0; left: 0; z-index: 60; display: flex; flex-direction: column; gap: 2px; min-width: 190px; padding: 6px; border-radius: 14px;
+  background: var(--dlg); border: 1px solid var(--dlg-edge); box-shadow: var(--dlg-sh); }
+.tabs.pvtabs .pvmorelist a { display: block; padding: 8px 12px; border-radius: 9px; border: 0; font-size: 14.5px; white-space: nowrap; }
+.tabs.pvtabs .pvmorelist a:hover { background: var(--dlg-chip); }
+.tabs.pvtabs .pvmorelist a.on { background: var(--dlg-chip); font-weight: 700; box-shadow: inset 3px 0 0 var(--tc, var(--fg)); }
+.pvtabs .pvmore[open] .pvmorelist { animation: pvpop .16s cubic-bezier(.2,.9,.3,1); transform-origin: top right; }
+@keyframes pvpop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+
+/* ---- the Build this view strip (inside Summary) ------------------------------------------------------------------- */
+.pvbuild { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 0 0 18px; padding: 12px 14px 12px 16px; border-radius: 16px;
+  background: color-mix(in srgb, var(--tc, var(--fg)) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--tc, var(--fg)) 26%, transparent); font-size: 14px; line-height: 1.45; }
+.pvbuild > span { flex: 1 1 260px; color: var(--fg-2); } .pvbuild strong { color: var(--fg); }
+.pvbuild .btn { background: var(--fg); color: var(--bg); }
+.pvbuild[data-pvbuild="queued"], .pvbuild[data-pvbuild="working"] { position: relative; overflow: hidden; }
+.pvbuild[data-pvbuild="queued"]::after, .pvbuild[data-pvbuild="working"]::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 40%;
+  background: var(--tc, var(--fg)); animation: pvslide 1.6s ease-in-out infinite; }
+@keyframes pvslide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+
+/* ---- shared bits ---------------------------------------------------------------------------------------------------- */
+.pvv { display: grid; gap: 4px; }
+.pvv .pvtext { margin: 0 0 10px; color: var(--fg-2); }
+.pvempty { margin: 6px 0; }
+.pvgh { margin: 18px 0 6px; font: 700 12px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); }
+.pvgh small { margin-left: 4px; font-weight: 600; letter-spacing: 0; }
+.pvv > .pvgh:first-child, .pvbar2 + .pvgh { margin-top: 6px; }
+.pvname { font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
+.pvdetail { display: block; color: var(--fg-3); font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.pvchip { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pvchip.pvkind { text-transform: capitalize; background: color-mix(in srgb, var(--tc, var(--fg)) 14%, var(--chip)); color: var(--fg); }
+.pvchip.pvyear { background: none; box-shadow: inset 0 0 0 1px var(--line); }
+.pvbar2 { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 8px; }
+.pvprog { margin: 0 auto 0 0; color: var(--fg-3); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pvprog.all { color: var(--ok-t); }
+.pvprog.all::before { content: "✓ "; }
+.pvflag { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; font-size: 13.5px; color: var(--bad-t); background: color-mix(in srgb, var(--bad) 10%, transparent); }
+
+/* a small round "jump to this moment" button (hub.js seeks the video for every [data-t]) */
+.pvjump { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px 0 7px; border-radius: 999px; background: var(--chip); color: var(--fg-2);
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; flex: none; transition: background .15s, color .15s; }
+.pvjump .ico { width: 11px; height: 11px; }
+.pvjump:hover { background: var(--fg); color: var(--bg); }
+
+/* copy buttons: their own feedback, the label turns into "Copied" with a tick */
+.pvcopy { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 12.5px; font-weight: 600; flex: none; transition: background .15s, color .15s; }
+.pvcopy .ico { width: 14px; height: 14px; }
+.pvcopy:hover { background: color-mix(in srgb, var(--fg) 9%, var(--chip)); color: var(--fg); }
+.pvcopy.pvdone { background: color-mix(in srgb, var(--ok) 18%, var(--chip)); color: var(--ok-t); }
+.pvcopy.pvdone .ico { animation: pvtick .32s cubic-bezier(.2,.9,.3,1); }
+.pvcopy.pvbad { color: var(--bad-t); }
+@keyframes pvtick { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } }
+
+/* ---- checklist ---------------------------------------------------------------------------------------------------- */
+.pvrows, .pvsteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.pvrow, .pvstep { display: flex; align-items: center; gap: 8px; border-radius: 12px; transition: background .15s; }
+.pvrow:hover, .pvstep:hover { background: var(--chip); }
+.pvrow > label, .pvstep > label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 9px 10px; cursor: pointer; }
+.pvrow input, .pvstep input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pvbox { flex: none; width: 20px; height: 20px; border-radius: 6px; border: 1.8px solid var(--fg-3); display: grid; place-items: center; transition: background .15s, border-color .15s; }
+.pvbox::after { content: ""; width: 10px; height: 5px; border: solid #fff; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg) scale(0); transition: transform .18s cubic-bezier(.2,.9,.3,1.4); }
+.pvrow.on .pvbox { background: var(--ok-sw); border-color: var(--ok-sw); }
+.pvrow.on .pvbox::after { transform: translateY(-1px) rotate(-45deg) scale(1); }
+.pvtxt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pvrow.on .pvname, .pvstep.on .pvname { color: var(--fg-3); text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: color-mix(in srgb, var(--fg-3) 70%, transparent); }
+.pvamt { flex: none; margin-left: auto; padding: 1px 6px; border-radius: 6px; color: var(--fg-2); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.pvrow.on .pvamt { color: var(--fg-3); }
+.pvrow > .pvjump, .pvstep .pvjump { margin-right: 8px; }
+html[data-kb] .pvrow:has(input:focus-visible), html[data-kb] .pvstep:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 6px var(--focus-glow); }
+.pvfail { animation: pvshake .4s; }
+@keyframes pvshake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+/* the servings scaler */
+.pvserv { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 999px; background: var(--chip); }
+.pvservl { padding: 0 6px 0 10px; color: var(--fg-3); font-size: 12.5px; font-weight: 700; }
+.pvstep-btn { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; font-weight: 600; color: var(--fg); background: var(--card); }
+.pvstep-btn:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
+.pvstep-btn:disabled { opacity: .35; cursor: default; }
+.pvservn { min-width: 30px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; display: inline-block; }
+.pvreset { padding: 0 10px 0 4px; color: var(--fg-3); font-size: 12.5px; font-weight: 600; } .pvreset:hover { color: var(--fg); }
+
+/* ---- steps -------------------------------------------------------------------------------------------------------- */
+.pvstep { flex-wrap: wrap; align-items: flex-start; }
+.pvstep > label { align-items: flex-start; }
+.pvnum { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 700; display: grid; place-items: center; transition: background .2s; }
+.pvstep.on .pvnum { background: var(--ok-sw); color: #fff; font-size: 0; }
+.pvstep.on .pvnum::after { content: "✓"; font-size: 13px; }
+.pvstepg { color: var(--fg-3); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.pvstep .pvtxt { padding-top: 2px; line-height: 1.5; }
+.pvstep .pvname { font-weight: 500; font-size: 15.5px; }
+.pvside { display: flex; align-items: center; gap: 6px; padding: 9px 0; }
+.pvstep .pvcode { flex-basis: 100%; margin: 0 10px 10px 48px; }
+
+/* code blocks with a copy button */
+.pvcode { display: flex; align-items: flex-start; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--chip); }
+.pvcode pre, .pvcode > code { flex: 1; min-width: 0; margin: 0; padding-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
+.pvcode .pvcopy { background: var(--card); }
+
+/* ---- cards and places --------------------------------------------------------------------------------------------- */
+.pvcards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.pvcard { display: flex; flex-direction: column; gap: 8px; padding: 14px 14px 12px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); transition: border-color .2s, box-shadow .3s; scroll-margin: 90px; }
+.pvcard:hover { border-color: color-mix(in srgb, var(--fg) 18%, var(--line)); }
+.pvch { display: flex; align-items: flex-start; gap: 8px; }
+.pvch .pvname { flex: 1; font-size: 15.5px; line-height: 1.35; }
+.pvcard .pvdetail { margin: 0; }
+.pvcardg { color: var(--fg-3); font-size: 12px; font-weight: 600; }
+.pvchips { display: flex; flex-wrap: wrap; gap: 5px; }
+.pvprovs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; }
+.pvprov { display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 12.5px; font-weight: 600; transition: background .15s, color .15s; }
+.pvprov span { font-size: 11px; opacity: .6; }
+.pvprov:hover { background: var(--fg); color: var(--bg); }
+.pvprov.exact { color: var(--fg); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tc, var(--fg)) 50%, transparent); }
+.pvprov.pvown { align-self: flex-start; }
+.pvpin { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--tc, var(--fg)); color: #fff; font-size: 12px; font-weight: 700; }
+.pvcard.pvlit { border-color: var(--tc, var(--fg)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tc, var(--fg)) 22%, transparent); }
+.pvmap { margin: 0 0 10px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); overflow: hidden; }
+.pvmap svg { display: block; width: 100%; height: auto; max-height: 300px; }
+.pvmap .pvgrid line { stroke: var(--line); stroke-width: 1; }
+.pvdot circle { fill: var(--tc, var(--fg)); stroke: var(--card); stroke-width: 3; transition: r .15s; }
+.pvdot text { fill: #fff; font: 700 14px var(--sans); pointer-events: none; }
+.pvdot:hover circle, .pvdot:focus-visible circle { r: 20; }
+.pvdot:focus { outline: none; }
+html[data-kb] .pvdot:focus-visible circle { stroke: var(--focus); stroke-width: 4; }
+.pvmap figcaption { padding: 8px 14px 10px; color: var(--fg-3); font-size: 12.5px; border-top: 1px solid var(--line); }
+
+/* ---- palette ------------------------------------------------------------------------------------------------------ */
+.pvswatches { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.pvsw { width: 100%; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; background: var(--card); border: 1px solid var(--line); text-align: left; transition: transform .15s; }
+button.pvsw:hover { transform: translateY(-2px); }
+.pvswc { position: relative; height: 84px; background: var(--sw, var(--chip)); display: grid; place-items: center; }
+.pvsw.nohex .pvswc { background: repeating-linear-gradient(45deg, var(--chip) 0 8px, transparent 8px 16px); }
+.pvcopied { opacity: 0; color: var(--ink, #fff); font-size: 13px; font-weight: 700; transform: translateY(4px); transition: opacity .2s, transform .2s; }
+.pvsw.pvdone .pvcopied { opacity: 1; transform: none; }
+.pvswt { display: flex; flex-direction: column; gap: 1px; padding: 9px 11px 10px; }
+.pvswt b { font-size: 13.5px; font-weight: 650; overflow-wrap: anywhere; }
+.pvswt code { color: var(--fg-2); font-size: 12px; text-transform: uppercase; }
+.pvswt small { color: var(--fg-3); font-size: 12px; line-height: 1.35; }
+
+/* ---- specs -------------------------------------------------------------------------------------------------------- */
+.pvspecs { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.pvspecs th, .pvspecs td { padding: 10px 4px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.pvspecs th[scope="row"] { width: 38%; padding-right: 16px; color: var(--fg-2); font-weight: 600; }
+.pvspecs td { color: var(--fg); }
+.pvspecs td .pvjump { margin-left: 8px; vertical-align: middle; }
+.pvspecs tr.pvsg th { padding: 18px 4px 6px; font: 700 12px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); }
+.pvspecs tr:last-child td, .pvspecs tr:last-child th { border-bottom: 0; }
+
+/* ---- pros and cons ------------------------------------------------------------------------------------------------ */
+.pvpc { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pvpc > div { padding: 4px 14px 12px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+.pvpc .pvside-pro { border-top: 3px solid var(--ok); } .pvpc .pvside-con { border-top: 3px solid var(--bad); }
+.pvpc ul, .pvnotes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pvpc li { display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; }
+.pvside-pro li:not(.muted)::before { content: "+"; color: var(--ok-t); font-weight: 800; }
+.pvside-con li:not(.muted)::before { content: "−"; color: var(--bad-t); font-weight: 800; }
+
+/* ---- quotes ------------------------------------------------------------------------------------------------------- */
+.pvquote { margin: 0 0 10px; padding: 14px 16px 10px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+.pvquote blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--tc, var(--fg)); font-size: 16px; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
+.pvquote pre { margin: 0; padding: 12px; border-radius: 12px; background: var(--chip); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; }
+.pvquote figcaption { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; color: var(--fg-3); font-size: 13px; }
+.pvquote .pvwho { font-weight: 600; color: var(--fg-2); }
+.pvquote .pvwho:not(:empty)::before { content: "— "; }
+.pvquote .pvdetail { flex-basis: 100%; order: 3; }
+.pvqa { display: inline-flex; gap: 6px; margin-left: auto; }
+
+/* ---- notes -------------------------------------------------------------------------------------------------------- */
+.pvnotes li { position: relative; padding: 2px 0 2px 18px; line-height: 1.55; font-size: 15px; }
+.pvnotes li::before { content: ""; position: absolute; left: 3px; top: .72em; width: 6px; height: 6px; border-radius: 50%; background: var(--tc, var(--fg-3)); }
+.pvnotes .pvname { font-weight: 600; }
+.pvnotes .pvdetail { display: inline; font-size: 15px; color: var(--fg-2); }
+.pvnotes .pvdetail::before { content: "— "; color: var(--fg-3); }
+.pvnotes .pvchip, .pvnotes .pvjump { margin-left: 6px; vertical-align: 1px; }
+.pvnotes .pvvalue { margin: 6px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--chip); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---- flashcards (turn over on click, Enter or Space; under reduced motion they swap without turning) -------------- */
+.pvflash { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.pvfc { width: 100%; perspective: 900px; text-align: left; }
+.pvfci { position: relative; display: grid; min-height: 150px; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.3,.7,.2,1); }
+.pvfc.flipped .pvfci { transform: rotateY(180deg); }
+.pvfcf, .pvfcb { grid-area: 1 / 1; display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 16px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
+.pvfcf { background: var(--card); border: 1px solid var(--line); font-weight: 600; }
+.pvfcb { background: color-mix(in srgb, var(--tc, var(--fg)) 12%, var(--card)); border: 1px solid color-mix(in srgb, var(--tc, var(--fg)) 30%, transparent); transform: rotateY(180deg); }
+.pvfcf small, .pvfcb small { color: var(--fg-3); font-size: 11.5px; font-weight: 700; letter-spacing: .05em; }
+.pvfc:hover .pvfcf { border-color: color-mix(in srgb, var(--fg) 20%, var(--line)); }
+.pvfcf::after { content: "Turn over ↻"; margin-top: auto; color: var(--fg-3); font-size: 12px; font-weight: 600; }
+
+/* ---- timeline ----------------------------------------------------------------------------------------------------- */
+.pvtimeline, .pvtimeline ol { list-style: none; margin: 0; padding: 0; }
+.pvtg + .pvtg { margin-top: 6px; }
+.pvtg ol { position: relative; padding-left: 22px; }
+.pvtg ol::before { content: ""; position: absolute; left: 6px; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: var(--line); }
+.pvti { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; }
+.pvtdot { position: absolute; left: -21px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: var(--card); border: 2.5px solid var(--tc, var(--fg)); }
+.pvti .pvtxt { line-height: 1.45; }
+
+/* ---- events ------------------------------------------------------------------------------------------------------- */
+.pvevent { display: flex; gap: 16px; padding: 16px; margin-bottom: 10px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); }
+.pvdate { flex: none; width: 64px; height: 72px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: color-mix(in srgb, var(--tc, var(--fg)) 14%, var(--chip)); line-height: 1.1; }
+.pvdate b { font: 700 26px/1 var(--display); }
+.pvdate small { color: var(--fg-2); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.pvdate.none { background: var(--chip); color: var(--fg-3); }
+.pvevb { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pvevb h5 { margin: 0; font: 650 17px/1.3 var(--sans); }
+.pvevl { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; color: var(--fg-2); font-size: 14px; }
+.pvevl li { display: flex; align-items: center; gap: 7px; } .pvevl .ico { width: 15px; height: 15px; flex: none; color: var(--fg-3); }
+.pvevb > .pvchip { align-self: flex-start; }
+.pvevact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.pvical .ico { width: 15px; height: 15px; }
+.pvical.pvdone { background: var(--ok-sw); color: #fff; }
+
+@media (max-width: 700px) {
+  .pvpc { grid-template-columns: 1fr; }
+  .pvcards { grid-template-columns: 1fr; }
+  .pvspecs th[scope="row"] { width: 44%; }
+  .pvevent { gap: 12px; padding: 14px; }
+  .pvstep .pvcode { margin-left: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pvfci { transition: none; transform: none !important; }
+  .pvfcb { transform: none; visibility: hidden; }
+  .pvfc.flipped .pvfcb { visibility: visible; } .pvfc.flipped .pvfcf { visibility: hidden; }
+  .pvbox::after, .pvsw, .pvcopied, .pvcard, .pvtabs .pvmore > summary::after { transition: none; }
+  .pvcopy.pvdone .ico, .pvfail, .pvtabs .pvmore[open] .pvmorelist { animation: none; }
+  .pvbuild[data-pvbuild]::after { animation: none; width: 100%; opacity: .5; }
+  button.pvsw:hover { transform: none; }
+}
