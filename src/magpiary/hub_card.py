@@ -23,6 +23,8 @@ from magpiary.store import TRASH_DAYS
 from magpiary.web import Response, e
 from magpiary.config import load_json as _read_json  # noqa: E402  (one reader for the library's JSON files)
 
+STEP_TABS = {"method", "steps", "start", "setup", "exercises"}  # category tabs that show a post's steps in full
+
 VIDEO = (".mp4", ".webm", ".mov")
 PDF_LOCK = threading.Lock()  # one headless browser drawing a PDF at a time
 AI_REASONS = {"busy": "the AI was too busy or slow; trying again later", "no_key": "no AI key yet",
@@ -787,8 +789,7 @@ class CardPages:
         related_html = (f'<a class="link" href="{here}?tab=rel">Show related saves</a>' if lazy_related
                         else self._related_pane(item, related, here))
         view = views.current(item, record, meta, folder)
-        panes = {"sum": ("Summary", "", self.build_strip(item, view) + self._summary_pane(item, record, caption, here)),
-                 "links": ("Links", str(len(links)) if links else "", self._links_pane(item, links, here, record)),
+        panes = {"links": ("Links", str(len(links)) if links else "", self._links_pane(item, links, here, record)),
                  "rel": ("Related", str(len(related)) if related else "", related_html),
                  "tr": ("Transcript", "", self._transcript_pane(folder)),
                  "det": ("Details", "", self._details_pane(item, record, folder, meta))}
@@ -801,6 +802,9 @@ class CardPages:
         core = {"read": "read" in panes, "deep": "deep" in panes, "links": bool(links), "rel": saved or bool(related),
                 "tr": not self._transcript_off(folder)[0]}
         visible, more = views.tab_plan(view, core, self.store.hidden_tabs())
+        # the summary leaves out what a category tab already shows in full (Ingredients, the steps)
+        panes["sum"] = ("Summary", "", self.build_strip(item, view)
+                        + self._summary_pane(item, record, caption, here, set(visible + more) & set(cats.TABS)))
         if any(k in cats.TABS for k in visible + more):
             state = self.store.view_state(item["canonical_url"])
             for k in visible + more:
@@ -820,8 +824,8 @@ class CardPages:
                     f'aria-selected="{str(k == tab).lower()}">{e(name)}'
                     + ((f'<em class="sugtext">✦ {e(n)}</em>' if not str(n).isdigit() else f"<small>{n}</small>") if n else "") + "</a>")
 
-        more_html = (f'<details class="pvmore{" on" if tab in more else ""}"><summary aria-haspopup="true">More'
-                     f'<small>{len(more)}</small></summary><div class="pvmorelist">'
+        more_html = (f'<details class="pvmore{" on" if tab in more else ""}"><summary aria-haspopup="true" aria-label="More tabs: {len(more)}">More'
+                     f'<small aria-hidden="true">{len(more)}</small></summary><div class="pvmorelist">'
                      + "".join(link(k) for k in more) + "</div></details>") if more else ""
         nav = (f'<nav class="tabs pvtabs" role="tablist" style="--tc:{tint}" data-category="{e(view.get("category", ""))}">'
                + "".join(link(k) for k in visible) + more_html + "</nav>")
@@ -918,13 +922,16 @@ class CardPages:
         return (f'<div class="capb pvcapb long" data-fold>{who}{text}{foot}'
                 f'<button type="button" class="capt" hidden>Show the whole caption</button></div>')
 
-    def _summary_pane(self, item: dict, record: dict | None, caption: str, here: str) -> str:
+    def _summary_pane(self, item: dict, record: dict | None, caption: str, here: str, tabs: set | None = None) -> str:
+        """`tabs`: the post's category tabs; a list one of them already shows is not repeated here."""
+        tabs = tabs or set()
+        shown = {"ingredients": "ingredients" in tabs, "steps": bool(tabs & STEP_TABS), "takeaways": "takeaways" in tabs}
         out = [self._summary_blocks(item, record)]  # the summary itself sits under the title (_lead), the caption after it
         out.append(self._list_block(item, record))
         if record:
             extras = record.get("extras") or {}
             for label, key in (("Ingredients", "ingredients"), ("Steps", "steps"), ("Takeaways", "takeaways")):
-                if extras.get(key):
+                if extras.get(key) and not shown[key]:
                     out.append(f"<h4>{label}</h4><ol class=\"it-sum sm\">" + "".join(f"<li>{e(x)}</li>" for x in extras[key]) + "</ol>")
             facts = [(label, extras.get(key)) for label, key in (
                 ("Tool", "tool_name"), ("Link", "tool_url"), ("Price", "pricing"), ("Place", "place_name"), ("City", "city"),

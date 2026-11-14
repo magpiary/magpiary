@@ -1,21 +1,38 @@
 /* Contextual post tabs (views.py, hub_views.py, views.js). Built on hub.css tokens (--fg, --fg-2, --fg-3, --line, --chip,
    --card, --dlg*, --ok, --bad-t, --tc = the post's tint). Focus rings come from hub.css (keyboard only, html[data-kb]). */
 
+/* ---- keyboard focus: a soft glow, only after a key press (html[data-kb]), never after a click. hub.css removes every
+   outline (!important) and makes --focus transparent, so these controls draw their own ring with a shadow -------------- */
+:root { --pvfocus: color-mix(in srgb, var(--pink, #ff4fa3) 55%, transparent); }
+html[data-kb] :is(.pvtabs a, .pvtabs .pvmore > summary, .pvv button, .pvv a, .pvbuild .btn):focus-visible {
+  box-shadow: 0 0 0 2px var(--pvfocus), 0 0 0 6px color-mix(in srgb, var(--pink, #ff4fa3) 14%, transparent); }
+/* the tabs have no side padding: their ring sits 8px out on each side, drawn by a layer behind the label */
+:is(.pvtabs > a, .pvtabs .pvmore > summary) { position: relative; }
+html[data-kb] :is(.pvtabs > a, .pvtabs .pvmore > summary):focus-visible { box-shadow: none; }
+html[data-kb] :is(.pvtabs > a, .pvtabs .pvmore > summary):focus-visible::before { content: ""; position: absolute; inset: 6px -8px; border-radius: 8px;
+  pointer-events: none; box-shadow: 0 0 0 2px var(--pvfocus), 0 0 0 6px color-mix(in srgb, var(--pink, #ff4fa3) 14%, transparent); }
+html[data-kb] .pvfc:focus-visible { box-shadow: none; }
+html[data-kb] .pvfc:focus-visible :is(.pvfcf, .pvfcb) { box-shadow: 0 0 0 2px var(--pvfocus); }
+
 /* ---- the More menu in the tab row: a floating surface (edged, lighter, no blur) ---------------------------------- */
-.pvtabs .pvmore { position: relative; display: inline-block; }
-.pvtabs .pvmore > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px; }
+.pvtabs .pvmore { position: relative; display: inline-flex; }
+/* the More button reads like the tabs beside it (indigo.css sets the tabs' type; :root[data-theme] matches its weight) */
+:root[data-theme] .tabs.pvtabs .pvmore > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px; padding: 10px 0;
+  font: 600 var(--type-body, 15px) var(--sans); color: var(--fg-3); white-space: nowrap; transition: color .15s; }
 .pvtabs .pvmore > summary::-webkit-details-marker { display: none; }
 .pvtabs .pvmore > summary::after { content: ""; width: 6px; height: 6px; margin-left: 4px; border: solid currentColor; border-width: 0 1.6px 1.6px 0; transform: translateY(-2px) rotate(45deg); opacity: .6; transition: transform .18s; }
 .pvtabs .pvmore[open] > summary::after { transform: translateY(1px) rotate(-135deg); }
-.pvtabs .pvmore > summary small { margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 11.5px; font-weight: 700; line-height: 18px; }
-.pvtabs .pvmore.on > summary { color: var(--fg); }
+:root[data-theme] .tabs.pvtabs .pvmore > summary:hover, :root[data-theme] .tabs.pvtabs .pvmore[open] > summary,
+:root[data-theme] .tabs.pvtabs .pvmore.on > summary { color: var(--fg); }
 /* fixed, placed by views.js: the tab row scrolls sideways (overflow:auto), which would clip an absolute menu */
 .pvtabs .pvmorelist { position: fixed; right: auto; top: 0; left: 0; z-index: 60; display: flex; flex-direction: column; gap: 2px; min-width: 190px; padding: 6px; border-radius: 14px;
   background: var(--dlg); border: 1px solid var(--dlg-edge); box-shadow: var(--dlg-sh); }
-/* menu items read as choices, not as the row's quiet unselected tabs (--fg-3 looked disabled on a narrow window) */
-.tabs.pvtabs .pvmorelist a { display: block; padding: 8px 12px; border-radius: 9px; border: 0; font-size: 14.5px; white-space: nowrap; color: var(--fg); }
-.tabs.pvtabs .pvmorelist a:hover { background: var(--dlg-chip); }
-.tabs.pvtabs .pvmorelist a.on { background: var(--dlg-chip); font-weight: 700; box-shadow: inset 3px 0 0 var(--tc, var(--fg)); }
+/* menu items read as choices, like the hub's other small menus (.pop), not as the row's quiet unselected tabs (--fg-3
+   looked disabled on a narrow window); :root[data-theme] so indigo.css's tab padding (10px 0) does not reach them */
+:root[data-theme] .tabs.pvtabs .pvmorelist a { display: flex; align-items: center; padding: 8px 12px; border-radius: 10px; border: 0;
+  font: 500 14px/1.4 var(--sans); white-space: nowrap; color: var(--fg); }
+:root[data-theme] .tabs.pvtabs .pvmorelist a:hover { background: var(--dlg-chip); }
+:root[data-theme] .tabs.pvtabs .pvmorelist a.on { background: var(--dlg-chip); font-weight: 650; box-shadow: inset 3px 0 0 var(--tc, var(--fg)); }
 /* a narrow window fades the scrolled tab row's edges with a mask (phone.css), and a mask also clips the fixed menu inside
    it to the row: drop the fade while the menu is open */
 .tabs.pvtabs:has(.pvmore[open]) { -webkit-mask-image: none !important; mask-image: none !important; }
@@ -26,7 +43,6 @@
 .pvbuild { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 0 0 18px; padding: 12px 14px 12px 16px; border-radius: 16px;
   background: color-mix(in srgb, var(--tc, var(--fg)) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--tc, var(--fg)) 26%, transparent); font-size: 14px; line-height: 1.45; }
 .pvbuild > span { flex: 1 1 260px; color: var(--fg-2); } .pvbuild strong { color: var(--fg); }
-.pvbuild .btn { background: var(--fg); color: var(--bg); }
 .pvbuild[data-pvbuild="queued"], .pvbuild[data-pvbuild="working"] { position: relative; overflow: hidden; }
 .pvbuild[data-pvbuild="queued"]::after, .pvbuild[data-pvbuild="working"]::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 40%;
   background: var(--tc, var(--fg)); animation: pvslide 1.6s ease-in-out infinite; }
@@ -41,7 +57,7 @@
 .pvv > .pvgh:first-child, .pvbar2 + .pvgh { margin-top: 6px; }
 .pvname { font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
 .pvdetail { display: block; color: var(--fg-3); font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
-.pvchip { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pvchip { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pvchip.pvkind { text-transform: capitalize; background: color-mix(in srgb, var(--tc, var(--fg)) 14%, var(--chip)); color: var(--fg); }
 .pvchip.pvyear { background: none; box-shadow: inset 0 0 0 1px var(--line); }
 .pvbar2 { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 8px; }
@@ -51,7 +67,7 @@
 .pvflag { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; font-size: 13.5px; color: var(--bad-t); background: color-mix(in srgb, var(--bad) 10%, transparent); }
 
 /* a small round "jump to this moment" button (hub.js seeks the video for every [data-t]) */
-.pvjump { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px 0 7px; border-radius: 999px; background: var(--chip); color: var(--fg-2);
+.pvjump { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px 0 8px; border-radius: 999px; background: var(--chip); color: var(--fg-2);
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; flex: none; transition: background .15s, color .15s; }
 .pvjump .ico { width: 11px; height: 11px; }
 .pvjump:hover { background: var(--fg); color: var(--bg); }
@@ -69,7 +85,7 @@
 .pvrows, .pvsteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .pvrow, .pvstep { display: flex; align-items: center; gap: 8px; border-radius: 12px; transition: background .15s; }
 .pvrow:hover, .pvstep:hover { background: var(--chip); }
-.pvrow > label, .pvstep > label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 9px 10px; cursor: pointer; }
+.pvrow > label, .pvstep > label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer; }
 .pvrow input, .pvstep input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .pvbox { flex: none; width: 20px; height: 20px; border-radius: 6px; border: 1.8px solid var(--fg-3); display: grid; place-items: center; transition: background .15s, border-color .15s; }
 .pvbox::after { content: ""; width: 10px; height: 5px; border: solid #fff; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg) scale(0); transition: transform .18s cubic-bezier(.2,.9,.3,1.4); }
@@ -77,15 +93,15 @@
 .pvrow.on .pvbox::after { transform: translateY(-1px) rotate(-45deg) scale(1); }
 .pvtxt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .pvrow.on .pvname, .pvstep.on .pvname { color: var(--fg-3); text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: color-mix(in srgb, var(--fg-3) 70%, transparent); }
-.pvamt { flex: none; margin-left: auto; padding: 1px 6px; border-radius: 6px; color: var(--fg-2); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.pvamt { flex: none; margin-left: auto; padding: 2px 6px; border-radius: 6px; color: var(--fg-2); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .pvrow.on .pvamt { color: var(--fg-3); }
 .pvrow > .pvjump, .pvstep .pvjump { margin-right: 8px; }
-html[data-kb] .pvrow:has(input:focus-visible), html[data-kb] .pvstep:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 6px var(--focus-glow); }
+html[data-kb] .pvrow:has(input:focus-visible), html[data-kb] .pvstep:has(input:focus-visible) { box-shadow: 0 0 0 2px var(--pvfocus); background: var(--chip); }
 .pvfail { animation: pvshake .4s; }
 @keyframes pvshake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 
 /* the servings scaler */
-.pvserv { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 999px; background: var(--chip); }
+.pvserv { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: var(--chip); }
 .pvservl { padding: 0 6px 0 10px; color: var(--fg-3); font-size: 12.5px; font-weight: 700; }
 .pvstep-btn { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; font-weight: 600; color: var(--fg); background: var(--card); }
 .pvstep-btn:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
@@ -102,8 +118,8 @@ html[data-kb] .pvrow:has(input:focus-visible), html[data-kb] .pvstep:has(input:f
 .pvstepg { color: var(--fg-3); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .pvstep .pvtxt { padding-top: 2px; line-height: 1.5; }
 .pvstep .pvname { font-weight: 500; font-size: 15.5px; }
-.pvside { display: flex; align-items: center; gap: 6px; padding: 9px 0; }
-.pvstep .pvcode { flex-basis: 100%; margin: 0 10px 10px 48px; }
+.pvside { display: flex; align-items: center; gap: 6px; padding: 10px 0; }
+.pvstep .pvcode { flex-basis: 100%; margin: 0 12px 12px 50px; }  /* under the step text: 12 + 26 + 12 */
 
 /* code blocks with a copy button */
 .pvcode { display: flex; align-items: flex-start; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--chip); }
@@ -118,9 +134,9 @@ html[data-kb] .pvrow:has(input:focus-visible), html[data-kb] .pvstep:has(input:f
 .pvch .pvname { flex: 1; font-size: 15.5px; line-height: 1.35; }
 .pvcard .pvdetail { margin: 0; }
 .pvcardg { color: var(--fg-3); font-size: 12px; font-weight: 600; }
-.pvchips { display: flex; flex-wrap: wrap; gap: 5px; }
+.pvchips { display: flex; flex-wrap: wrap; gap: 6px; }
 .pvprovs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; }
-.pvprov { display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 12.5px; font-weight: 600; transition: background .15s, color .15s; }
+.pvprov { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--chip); color: var(--fg-2); font-size: 12.5px; font-weight: 600; transition: background .15s, color .15s; }
 .pvprov span { font-size: 11px; opacity: .6; }
 .pvprov:hover { background: var(--fg); color: var(--bg); }
 .pvprov.exact { color: var(--fg); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tc, var(--fg)) 50%, transparent); }
@@ -141,11 +157,11 @@ html[data-kb] .pvdot:focus-visible circle { stroke: var(--focus); stroke-width: 
 .pvswatches { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .pvsw { width: 100%; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; background: var(--card); border: 1px solid var(--line); text-align: left; transition: transform .15s; }
 button.pvsw:hover { transform: translateY(-2px); }
-.pvswc { position: relative; height: 84px; background: var(--sw, var(--chip)); display: grid; place-items: center; }
+.pvswc { position: relative; height: 84px; background: var(--sw, var(--chip)); display: grid; place-items: center; box-shadow: inset 0 -1px 0 var(--line); }
 .pvsw.nohex .pvswc { background: repeating-linear-gradient(45deg, var(--chip) 0 8px, transparent 8px 16px); }
 .pvcopied { opacity: 0; color: var(--ink, #fff); font-size: 13px; font-weight: 700; transform: translateY(4px); transition: opacity .2s, transform .2s; }
 .pvsw.pvdone .pvcopied { opacity: 1; transform: none; }
-.pvswt { display: flex; flex-direction: column; gap: 1px; padding: 9px 11px 10px; }
+.pvswt { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; }
 .pvswt b { font-size: 13.5px; font-weight: 650; overflow-wrap: anywhere; }
 .pvswt code { color: var(--fg-2); font-size: 12px; text-transform: uppercase; }
 .pvswt small { color: var(--fg-3); font-size: 12px; line-height: 1.35; }
@@ -175,6 +191,7 @@ button.pvsw:hover { transform: translateY(-2px); }
 .pvquote figcaption { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; color: var(--fg-3); font-size: 13px; }
 .pvquote .pvwho { font-weight: 600; color: var(--fg-2); }
 .pvquote .pvwho:not(:empty)::before { content: "— "; }
+.pvquote .pvkind + .pvwho::before { content: none; }
 .pvquote .pvdetail { flex-basis: 100%; order: 3; }
 .pvqa { display: inline-flex; gap: 6px; margin-left: auto; }
 
@@ -217,19 +234,27 @@ button.pvsw:hover { transform: translateY(-2px); }
 .pvdate.none { background: var(--chip); color: var(--fg-3); }
 .pvevb { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .pvevb h5 { margin: 0; font: 650 17px/1.3 var(--sans); }
-.pvevl { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; color: var(--fg-2); font-size: 14px; }
-.pvevl li { display: flex; align-items: center; gap: 7px; } .pvevl .ico { width: 15px; height: 15px; flex: none; color: var(--fg-3); }
+.pvevl { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; color: var(--fg-2); font-size: 14px; }
+.pvevl li { display: flex; align-items: center; gap: 8px; } .pvevl .ico { width: 15px; height: 15px; flex: none; color: var(--fg-3); }
 .pvevb > .pvchip { align-self: flex-start; }
 .pvevact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
 .pvical .ico { width: 15px; height: 15px; }
 .pvical.pvdone { background: var(--ok-sw); color: #fff; }
 
+/* a finger-sized row of buttons on a narrow window (at least 32 px; the tab row's own targets are 44 px in phone.css) */
+@media (max-width: 760px) {
+  :root[data-theme] .tabs.pvtabs .pvmore > summary { min-height: 44px; }
+  .pvprov, .pvcopy { height: 36px; padding: 0 14px; }
+  .pvjump { height: 32px; padding: 0 12px 0 10px; }
+  .pvstep-btn { width: 34px; height: 34px; }
+  .pvprovs { gap: 8px; }
+}
 @media (max-width: 700px) {
   .pvpc { grid-template-columns: 1fr; }
   .pvcards { grid-template-columns: 1fr; }
   .pvspecs th[scope="row"] { width: 44%; }
   .pvevent { gap: 12px; padding: 14px; }
-  .pvstep .pvcode { margin-left: 10px; }
+  .pvstep .pvcode { margin-left: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pvfci { transition: none; transform: none !important; }

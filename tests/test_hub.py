@@ -299,7 +299,7 @@ def test_the_item_page_shows_the_summary_key_points_and_timing(mac, lib, tmp_pat
     mac.store.record_timing(IG, "download", 0, 6.2)
     mac.store.record_timing(IG, "summary", 0, 8.0)
     body = page(mac, f"/item/{lib['ig']}")[2]
-    assert "Carbonara fast" in body and 'data-t="0:05"' in body and "<li>eggs</li>" in body and "Guanciale" in body
+    assert "Carbonara fast" in body and 'data-t="0:05"' in body and 'data-pane="ingredients"' in body and ">eggs<" in body and "Guanciale" in body  # eggs: in the Ingredients tab, not repeated in the Summary
     assert "Suggested tags: #pasta" in body and "using Mine" in body
     assert "How long it took" in body and "6.2s" in body and "14s" in body and "as of" in body
 

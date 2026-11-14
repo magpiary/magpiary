@@ -3272,8 +3272,6 @@ form:has(> .pvprimary.find), form.pvfindf { display: contents; } .pvprimary.find
 .pvactions { gap: 10px; align-items: stretch; }
 .pvactions .pvprimary { flex: 1 1 240px; }
 .pvactions .pvprimary.find { flex: 1 1 200px; }
-.pvmore { align-self: center; font-size: 13.5px; font-weight: 600; color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px; padding: 6px 4px; }
-.pvmore:hover { color: var(--fg); }
 .pagenote { margin: 14px 0 24px; max-width: 54ch; line-height: 1.5; text-wrap: pretty; }
 .pilebar { margin: 18px 0 22px; align-items: flex-start; } .pilebar p { max-width: 54ch; min-width: 220px; line-height: 1.5; }
 .cardm .pscroll { scrollbar-gutter: stable; }
