@@ -25,6 +25,7 @@ THEME = "#0f0f0f"  # the hub's dark background, so the window frame and the spla
 MANIFEST = {
     "name": "Magpiary", "short_name": "Magpiary", "description": "Your saved posts, on your Mac.",
     "id": "/", "start_url": "/", "scope": "/", "display": "standalone",
+    "launch_handler": {"client_mode": ["focus-existing", "auto"]},  # opening it again brings the open window forward, no second copy
     "background_color": THEME, "theme_color": THEME,
     "icons": [
         {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},

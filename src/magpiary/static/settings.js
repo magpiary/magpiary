@@ -363,7 +363,9 @@
       row.classList.add("dragging");
       handle.setPointerCapture(ev.pointerId);
     });
-    list.addEventListener("pointermove", (ev) => {
+    // On the document, not the list: moving the row in the page drops the browser's pointer capture, and letting go
+    // above, below or beside the list would otherwise never end the drag (so the new order was never saved).
+    document.addEventListener("pointermove", (ev) => {
       if (!drag) return;
       const { row } = drag;
       row.style.transform = `translateY(${ev.clientY - drag.start}px)`;
@@ -393,8 +395,9 @@
       row.style.transform = "";
       if (moved) save();
     };
-    list.addEventListener("pointerup", drop);
-    list.addEventListener("pointercancel", drop);
+    document.addEventListener("pointerup", drop);
+    document.addEventListener("pointercancel", drop);
+    window.addEventListener("blur", drop);
     list.addEventListener("keydown", (ev) => {
       const handle = ev.target.closest("[data-keyhandle]");
       if (!handle || handle.disabled || !["ArrowUp", "ArrowDown"].includes(ev.key)) return;

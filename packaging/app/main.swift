@@ -405,8 +405,20 @@ final class Shell: NSObject, NSApplicationDelegate {
         return nil
     }
 
+    /// Quitting Magpiary also closes its own Chrome/Edge/Brave app window, which is a separate program that would
+    /// otherwise stay open showing "Magpiary isn't running".
+    func closeWebApp() {
+        guard let app = installedWebApp(),
+              let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist")),
+              let id = info["CFBundleIdentifier"] as? String else { return }
+        for running in NSRunningApplication.runningApplications(withBundleIdentifier: id) { running.terminate() }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) { closeWebApp() }   // Cmd-Q, the updater's quit and Quit all end here
+
     func quit() {
         child?.terminate()
+        closeWebApp()
         NSApp.terminate(nil)
     }
 
