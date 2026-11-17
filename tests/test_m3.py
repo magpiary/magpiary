@@ -548,3 +548,22 @@ def test_a_rejected_request_hands_the_item_to_the_next_key_and_the_note_says_why
         return tidy(GOOD)
     assert brain_due(store, tmp_path / "notes", pause=lambda tier: None, process=process) == 2
     assert store.get_item("https://www.instagram.com/reel/R0/")["ai_status"] == "done"
+
+
+def test_the_summary_request_carries_categories_only_when_the_beta_is_on(tmp_path, monkeypatch):
+    """Contextual Post View is a beta, off by default (owner, 17 Nov 2026): a save then sends the plain summary request."""
+    from magpiary import store as store_module
+    from magpiary.store import CONTEXTUAL_SETTING, Store
+
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "0")
+    store = Store(tmp_path / "m.db")
+    item = {"canonical_url": "https://www.instagram.com/reel/AbC/", "source": "instagram", "archive_dir": str(folder_with(tmp_path)),
+            "note": "", "first_shared_at": "2026-10-23T10:00:00+05:30"}
+    talk = [{"start": 0.0, "end": 30.0, "text": "Today we cook pasta with eggs pecorino and guanciale for everyone " * 3}]
+    sent = []
+    for on in ("0", "1"):
+        store.set_setting(CONTEXTUAL_SETTING, on)
+        gemini = FakeGemini(answer(GOOD))
+        process_item(item, a_key(tmp_path), tmp_path / "notes", gemini, fake_transcriber(talk), fake_framer([]), store=store)
+        sent.append(json.dumps(gemini.sent[0][3]))
+    assert '"category"' not in sent[0] and '"category"' in sent[1]

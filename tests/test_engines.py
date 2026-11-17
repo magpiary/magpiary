@@ -124,6 +124,8 @@ def test_a_summary_by_claude_code_gets_the_pictures_as_files_and_the_summary_rul
     monkeypatch.setattr(deepdive, "claude_code_asker", fake)
     parts = [{"text": "CAPTION: hello"}, {"text": "FRAME at 0:01"},
              {"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(b"\xff\xd8pic").decode()}}]
-    record = brain.summarise(parts, "local", "haiku", provider="claude_code")
-    assert record["title"] == "T" and seen["model"] == "haiku" and seen["system"] is brain.PROMPT and seen["schema"] is brain.SCHEMA
+    record = brain.summarise(parts, "local", "haiku", provider="claude_code")  # the Contextual Post View beta is off by default
+    assert record["title"] == "T" and seen["model"] == "haiku" and seen["system"] is brain.BASE_PROMPT and seen["schema"] is brain.BASE_SCHEMA
+    brain.summarise(parts, "local", "haiku", provider="claude_code", contextual=True)
+    assert seen["system"] is brain.PROMPT and seen["schema"] is brain.SCHEMA
     assert seen["images"] == [b"\xff\xd8pic"] and "CAPTION: hello" in seen["text"]

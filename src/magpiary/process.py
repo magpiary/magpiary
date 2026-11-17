@@ -121,7 +121,7 @@ def process_item(item: dict, key, notes_dir: Path, call: Call = http_call,
     used: dict = {}
     ask = None
     # Contextual Post View off (Settings): the summary is asked without the category and tabs, so it costs no more
-    contextual = store is None or not hasattr(store, "contextual_view") or store.contextual_view()
+    contextual = store is not None and hasattr(store, "contextual_view") and store.contextual_view()  # a beta: off by default
     if key.provider == "claude_code":  # the owner's model and effort, and what really ran (a fallback is noted on the post)
         from magpiary.brain import BASE_PROMPT, BASE_SCHEMA, PROMPT, SCHEMA, local_asker
 

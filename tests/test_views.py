@@ -14,6 +14,14 @@ from magpiary.store import Store
 
 from test_hub import archive, lib, page, post, request  # noqa: F401  (lib is a fixture)
 
+
+@pytest.fixture(autouse=True)
+def _contextual_beta_on(monkeypatch):
+    """Contextual Post View is a beta, off by default (owner, 17 Nov 2026): these tests test it turned on."""
+    from magpiary import store as store_module
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "1")
+
+
 RECIPE_URL = "https://www.instagram.com/reel/ExampleRecipe1/"
 
 
@@ -422,27 +430,52 @@ def test_private_mode_offers_no_link_search_and_the_worker_sends_none(mac, lib):
     assert mac.store.item_by_id(lib["ig"])["links_force"] == 1  # it waits for Smart
 
 
-# ---- Contextual Post View switch (Settings > Appearance; owner, 15 Nov 2026) ------------------------------------------
+# ---- Contextual Post View: a beta, off by default (owner, 17 Nov 2026) -------------------------------------------------
+
+def test_a_new_library_has_the_beta_off(tmp_path, monkeypatch):
+    from magpiary import store as store_module
+
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "0")  # the shipped default, not this module's test default
+    assert store_module.CONTEXTUAL_DEFAULT == "0" and not Store(tmp_path / "m.db").contextual_view()
+
+
+def test_by_default_posts_are_plain_and_the_switch_sits_in_advanced_beta(mac, recipe, monkeypatch):
+    from magpiary import store as store_module
+
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "0")
+    item_id, folder = recipe
+    views.save(folder, VIEW)
+    assert not mac.store.contextual_view()
+    body = page(mac, "/settings/appearance")[2]
+    adv = body.index('<details class="adv" id="advanced"')
+    assert body.index('id="betactx"') > adv and body.count('id="advanced"') == 1  # hidden inside Advanced, one fold
+    assert 'aria-checked="false" aria-label="Contextual Post View"' in body and 'id="posttabs"' not in body
+    nav = _nav(page(mac, f"/item/{item_id}")[2])
+    assert ">Summary" in nav and ">Links" in nav and ">Details" in nav and ">Ingredients" not in nav
+    wall = page(mac, "/")[2]
+    assert 'data-cat="recipe"' not in wall  # no category on the tile
+
+    status, headers, _ = post(mac, "/hub/views/contextual", enabled="1", next="/settings/appearance#betactx")
+    assert status == 303 and headers["Location"] == "/settings/appearance#betactx" and mac.store.contextual_view()
+    body = page(mac, "/settings/appearance")[2]
+    assert 'aria-checked="true" aria-label="Contextual Post View"' in body
+    assert body.index('id="posttabs"') > body.index('id="betactx"')  # the tab switches follow, only while it is on
+    nav = _nav(page(mac, f"/item/{item_id}")[2])
+    assert ">Ingredients" in nav and ">Method" in nav
+
 
 def test_turning_contextual_post_view_off_gives_the_plain_post_view_and_back(mac, recipe):
     item_id, folder = recipe
     views.save(folder, VIEW)
-    assert mac.store.contextual_view()
-    body = page(mac, "/settings/appearance")[2]
-    assert 'id="contextual"' in body and 'aria-label="Contextual Post View"' in body and 'id="posttabs"' in body
-
-    status, headers, _ = post(mac, "/hub/views/contextual", enabled="0", next="/settings/appearance#contextual")
+    assert mac.store.contextual_view()  # this module turns the beta on
+    status, headers, _ = post(mac, "/hub/views/contextual", enabled="0", next="/settings/appearance#betactx")
     assert status == 303 and not mac.store.contextual_view()
-    body = page(mac, "/settings/appearance")[2]
-    assert 'aria-checked="false" aria-label="Contextual Post View"' in body and 'id="posttabs"' not in body
-
     body = page(mac, f"/item/{item_id}")[2]
     nav = _nav(body)
     assert ">Summary" in nav and ">Links" in nav and ">Details" in nav and "pvmore" not in nav
     assert ">Ingredients" not in nav and ">Method" not in nav and "Build this view" not in body
     assert 'action="/hub/pv/category"' not in body  # no Change category
     assert 'data-pane="ingredients"' not in body
-
     post(mac, "/hub/views/contextual", enabled="maybe")  # junk is ignored
     assert not mac.store.contextual_view()
     post(mac, "/hub/views/contextual", enabled="1")
@@ -463,12 +496,23 @@ def test_off_the_summary_is_asked_without_category_and_tabs(tmp_path):
     real = b._asker
     b._asker = fake
     try:
-        brain.summarise([{"text": "x"}], "k", "m", contextual=False)
+        brain.summarise([{"text": "x"}], "k", "m")  # the default: the beta is off
         assert seen["system"] is brain.BASE_PROMPT and seen["schema"] is brain.BASE_SCHEMA
-        brain.summarise([{"text": "x"}], "k", "m")
+        brain.summarise([{"text": "x"}], "k", "m", contextual=True)
         assert seen["system"] is brain.PROMPT and seen["schema"] is brain.SCHEMA
     finally:
         b._asker = real
+
+
+def test_off_a_saved_summary_leaves_the_built_view_alone(tmp_path, monkeypatch):
+    from magpiary import store as store_module
+    from magpiary import worker
+
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "0")
+    called = []
+    monkeypatch.setattr("magpiary.views_ai.apply_summary", lambda *a, **k: called.append(1))
+    worker._view_from_summary(Store(tmp_path / "m.db"), {"id": 1}, {"category": ""}, lambda m: None)
+    assert called == []
 
 
 def test_off_no_view_builds_or_lookups_run(tmp_path):

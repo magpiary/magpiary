@@ -274,6 +274,8 @@ def _view_from_summary(store: Store, item: dict, record: dict, log: Callable[[st
     """The category and tabs the summary call answered (views_ai). The summary is already saved: nothing here can undo it."""
     from magpiary import views_ai
 
+    if hasattr(store, "contextual_view") and not store.contextual_view():
+        return  # the Contextual Post View beta is off: the summary was asked without a category; built views stay as they are
     try:
         views_ai.apply_summary(store, item, record)
     except Exception as err:  # a broken view leaves the post on its rules view

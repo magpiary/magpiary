@@ -14,6 +14,14 @@ from magpiary import ui, views
 
 from test_hub import page
 
+
+@pytest.fixture(autouse=True)
+def _contextual_beta_on(monkeypatch):
+    """Contextual Post View is a beta, off by default (owner, 17 Nov 2026): these tests test it turned on."""
+    from magpiary import store as store_module
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "1")
+
+
 FIXTURES = Path(__file__).parent / "fixtures" / "views"
 POSTS = sorted(p.name for p in FIXTURES.iterdir() if (p / "meta.json").is_file())
 SANDBOX = Path(__file__).parents[1] / "scripts" / "smoke" / "views_sandbox_hub.py"

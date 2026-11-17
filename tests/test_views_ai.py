@@ -12,6 +12,14 @@ from magpiary import categories as cats
 from magpiary.brain import BrainFailed
 from magpiary.store import Store
 
+
+@pytest.fixture(autouse=True)
+def _contextual_beta_on(monkeypatch):
+    """Contextual Post View is a beta, off by default (owner, 17 Nov 2026): these tests test it turned on."""
+    from magpiary import store as store_module
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "1")
+
+
 URL = "https://www.instagram.com/reel/ExampleViewAi1/"
 RECORD = {"title": "Lemon ricotta pasta", "summary": "A ten-minute lemon ricotta pasta with basil.",
           "key_points": [{"text": "Zest the lemon first", "at": "0:04"}], "type": "recipe",
@@ -136,7 +144,7 @@ def test_a_service_that_rejects_the_bigger_schema_still_writes_the_summary():
         if len(sent) == 1:
             return 400, {"error": {"message": "schema has too many states for serving"}}
         return 200, {"candidates": [{"content": {"parts": [{"text": json.dumps(RECORD)}]}}]}
-    record = brain.summarise([{"text": "evidence"}], "secret", "gemini-x-flash", call=call)
+    record = brain.summarise([{"text": "evidence"}], "secret", "gemini-x-flash", call=call, contextual=True)
     assert record["title"] == "Lemon ricotta pasta" and record["category"] == "" and "view" not in record
     assert "view" in sent[0]["generationConfig"]["responseSchema"]["properties"]
     assert "view" not in sent[1]["generationConfig"]["responseSchema"]["properties"]

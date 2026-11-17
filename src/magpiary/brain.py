@@ -406,14 +406,14 @@ BUSY_WAITS = (5, 15)  # free keys share Google's capacity: a 503 often clears wi
 
 
 def summarise(parts: list[dict], key: str, model: str, call: Call = http_call, wait=None,
-              provider: str = "gemini", ask=None, contextual: bool = True) -> dict:
+              provider: str = "gemini", ask=None, contextual: bool = False) -> dict:
     """Ask once; if the answer does not check out, ask once more naming the problems. Raises BrainFailed.
     `ask(parts, history)` returns an answer's text; by default it is the provider's own request."""
     if not key:
         raise BrainFailed("no_key", "no AI key is saved (Settings)")
     if ask is None:
-        ask = (_asker(provider, key, model, call, wait) if contextual
-               else _asker(provider, key, model, call, wait, BASE_PROMPT, BASE_SCHEMA))  # Contextual Post View off
+        ask = (_asker(provider, key, model, call, wait) if contextual  # the Contextual Post View beta is on
+               else _asker(provider, key, model, call, wait, BASE_PROMPT, BASE_SCHEMA))
     history: list[tuple[str, str]] = []
     for _ in range(2):
         text = ask(parts, history)

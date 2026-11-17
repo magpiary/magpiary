@@ -44,6 +44,7 @@ def quiet(store) -> None:
     """Private mode and every background step paused: no AI, no links, no lookups, no transcribing."""
     store.set_setting("setup_done", "1")
     store.set_setting("ai_mode", "private")
+    store.set_setting("contextual_view", "1")  # the Contextual Post View beta is off by default; this sandbox shows it
     store.set_setting("checklist", '{"done": [], "off": true}')  # the getting-started panel would cover the wall
     for part in ("transcribe", "summary", "links"):
         store.set_paused(part, True)

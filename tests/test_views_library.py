@@ -18,6 +18,14 @@ from magpiary.query import understand
 from test_hub import archive, page, post
 from test_views import GUESSES
 
+
+@pytest.fixture(autouse=True)
+def _contextual_beta_on(monkeypatch):
+    """Contextual Post View is a beta, off by default (owner, 17 Nov 2026): these tests test it turned on."""
+    from magpiary import store as store_module
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "1")
+
+
 RECIPE = "https://www.instagram.com/reel/ExampleLibRecipe/"
 SONGS = "https://www.instagram.com/reel/ExampleLibSongs/"
 CAT = "https://www.instagram.com/reel/ExampleLibCat/"

@@ -15,6 +15,14 @@ from magpiary import views
 
 from test_hub import archive, page, post
 
+
+@pytest.fixture(autouse=True)
+def _contextual_beta_on(monkeypatch):
+    """Contextual Post View is a beta, off by default (owner, 17 Nov 2026): these tests test it turned on."""
+    from magpiary import store as store_module
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "1")
+
+
 EVIL = '<img src=x onerror="alert(1)">'
 ITEM = {"id": 7, "canonical_url": "https://www.instagram.com/reel/ExampleViews1/",
         "caption": "Serves 4. Tickets at https://tickets.example.org/show and more."}

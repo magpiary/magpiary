@@ -11,6 +11,14 @@ from magpiary import categories as cats
 from magpiary import lookups, views
 from magpiary.store import Store
 
+
+@pytest.fixture(autouse=True)
+def _contextual_beta_on(monkeypatch):
+    """Contextual Post View is a beta, off by default (owner, 17 Nov 2026): these tests test it turned on."""
+    from magpiary import store as store_module
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "1")
+
+
 POST = "https://www.instagram.com/reel/ExampleLookup1/"
 
 

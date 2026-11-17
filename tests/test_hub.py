@@ -9,6 +9,8 @@ from urllib.parse import urlencode
 
 import pytest
 
+from magpiary import store as store_module
+
 from magpiary.hub import backfill_details, details_from_folder
 
 IG = "https://www.instagram.com/reel/Example0020/"
@@ -288,7 +290,8 @@ def test_the_live_status_is_json_and_the_activity_page_lists_waiting_items(mac, 
     assert 'id="ticker"' in body and "1 waiting" in body  # the strip is on every page
 
 
-def test_the_item_page_shows_the_summary_key_points_and_timing(mac, lib, tmp_path):
+def test_the_item_page_shows_the_summary_key_points_and_timing(mac, lib, tmp_path, monkeypatch):
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "1")  # its category tabs: the Contextual Post View beta on
     item = mac.store.item_by_id(lib["ig"])
     folder = Path(item["archive_dir"])
     record = {"title": "Carbonara fast", "summary": "Eggs, cheese, pork.", "type": "recipe",
@@ -399,7 +402,8 @@ def test_static_files_are_served_from_a_fixed_list_and_cached(mac):
     assert "fonts.googleapis" not in body  # no outside requests
 
 
-def test_a_post_opens_as_a_card_over_the_wall_or_as_a_page(mac, lib):
+def test_a_post_opens_as_a_card_over_the_wall_or_as_a_page(mac, lib, monkeypatch):
+    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "1")  # its category tabs: the Contextual Post View beta on
     status, headers, data = request(mac, "GET", f"/item/{lib['ig']}?frag=1")
     assert status == 200 and not data.startswith(b"<!doctype") and b'class="it-h"' in data and b"<video" in data
     for tab in ("Summary", "Related", "Details"):
