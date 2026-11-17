@@ -637,7 +637,7 @@ class Hub(
                 if words and t.startswith(words)][:6]
         names, seen = [], set()
         if len(words) >= 2:
-            for i in self.store.hub_items("kept", query, limit=40):
+            for i in self.store.hub_items("kept", query, limit=20):
                 for values in ui.media_of(i)["entities"].values():
                     for name in values:
                         if words in name.lower() and name.lower() not in seen and not name.startswith("http"):
@@ -645,9 +645,10 @@ class Hub(
                             names.append(name)
         names = names[:6]
         types: dict = {}
-        for i in self.store.hub_items("inbox"):
-            if i.get("ai_status") == "done":
-                types[i.get("ai_type") or "other"] = types.get(i.get("ai_type") or "other", 0) + 1
+        if not words:  # the type chips show only for an empty box; counting every save on each keystroke made typing wait
+            for i in self.store.hub_items("inbox", compact=True):
+                if i.get("ai_status") == "done":
+                    types[i.get("ai_type") or "other"] = types.get(i.get("ai_type") or "other", 0) + 1
         views = [{"id": v["id"], "name": v["name"], "q": v["rule"].get("q", ""), "no": "|".join(v["rule"].get("no", [])),
                   "n": len(self.find(v["rule"].get("q", ""), set(v["rule"].get("no", [])), True)[0])} for v in self.store.views()] \
             if not words else []

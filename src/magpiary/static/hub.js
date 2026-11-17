@@ -162,8 +162,8 @@
     say(d.error || "That did not work. Try again.", "bad");
     if (term) term.hidden = !(d.terminal || viaTerminal);
   });
-  async function getDoc(url) {
-    const r = await fetch(url, { cache: "no-store" });
+  async function getDoc(url, signal) {
+    const r = await fetch(url, { cache: "no-store", signal });
     if (!r.ok && r.status !== 404) throw new Error(String(r.status));
     return { doc: new DOMParser().parseFromString(await r.text(), "text/html"), url: r.url };
   }
@@ -277,6 +277,7 @@
 
   // ---- in-place navigation -----------------------------------------------------------------------------
   let navigating = false, pendingGo = null;
+  let typeSeq = 0, navAbort = null;  // typeSeq counts the search box's keystrokes, so a page fetched for older text is dropped, never drawn
   const SHELF_ORDER = { inbox: 0, archive: 1, trash: 2 };
   const shelfOf = (u) => { const p = new URL(u, location.href); return p.pathname === "/" && !p.searchParams.get("q") ? (p.searchParams.get("shelf") || "inbox") : null; };
 
@@ -318,6 +319,7 @@
   async function swapAll(view, fresh, how, dir = 1) {
     const g = G();
     if (!g) { view.innerHTML = fresh.innerHTML; return; }
+    if (how === "quick") { view.innerHTML = fresh.innerHTML; g.fromTo(view, { opacity: .5 }, { opacity: 1, duration: .16, ease: "power1.out", clearProps: "opacity" }); return; }  // while typing: no per-tile measuring (Flip took ~1s on a full library)
     if (how === "flip") { flipTo(view, fresh.innerHTML); return; }
     const dx = how === "slide" ? 40 * dir : 0, dy = how === "slide" ? 0 : 10;
     await g.to(view, { x: -dx * .5, y: -dy * .3, opacity: 0, duration: .15, ease: "power2.in" });
@@ -344,6 +346,7 @@
     };
     if (kind === "gather") gather(body, fbody.innerHTML, before);
     else if (kind === "deal") deal(body, fbody.innerHTML, before);
+    else if (kind === "quick") { before(); body.innerHTML = fbody.innerHTML; G()?.fromTo(body, { opacity: .5 }, { opacity: 1, duration: .16, ease: "power1.out", clearProps: "opacity" }); }
     else flipTo(body, fbody.innerHTML, { before });
   }
 
@@ -404,12 +407,14 @@
   async function go(url, opts = {}) {
     const view = $("#view");
     if (!view || new URL(url, location.href).pathname === "/ask") { location.href = url; return; }
-    if (navigating) { pendingGo = [url, opts]; return; }
+    if (navigating) { pendingGo = [url, opts]; if (opts.typing) navAbort?.abort(); return; }  // a newer search overtakes one still being fetched
     navigating = true;
     navBar.start();
+    const ctl = opts.typing ? new AbortController() : null; navAbort = ctl;
     try {
       const from = location.href;
-      const { doc, url: final } = await getDoc(url);
+      const { doc, url: final } = await getDoc(url, ctl?.signal);
+      if (opts.typing && opts.seq !== typeSeq) return;  // the text changed while this page loaded: draw nothing
       const fresh = doc.getElementById("view");
       if (!fresh) { location.href = final; return; }
       closeNest();
@@ -436,9 +441,9 @@
         await swapAll($("#ntbody", view), $("#ntbody", fresh), "fade");
       } else if (samePage && $("#wallbody", view) && $("#wallbody", fresh)) {
         const va = $("#wallbody", view).dataset.view, vb = $("#wallbody", fresh).dataset.view;
-        swapWall(view, fresh, va === vb ? "flip" : vb === "piles" ? "gather" : "deal");
+        swapWall(view, fresh, opts.typing ? "quick" : va === vb ? "flip" : vb === "piles" ? "gather" : "deal");
       } else {
-        let how = opts.how || "", dir = 1;
+        let how = opts.typing ? "quick" : opts.how || "", dir = 1;
         if (!how && a && b && a !== b) { how = "slide"; dir = SHELF_ORDER[b] > SHELF_ORDER[a] ? 1 : -1; }
         if (!how) {
           const mine = new Set($$("[data-flip-id]", view).map((e) => e.dataset.flipId));
@@ -449,9 +454,10 @@
       }
       initView();
     } catch (e) {
+      if (e && e.name === "AbortError") return;  // overtaken by newer typing: not an error, and no reload
       location.href = url;
     } finally {
-      navigating = false;
+      navigating = false; if (navAbort === ctl) navAbort = null;
       navBar.done();
       if (pendingGo) { const [u, o] = pendingGo; pendingGo = null; go(u, o); }
     }
@@ -798,6 +804,7 @@
     arm();
     stuckWatch = { end() { if (io) io.disconnect(); classes.disconnect(); crumb.removeEventListener("transitionend", again); removeEventListener("resize", again); } };
   }
+  const TAB_ON = ':scope > a.on, :scope > .pvmore.on > summary';  // the active tab, or More when the active tab is inside it
   function wireCard(host) {
     const main = $(".main", host); if (!main) return;
     // the tab the server opened (Read, for a page saved as the owner saw it) wins over Summary
@@ -809,7 +816,10 @@
       tabs.forEach((t) => { const on = t.dataset.tab === k; t.classList.toggle("on", on); t.setAttribute("aria-selected", String(on)); });
       $$("[data-pane]", host).forEach((p) => { p.hidden = p.dataset.pane !== k; });
       host.dataset.tab = k;
-      placeSlider(bar, "a.on", !animate);
+      // A tab chosen from the More menu lights More itself and closes the menu: the underline sits under the visible More, not under a link inside the menu
+      const moreBox = $(".pvmore", host);
+      if (moreBox) { moreBox.classList.toggle("on", !!$("a.on", moreBox)); moreBox.open = false; }
+      placeSlider(bar, TAB_ON, !animate);
       const pane = $(`[data-pane="${k}"]`, host);
       if (pane?.dataset.relatedSrc && !pane.hasAttribute("aria-busy")) {
         pane.setAttribute("aria-busy", "true");
@@ -853,7 +863,7 @@
       $("[data-pvhide]", f)?.addEventListener("click", () => toggle(false));
     });
     show(tabs.some((t) => t.dataset.tab === want && !t.classList.contains("off")) ? want : "sum", false);
-    requestAnimationFrame(() => placeSlider(bar, "a.on", true));
+    requestAnimationFrame(() => placeSlider(bar, TAB_ON, true));
     $$("[data-fold]", host).forEach((c) => {
       const b = $(".capt", c), slot = c.closest(".capslot"), vid = c.closest(".vid");
       c.classList.add("folded"); b.hidden = false;
@@ -1659,12 +1669,14 @@
     document.body.classList.remove("searching");
   }
   const SRC = ["instagram", "threads", "youtube", "reddit", "x", "linkedin"];
+  let hintAbort = null;
   async function hints() {
     const input = activeInput(), box = activePanel();
     if (!input || !box) return;
     const text = input.value.trim();
+    hintAbort?.abort(); const ac = hintAbort = new AbortController();  // only the latest text's suggestions are ever fetched or drawn
     let d;
-    try { d = await (await fetch("/search.json?q=" + encodeURIComponent(text), { cache: "no-store" })).json(); } catch (e) { return; }
+    try { d = await (await fetch("/search.json?q=" + encodeURIComponent(text), { cache: "no-store", signal: ac.signal })).json(); } catch (e) { return; }
     if (input.value.trim() !== text) return;
     const row = (href, label, sub, icon = "") => `<a class="sopt" role="option" href="${esc(href)}">${icon}<span>${label}</span>${sub ? `<small>${esc(sub)}</small>` : ""}</a>`;
     let html = "";
@@ -1690,16 +1702,19 @@
   function onType(input) {
     if (input === q2) q.value = q2.value;
     sclear.hidden = !q.value;
-    clearTimeout(hintTimer); hintTimer = setTimeout(hints, 150);
+    typeSeq++; hintAbort?.abort();
+    if (pendingGo?.[1].typing) pendingGo = null;  // a search queued for older text is dropped
+    clearTimeout(hintTimer); hintTimer = setTimeout(hints, 200);
     clearTimeout(sTimer); clearTimeout(mTimer);
+    const seq = typeSeq;
     sTimer = setTimeout(() => {
       const text = input.value.trim();
       const url = text ? "/?q=" + encodeURIComponent(text) : "/";
       if (!$("#view")) { location.replace(url); return; }
       // word matches at once; saves close in meaning join after a further pause (M7b)
-      go(text ? url + "&words=1" : url, { how: "flip", replace: page() === "search", typing: true });
-      if (text) mTimer = setTimeout(() => go(url, { how: "flip", replace: true, typing: true }), 500);
-    }, 280);
+      go(text ? url + "&words=1" : url, { how: "flip", replace: page() === "search", typing: true, seq });
+      if (text) mTimer = setTimeout(() => go(url, { how: "flip", replace: true, typing: true, seq }), 700);
+    }, 450);
     const g = G();
     if (g && input === q2) g.fromTo($(".smag", sover), { rotation: -8 }, { rotation: 0, duration: .3, ease: "elastic.out(1, .4)" });
   }
@@ -1713,7 +1728,8 @@
       ev.preventDefault();
       if (sIndex >= 0 && opts[sIndex]) { const h = opts[sIndex].href; closeSearch(); input.blur(); go(h); return; }
       remember(input.value); closeSearch(); input.blur();
-      if (input.value.trim() && page() !== "search") go("/?q=" + encodeURIComponent(input.value.trim()), { how: "flip" });
+      clearTimeout(sTimer); clearTimeout(mTimer); typeSeq++;  // Enter runs the full search (words and meaning) now
+      if (input.value.trim()) go("/?q=" + encodeURIComponent(input.value.trim()), { how: "flip", replace: page() === "search", typing: true, seq: typeSeq });
     } else if (ev.key === "Escape") {
       ev.stopPropagation(); ev.preventDefault();
       if (bigSearch() && sover && !sover.hidden && input.value) { input.value = ""; onType(input); return; }
