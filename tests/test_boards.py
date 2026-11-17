@@ -330,7 +330,7 @@ def test_a_code_renews_after_seven_days_and_its_key_goes_a_week_later(macs, monk
 
 
 def test_the_phone_asks_about_active_boards_only_and_the_post_becomes_a_card_once_read(mac, phone, tmp_path):
-    from datetime import timedelta
+    from datetime import datetime, timedelta
 
     from test_hub import archive
 
@@ -363,7 +363,9 @@ def test_the_phone_asks_about_active_boards_only_and_the_post_becomes_a_card_onc
     phone.run("https://www.instagram.com/reel/JUSTME/")  # the first choice: library only
     assert len(mac.store.board_pending()) == pending
 
-    mac.clock.t += timedelta(days=30)  # a month later, nothing changed on either board
+    # a month later, nothing changed on either board. Board changes carry the real time (they are signed events), so the
+    # month is counted from today, not from the fake clock's start (it broke once real time passed 23 Oct + 24 days)
+    mac.clock.t = max(mac.clock.t, datetime.now().astimezone()) + timedelta(days=30)
     phone.run("")
     assert phone.boards_file.strip() == ""
     phone.run("https://www.instagram.com/reel/LATER/")
