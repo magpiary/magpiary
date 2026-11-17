@@ -55,6 +55,13 @@ final class Shell: NSObject, NSApplicationDelegate {
     // ---- launch -----------------------------------------------------------------------------
 
     func applicationDidFinishLaunching(_ note: Notification) {
+        // After setup Magpiary lives in the menu bar only: the library is its own web-app window with its own Dock icon, so a
+        // second Dock icon (and Cmd-Tab entry) for this helper would be a duplicate. The installer window brings the icon back
+        // while it is open (InstallerWindow.show) and it goes away again when that window closes.
+        NSApp.setActivationPolicy(UserDefaults.standard.bool(forKey: "setupComplete") ? .accessory : .regular)
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: installer.window, queue: .main) { _ in
+            if UserDefaults.standard.bool(forKey: "setupComplete") { NSApp.setActivationPolicy(.accessory) }
+        }
         if let path = Bundle.main.path(forResource: "symbol-black", ofType: "png"), let icon = NSImage(contentsOfFile: path) {
             icon.isTemplate = true
             icon.size = NSSize(width: 18, height: 18)

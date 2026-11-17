@@ -72,6 +72,7 @@ final class InstallerWindow: NSObject, WKScriptMessageHandler, WKNavigationDeleg
     }
 
     func show() {
+        NSApp.setActivationPolicy(.regular)   // the helper is menu-bar only once set up; the installer window needs a Dock icon
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }
