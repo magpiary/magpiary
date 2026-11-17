@@ -432,13 +432,6 @@ def test_private_mode_offers_no_link_search_and_the_worker_sends_none(mac, lib):
 
 # ---- Contextual Post View: a beta, off by default (owner, 17 Nov 2026) -------------------------------------------------
 
-def test_a_new_library_has_the_beta_off(tmp_path, monkeypatch):
-    from magpiary import store as store_module
-
-    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "0")  # the shipped default, not this module's test default
-    assert store_module.CONTEXTUAL_DEFAULT == "0" and not Store(tmp_path / "m.db").contextual_view()
-
-
 def test_by_default_posts_are_plain_and_the_switch_sits_in_advanced_beta(mac, recipe, monkeypatch):
     from magpiary import store as store_module
 

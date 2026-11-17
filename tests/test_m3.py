@@ -555,15 +555,16 @@ def test_the_summary_request_carries_categories_only_when_the_beta_is_on(tmp_pat
     from magpiary import store as store_module
     from magpiary.store import CONTEXTUAL_SETTING, Store
 
-    monkeypatch.setattr(store_module, "CONTEXTUAL_DEFAULT", "0")
+    assert store_module.CONTEXTUAL_DEFAULT == "0"  # the shipped default: a beta stays off until the owner turns it on
     store = Store(tmp_path / "m.db")
     item = {"canonical_url": "https://www.instagram.com/reel/AbC/", "source": "instagram", "archive_dir": str(folder_with(tmp_path)),
             "note": "", "first_shared_at": "2026-10-23T10:00:00+05:30"}
     talk = [{"start": 0.0, "end": 30.0, "text": "Today we cook pasta with eggs pecorino and guanciale for everyone " * 3}]
     sent = []
-    for on in ("0", "1"):
-        store.set_setting(CONTEXTUAL_SETTING, on)
+    for on in (None, "0", "1"):  # None: a fresh library that never touched the switch
+        if on is not None:
+            store.set_setting(CONTEXTUAL_SETTING, on)
         gemini = FakeGemini(answer(GOOD))
         process_item(item, a_key(tmp_path), tmp_path / "notes", gemini, fake_transcriber(talk), fake_framer([]), store=store)
         sent.append(json.dumps(gemini.sent[0][3]))
-    assert '"category"' not in sent[0] and '"category"' in sent[1]
+    assert '"category"' not in sent[0] and '"category"' not in sent[1] and '"category"' in sent[2]
