@@ -7,6 +7,8 @@ Newest first. Plain words; the same notes are on each GitHub release.
 - **The Mac app updates itself.** In the Mac app, Update now downloads the offered version, checks it against the release's published checksum and the app's own name and version, closes Magpiary, swaps it in Applications and opens it again. If the new version does not start, the old one is put back and the library says what went wrong.
 - **Fixed: no link searches in Private mode.** Find the link, Find it and Find more links are hidden in Private mode, and a link search asked for earlier waits, so nothing about a post is searched for online. Only links the post itself contains show.
 - **Beta: tabs that fit each kind of post.** Off by default. Turn it on in Settings, Appearance, Advanced settings, Beta: Contextual Post View. A post then gets a category (Recipes, Travel, Music and 19 more) and its own tabs, such as Ingredients and Method for a recipe or Places for a trip. It is still being built and may change.
+- **Typing in search stays smooth.** Results no longer redraw in a way that froze the box while you typed.
+- **Mac app window and top bar.** After setup the helper lives only in the menu bar, so the web-app window is the one Dock icon; quitting also closes that window, and reopening focuses the open one. The top bar has a refresh button in the app window, and its buttons are flat until you hover them.
 
 ## 0.1.8 (10 November 2026)
 

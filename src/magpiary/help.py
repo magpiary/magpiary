@@ -574,7 +574,9 @@ PAGE_TOPIC = {"wall": "library", "search": "library", "shelf": "library", "add":
 CHANGES = [
     ("0.1.9", ["The Mac app updates itself: Update now checks the download, swaps the app and opens it again, and puts the old one back if the new one does not start.",
                "Private mode no longer offers link searches: only links the post itself contains show.",
-               "Beta, off by default: tabs that fit each kind of post (a recipe gets Ingredients and Method). Settings → Appearance → Advanced settings → Beta."]),
+               "Beta, off by default: tabs that fit each kind of post (a recipe gets Ingredients and Method). Settings → Appearance → Advanced settings → Beta.",
+               "Typing in search no longer freezes while results redraw.",
+               "Mac app: after setup only the web-app window shows in the Dock; quitting closes the window too. The top bar has a refresh button in the app window, and its buttons are flat until you hover them."]),
     ("0.1.8", ["Install Magpiary as an app: Settings → Appearance → Install as app (Chrome, Edge or Brave) gives it its own window and Dock icon. Nothing from your library is stored in the browser, and the Dock icon opens the app.",
                "Settings → AI & login: choose the Claude model and effort that write your summaries. New default is Sonnet at low effort; if the model isn't available, Haiku at low effort is used and the post says so.",
                "Your library is empty no longer shows while your first post is still being processed.",

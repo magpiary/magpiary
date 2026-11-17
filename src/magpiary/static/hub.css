@@ -4413,3 +4413,12 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .refbtn.spin .ico { animation: refspin .7s linear infinite; }
 @keyframes refspin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .refbtn.spin .ico { animation: none; opacity: .5; } }
+
+/* Top-bar buttons are flat at rest (owner, 17 Nov 2026): no pill, border, edge or shadow. The glass pill appears only on hover, press, or while
+   the button's panel/page is open. Nest keeps its coloured working/needs states. Phone widths (<=760px) keep the joined Digest/Settings pill. */
+@media (min-width: 761px) {
+  :root[data-theme] .top .bar .ubtn:not(.nestbtn[data-mood="working"], .nestbtn[data-mood="needs"]) { background: none; box-shadow: none; }
+  :root[data-theme] .top .bar .ubtn:not(.nestbtn[data-mood="working"], .nestbtn[data-mood="needs"]):is(:hover, .st-hover, .on, .open, :active):not(:disabled) {
+    background: var(--navglass); box-shadow: var(--navring), inset 0 0 0 999px rgba(255,255,255,.07);
+  }
+}
