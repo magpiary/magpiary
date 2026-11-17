@@ -62,3 +62,11 @@ def test_phone_pages_never_register_it():
 def test_csp_lets_the_page_load_its_manifest(mac):
     _, headers, _ = request(mac, "GET", "/settings/appearance")
     assert "manifest-src 'self'" in headers["Content-Security-Policy"]
+
+
+def test_top_bar_has_a_refresh_button_shown_only_in_the_app_window(mac):
+    status, _, body = request(mac, "GET", "/")
+    assert status == 200 and b"data-refresh" in body and b"Refresh (" in body
+    css = request(mac, "GET", "/static/hub.css")[2].decode()
+    assert "display-mode: standalone) { :root[data-theme] .top .bar .ubtn.refbtn" in css
+    assert "width: 44px; min-width: 44px; height: 44px" in css  # a square, so the round button is a circle

@@ -28,6 +28,10 @@
     else show("Not offered by this browser right now. If you installed it already, find Magpiary in Launchpad.");
   }
   document.addEventListener("click", function (event) {
+    var again = event.target.closest && event.target.closest("[data-refresh]");
+    if (again) { again.classList.add("spin"); location.reload(); return; }
+  });
+  document.addEventListener("click", function (event) {
     var button = event.target.closest && event.target.closest("[data-pwa-install]");
     if (!button || !saved) return;
     var prompt = saved; saved = null; refresh();

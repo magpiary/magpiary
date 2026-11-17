@@ -4402,3 +4402,14 @@ html[data-scale="85"] { zoom: .85; } html[data-scale="90"] { zoom: .9; } html[da
 .lgstat[data-tone="ok"] { color: var(--ok); }
 .lgstat[data-tone="bad"] { color: var(--bad); }
 .lgstat[hidden], [data-login-terminal][hidden] { display: none; }
+
+/* Refresh: only in the installed app window, which has no browser refresh button (owner, 15 Nov 2026) */
+.refbtn { display: none; }
+/* Same specificity as the theme's `:root[data-theme] .top .bar .ubtn` (which sets 44px height and side padding), or the icon is squeezed and the circle goes oval */
+:root[data-theme] .top .bar .ubtn.refbtn, .ubtn.refbtn { width: 44px; min-width: 44px; height: 44px; min-height: 44px; flex: none; padding: 0; gap: 0; justify-content: center; align-items: center; background: none; box-shadow: none; border: 0; border-radius: 50%; cursor: pointer; }
+:root[data-theme] .top .bar .ubtn.refbtn:hover, .ubtn.refbtn:hover { background: var(--chip); }
+.refbtn svg { display: block; margin: 0; }
+@media (display-mode: standalone) { :root[data-theme] .top .bar .ubtn.refbtn, .ubtn.refbtn { display: inline-flex; } }
+.refbtn.spin .ico { animation: refspin .7s linear infinite; }
+@keyframes refspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .refbtn.spin .ico { animation: none; opacity: .5; } }
