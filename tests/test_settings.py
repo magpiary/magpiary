@@ -394,3 +394,12 @@ def test_the_old_boards_page_redirects_and_keeps_query_and_anchor(mac):
     assert page(mac, "/settings/boards?saved=bucket")[1]["Location"] == "/settings/profile?saved=bucket"
     assert "Where boards sync" in page(mac, "/settings/profile")[2]
     assert page(mac, "/settings/ask")[0] == 200 and page(mac, "/settings/agents")[0] == 200
+
+
+def test_post_tab_underline_follows_more_when_the_active_tab_is_inside_it():
+    """A tab chosen from the More menu puts the underline under More (the link inside the closed menu has no place on the bar)."""
+    from pathlib import Path
+
+    js = (Path(__file__).parent.parent / "src/magpiary/static/hub.js").read_text()
+    assert ":scope > .pvmore.on > summary" in js and "moreBox.classList.toggle" in js
+    assert 'placeSlider(bar, "a.on"' not in js

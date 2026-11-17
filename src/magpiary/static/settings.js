@@ -372,7 +372,7 @@
       const swap = (other, before) => {
         const shift = other.getBoundingClientRect().top;
         list.insertBefore(row, before ? other : other.nextSibling);
-        drag.start += other.getBoundingClientRect().top - shift;  // keep the row under the finger after the swap
+        drag.start -= other.getBoundingClientRect().top - shift;  // the row's own place moved the other way by that much: take it off the offset so the row stays under the finger
         row.style.transform = `translateY(${ev.clientY - drag.start}px)`;
         if (!calm) other.animate([{ transform: `translateY(${shift - other.getBoundingClientRect().top}px)` }, { transform: "none" }],
                                  { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)" });
